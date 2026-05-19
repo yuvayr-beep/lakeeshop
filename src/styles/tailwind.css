@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap');
+
+@font-face {
+  font-family: 'Alluring Delight';
+  src: url('/assets/fonts/AlluringDelightFreeRegular.woff2') format('woff2'),
+       url('/assets/fonts/AlluringDelightFreeRegular.woff') format('woff'),
+       url('/assets/fonts/AlluringDelightFreeRegular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Bradley Hand ITC';
+  src: url('/assets/fonts/BradleyHandITCRegular.woff2') format('woff2'),
+       url('/assets/fonts/BradleyHandITCRegular.woff') format('woff'),
+       url('/assets/fonts/BradleyHandITCRegular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #7c3aed;
+  --secondary-foreground: #ffffff;
+  --accent: #06b6d4;
+  --accent-foreground: #ffffff;
+  --muted: #0056c9;
+  --muted-foreground: #f7f7f7;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #e2e8f0;
+  --input: #f8fafc;
+  --ring: #2563eb;
+  --radius: 1rem;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+
+  --morning-from: #fef3c7;
+  --morning-to: #bae6fd;
+  --afternoon-from: #dbeafe;
+  --afternoon-to: #e0f2fe;
+  --evening-from: #1e1b4b;
+  --evening-to: #0c1445;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  .font-script {
+    font-family: 'Caveat', cursive;
+  }
+  .glass-card {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+  .glass-card-dark {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .input-glow:focus-within {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), 0 0 20px rgba(37, 99, 235, 0.08);
+  }
+  .rainbow-border {
+    background: linear-gradient(white, white) padding-box,
+      linear-gradient(135deg, #f59e0b, #ef4444, #8b5cf6, #3b82f6, #06b6d4, #10b981) border-box;
+    border: 2px solid transparent;
+  }
+  .btn-primary-glow:hover {
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.45);
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .sidebar-item-active {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary);
+    border-right: 3px solid var(--primary);
+  }
+  .morning-bg {
+    background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 30%, #bae6fd 70%, #e0f2fe 100%);
+  }
+  .afternoon-bg {
+    background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 40%, #f0f9ff 70%, #ecfeff 100%);
+  }
+  .evening-bg {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #1e3a5f 60%, #0c1445 100%);
+  }
+  .blob-primary {
+    background: radial-gradient(ellipse at center, rgba(37, 99, 235, 0.25) 0%, transparent 70%);
+    filter: blur(60px);
+  }
+  .blob-secondary {
+    background: radial-gradient(ellipse at center, rgba(124, 58, 237, 0.2) 0%, transparent 70%);
+    filter: blur(80px);
+  }
+  .blob-accent {
+    background: radial-gradient(ellipse at center, rgba(6, 182, 212, 0.2) 0%, transparent 70%);
+    filter: blur(60px);
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    border-radius: 4px;
+  }
+}
