@@ -80,30 +80,14 @@ export default function ForgotPasswordClient() {
   };
 
   return (
-    <AuthCard>
-      <motion.div
-        className="mb-6"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15, duration: 0.5 }}
-      >
-        <h1
-          className={`font-script text-4xl mb-1 ${
-            isEvening ? 'text-white' : 'text-foreground'
-          }`}
-        >
-          {step === 'mobile' ? 'Forgot Password' : 'Reset Password'}
-        </h1>
-        <p
-          className={`text-sm font-400 ${
-            isEvening ? 'text-white/60' : 'text-muted-foreground'
-          }`}
-          style={{ fontFamily: "'Caveat', cursive" }}
-        >
-          {step === 'mobile' ?'Enter your mobile number to receive OTP'
-            : `OTP sent to +91 ${phone.slice(0, 2)}****${phone.slice(-4)}`}
-        </p>
-      </motion.div>
+    <AuthCard
+      heading={step === 'mobile' ? 'Forgot Password' : 'Reset Password'}
+      subheading={
+        step === 'mobile'
+          ? 'Enter your registered mobile number to receive OTP'
+          : `OTP sent to +91 ${phone.slice(0, 2)}****${phone.slice(-4)}`
+      }
+    >
 
       <AnimatePresence mode="wait">
         {step === 'mobile' ? (
