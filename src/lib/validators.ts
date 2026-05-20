@@ -23,13 +23,16 @@ export const forgotPasswordInitiateSchema = z.object({
     .regex(/^[6-9]\d{9}$/, 'Enter a valid Indian mobile number'),
 });
 
-export const forgotPasswordVerifySchema = z
+export const forgotPasswordOtpSchema = z.object({
+  otp: z
+    .string()
+    .min(6, 'OTP must be 6 digits')
+    .max(6, 'OTP must be 6 digits')
+    .regex(/^\d{6}$/, 'OTP must be numeric'),
+});
+
+export const forgotPasswordResetSchema = z
   .object({
-    otp: z
-      .string()
-      .min(6, 'OTP must be 6 digits')
-      .max(6, 'OTP must be 6 digits')
-      .regex(/^\d{6}$/, 'OTP must be numeric'),
     newPassword: z
       .string()
       .min(8, 'Password must be at least 8 characters')
@@ -47,4 +50,5 @@ export const forgotPasswordVerifySchema = z
 export type MobileFormData = z.infer<typeof mobileSchema>;
 export type PasswordFormData = z.infer<typeof passwordSchema>;
 export type ForgotInitiateFormData = z.infer<typeof forgotPasswordInitiateSchema>;
-export type ForgotVerifyFormData = z.infer<typeof forgotPasswordVerifySchema>;
+export type ForgotOtpFormData = z.infer<typeof forgotPasswordOtpSchema>;
+export type ForgotResetFormData = z.infer<typeof forgotPasswordResetSchema>;

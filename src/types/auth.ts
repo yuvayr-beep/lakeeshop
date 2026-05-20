@@ -1,5 +1,5 @@
 export type AuthStep = 'mobile' | 'password';
-export type ForgotStep = 'mobile' | 'verify';
+export type ForgotStep = 'mobile' | 'otp' | 'password';
 
 export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
 
