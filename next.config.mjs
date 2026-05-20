@@ -16,6 +16,15 @@ const nextConfig = {
   images: {
     remotePatterns: imageHosts,
     minimumCacheTTL: 60,
-  }
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/proxy/:path*',
+        destination: 'https://v2.lakeetech.com/:path*',
+      },
+    ];
+  },
 };
 export default nextConfig;
