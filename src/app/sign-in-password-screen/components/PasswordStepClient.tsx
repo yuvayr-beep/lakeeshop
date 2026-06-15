@@ -48,7 +48,7 @@ export default function PasswordStepClient() {
         description: 'Welcome back to LAKEEE Partner Portal',
       });
       sessionStorage.removeItem('auth_phone');
-      router.push('/dashboard');
+      router.push('/admin/dashboard/operations');
     } catch (err: unknown) {
       const errorMessage =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||

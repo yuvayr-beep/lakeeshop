@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
 import { Toaster } from 'sonner';
+import ReduxProvider from '@/components/providers/ReduxProvider';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -31,7 +32,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={plusJakartaSans.variable}>
       <body className={plusJakartaSans.className}>
-        {children}
+        <ReduxProvider>
+          {children}
+        </ReduxProvider>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -44,7 +47,9 @@ export default function RootLayout({
         <div className="fixed bottom-4 right-6 z-50 text-xs text-gray-500/80 pointer-events-none select-none">
           © 2026 Lakee e Shopping India Pvt Ltd. All rights reserved.
         </div>
-      </body>
+
+        <script type="module" async src="https://static.rocket.new/rocket-web.js?_cfg=https%3A%2F%2Flakeeshop4791back.builtwithrocket.new&_be=https%3A%2F%2Fappanalytics.rocket.new&_v=0.1.19" />
+        <script type="module" defer src="https://static.rocket.new/rocket-shot.js?v=0.0.2" /></body>
     </html>
   );
 }

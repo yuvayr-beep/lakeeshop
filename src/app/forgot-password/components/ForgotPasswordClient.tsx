@@ -110,8 +110,7 @@ export default function ForgotPasswordClient() {
     <AuthCard
       heading="Forgot Password"
       subheading={
-        step === 'mobile'
-          ? 'Enter your registered mobile number to receive OTP'
+        step === 'mobile' ?'Enter your registered mobile number to receive OTP'
           : step === 'otp'
           ? `OTP sent to +91 ${phone.slice(0, 2)}****${phone.slice(-4)}`
           : 'Set a new password for your account'
