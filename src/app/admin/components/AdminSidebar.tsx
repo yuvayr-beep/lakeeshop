@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,6 +36,11 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose }: S
   const dispatch = useAppDispatch();
   const router = useRouter();
   const [expandedModules, setExpandedModules] = useState<string[]>(['DASH']);
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleModule = (code: string) => {
     setExpandedModules((prev) =>
@@ -80,7 +85,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose }: S
         {mockMenuData.map((module) => {
           const IconComp = iconMap[module.icon || 'LayoutDashboard'] || LayoutDashboard;
           const isExpanded = expandedModules.includes(module.code);
-          const hasActiveChild = module.screens.some((s) => pathname === s.href);
+          const hasActiveChild = mounted && module.screens.some((s) => pathname === s.href);
 
           return (
             <div key={module.code}>
@@ -126,7 +131,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose }: S
                     className="overflow-hidden ml-3 pl-3 border-l border-slate-100 dark:border-slate-700/60 mt-0.5 mb-1 space-y-0.5"
                   >
                     {module.screens.map((screen) => {
-                      const isActive = pathname === screen.href;
+                      const isActive = mounted && pathname === screen.href;
                       return (
                         <Link
                           key={screen.code}
