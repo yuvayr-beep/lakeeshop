@@ -3,7 +3,7 @@ import ProductCreateScreen from './ProductCreateScreen';
 
 export default function ProductCreatePage() {
   return (
-    <AdminLayout fullWidth>
+    <AdminLayout>
       <ProductCreateScreen />
     </AdminLayout>
   );

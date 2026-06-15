@@ -140,10 +140,10 @@ export default function ProductCreateScreen() {
   };
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
       {/* Top bar */}
-      <header className="sticky top-16 z-20 border-b border-slate-200 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md">
-        <div className="px-6 h-14 flex items-center gap-4">
+      <header className="sticky top-0 z-50 border-b border-slate-200 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md">
+        <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center gap-4">
           <button
             type="button"
             onClick={() => router.push('/admin/products/list')}
@@ -186,7 +186,7 @@ export default function ProductCreateScreen() {
       </header>
 
       {/* Body */}
-      <div className="flex-1 w-full px-6 py-8">
+      <div className="flex-1 max-w-[1400px] mx-auto w-full px-6 py-8">
         <div className="flex gap-6">
           {/* Left section nav */}
           <aside className="w-52 flex-shrink-0 hidden xl:block">
