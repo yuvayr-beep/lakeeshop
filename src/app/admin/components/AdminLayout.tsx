@@ -10,9 +10,10 @@ import { fetchUserProfile } from '@/redux/slices/userSlice';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
+  fullWidth?: boolean;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function AdminLayout({ children, fullWidth }: AdminLayoutProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const themeMode = useAppSelector((s) => s.theme.mode);
@@ -58,7 +59,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           onToggleSidebar={() => setSidebarOpen((p) => !p)}
           onMobileMenu={() => setMobileSidebarOpen(true)}
         />
-        <main className="flex-1 overflow-auto scrollbar-thin px-4 md:px-6 xl:px-8 py-6 max-w-screen-2xl mx-auto w-full">
+        <main className={fullWidth ? 'flex-1 overflow-auto scrollbar-thin' : 'flex-1 overflow-auto scrollbar-thin px-4 md:px-6 xl:px-8 py-6 max-w-screen-2xl mx-auto w-full'}>
           {children}
         </main>
         <AdminFooter />

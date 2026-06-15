@@ -28,7 +28,7 @@ function EditPageContent() {
 
 export default function ProductEditPage() {
   return (
-    <AdminLayout>
+    <AdminLayout fullWidth>
       <Suspense fallback={<div className="flex items-center justify-center py-24"><div className="text-slate-400">Loading…</div></div>}>
         <EditPageContent />
       </Suspense>
