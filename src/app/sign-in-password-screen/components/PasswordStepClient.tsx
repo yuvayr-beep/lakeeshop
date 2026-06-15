@@ -10,9 +10,12 @@ import AuthCard from '@/components/auth/AuthCard';
 import CircularNextButton from '@/components/auth/CircularNextButton';
 import { passwordSchema, type PasswordFormData } from '@/lib/validators';
 import { signIn, saveAuthTokens } from '@/services/auth.service';
+import { useAppDispatch } from '@/redux/hooks';
+import { setCredentials } from '@/redux/slices/authSlice';
 
 export default function PasswordStepClient() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -44,6 +47,9 @@ export default function PasswordStepClient() {
     try {
       const response = await signIn({ phone, password: data.password });
       saveAuthTokens(response);
+      // Save phone for profile fetch and sync Redux auth state
+      localStorage.setItem('userPhone', phone);
+      dispatch(setCredentials({ token: response.accessToken, phoneNumber: phone }));
       toast.success('Successfully Logged In', {
         description: 'Welcome back to LAKEEE Partner Portal',
       });

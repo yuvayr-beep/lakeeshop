@@ -110,8 +110,8 @@ export const mockProducts: Product[] = [
   description: 'Clinic Plus Strength & Shine Shampoo 340ml for strong and shiny hair.',
   isCombo: false,
   images: [
-  { url: "https://img.rocket.new/generatedImages/rocket_gen_img_1e18910b6-1781509168975.png", alt: 'Clinic Plus Shampoo 340ml front view' },
-  { url: "https://img.rocket.new/generatedImages/rocket_gen_img_1bad4c92b-1781509171245.png", alt: 'Clinic Plus Shampoo 340ml back label' }],
+  { url: "https://img.rocket.new/generatedImages/rocket_gen_img_19f4e7885-1781520232046.png", alt: 'Clinic Plus Shampoo 340ml front view' },
+  { url: "https://img.rocket.new/generatedImages/rocket_gen_img_1838ec328-1781520234359.png", alt: 'Clinic Plus Shampoo 340ml back label' }],
 
   createdAt: '2026-01-10',
   updatedAt: '2026-05-20'
