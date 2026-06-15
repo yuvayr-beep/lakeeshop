@@ -190,7 +190,7 @@ export default function ProductCreateScreen() {
         <div className="flex gap-6">
           {/* Left section nav */}
           <aside className="w-52 flex-shrink-0 hidden xl:block">
-            <div className="sticky top-[88px] space-y-1">
+            <div className="sticky top-[64px] space-y-1">
               <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3 px-3">Sections</p>
               {SECTION_NAV.map((s) => (
                 <button
