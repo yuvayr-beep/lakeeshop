@@ -13,6 +13,7 @@ interface ProductTableProps {
   sortDir: 'asc' | 'desc';
   onSort: (col: keyof Product) => void;
   onEdit?: (p: Product) => void;
+  onView?: (p: Product) => void;
   page: number;
   perPage: number;
   total: number;
@@ -109,7 +110,7 @@ function ImageCarouselModal({ images, productName, open, onClose }: ImageCarouse
 
 export default function ProductTable({
   products, allProducts, selectedIds, onSelectionChange,
-  sortCol, sortDir, onSort, onEdit,
+  sortCol, sortDir, onSort, onEdit, onView,
   page, perPage, total, totalPages, onPageChange, onPerPageChange,
 }: ProductTableProps) {
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -263,6 +264,7 @@ export default function ProductTable({
                   <td className="px-3 py-3">
                     <div className="hidden group-hover:flex items-center justify-center gap-1">
                       <button
+                        onClick={() => onView && onView(p)}
                         className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-blue-600 transition-colors"
                         title="View product details"
                       >

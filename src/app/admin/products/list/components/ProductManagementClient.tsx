@@ -311,6 +311,10 @@ export default function ProductManagementClient() {
     router.push(`/admin/products/edit?id=${p.id}`);
   };
 
+  const handleView = (p: Product) => {
+    router.push(`/admin/products/view?sku=${p.sku}`);
+  };
+
   const handleAdd = () => {
     router.push('/admin/products/create');
   };
@@ -466,6 +470,7 @@ export default function ProductManagementClient() {
           sortDir={sortDir}
           onSort={handleSort}
           onEdit={handleEdit}
+          onView={handleView}
           page={page}
           perPage={perPage}
           total={filtered.length}
