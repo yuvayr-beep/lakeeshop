@@ -25,7 +25,7 @@ export const fetchUserProfile = createAsyncThunk(
   'user/fetchProfile',
   async (phoneNumber: string, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get(`https://v2.lakeetech.com/users/${phoneNumber}`);
+      const response = await axiosInstance.get(`/users/${phoneNumber}`);
       return response.data as UserProfile;
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };

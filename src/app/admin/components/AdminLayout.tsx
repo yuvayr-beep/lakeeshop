@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const themeMode = useAppSelector((s) => s.theme.mode);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -51,11 +51,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         collapsed={!sidebarOpen}
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
+        onRequestOpen={() => setSidebarOpen(true)}
       />
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          className="fixed inset-0 z-40 hidden cursor-default border-0 bg-transparent p-0 md:block"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         <AdminTopbar
-          onToggleSidebar={() => setSidebarOpen((p) => !p)}
+          onToggleSidebar={() => setSidebarOpen(true)}
           onMobileMenu={() => setMobileSidebarOpen(true)}
         />
         <main className="flex-1 overflow-auto scrollbar-thin px-4 md:px-6 xl:px-8 py-6 max-w-screen-2xl mx-auto w-full">

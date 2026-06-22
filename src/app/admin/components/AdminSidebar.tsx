@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,7 +9,6 @@ import {
   LogOut, BarChart3, Briefcase, KeyRound
 } from 'lucide-react';
 import { mockMenuData } from '@/constants/menuData';
-import LakeeeLogoMark from '@/components/auth/LakeeeLogoMark';
 import { useAppDispatch } from '@/redux/hooks';
 import { logout } from '@/redux/slices/authSlice';
 import { useRouter } from 'next/navigation';
@@ -29,23 +29,26 @@ interface SidebarProps {
   collapsed: boolean;
   mobileOpen: boolean;
   onMobileClose: () => void;
+  onRequestOpen: () => void;
 }
 
-export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose }: SidebarProps) {
+export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onRequestOpen }: SidebarProps) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const [expandedModules, setExpandedModules] = useState<string[]>(['DASH']);
-  const [mounted, setMounted] = useState(false);
+  const [expandedModule, setExpandedModule] = useState<string | null>('DASH');
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => {
+    const activeModule = mockMenuData.find((module) =>
+      module.screens.some((s) => pathname === s.href)
+    );
+    if (activeModule) {
+      setExpandedModule(activeModule.code);
+    }
+  }, [pathname]);
 
   const toggleModule = (code: string) => {
-    setExpandedModules((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
-    );
+    setExpandedModule((prev) => (prev === code ? null : code));
   };
 
   const handleLogout = async () => {
@@ -60,38 +63,28 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose }: S
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700/60">
       {/* Logo */}
-      <div className={`flex items-center gap-3 px-4 py-4 border-b border-slate-100 dark:border-slate-700/60 ${collapsed ? 'justify-center' : ''}`}>
-        <LakeeeLogoMark size={collapsed ? 30 : 34} />
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="text-sm font-700 text-slate-800 dark:text-white whitespace-nowrap">
-                LAKEE<span className="text-blue-600">E</span>
-              </div>
-              <div className="text-[10px] font-500 text-slate-400 whitespace-nowrap">Admin Portal</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <div className={`flex items-center px-4 py-4 border-b border-slate-100 dark:border-slate-700/60 ${collapsed ? 'justify-center' : ''}`}>
+        <Image
+          src={collapsed ? '/assets/images/small_logo.png' : '/assets/images/app_logo.png'}
+          alt="LAKEEE Admin Portal"
+          width={collapsed ? 32 : 160}
+          height={collapsed ? 32 : 40}
+          className={collapsed ? 'h-8 w-8 object-contain' : 'h-10 max-w-full object-contain'}
+        />
       </div>
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto scrollbar-thin py-3 px-2 space-y-0.5">
         {mockMenuData.map((module) => {
           const IconComp = iconMap[module.icon || 'LayoutDashboard'] || LayoutDashboard;
-          const isExpanded = expandedModules.includes(module.code);
-          const hasActiveChild = mounted && module.screens.some((s) => pathname === s.href);
+          const isExpanded = expandedModule === module.code;
+          const hasActiveChild = module.screens.some((s) => pathname === s.href);
 
           return (
             <div key={module.code}>
               {/* Module header */}
               <button
-                onClick={() => !collapsed && toggleModule(module.code)}
+                onClick={() => collapsed ? onRequestOpen() : toggleModule(module.code)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-600 transition-all duration-150 ${
                   hasActiveChild
                     ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' :'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-white'
@@ -131,7 +124,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose }: S
                     className="overflow-hidden ml-3 pl-3 border-l border-slate-100 dark:border-slate-700/60 mt-0.5 mb-1 space-y-0.5"
                   >
                     {module.screens.map((screen) => {
-                      const isActive = mounted && pathname === screen.href;
+                      const isActive = pathname === screen.href;
                       return (
                         <Link
                           key={screen.code}
@@ -182,7 +175,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose }: S
     <>
       {/* Desktop sidebar */}
       <motion.aside
-        className="hidden md:block flex-shrink-0 h-screen sticky top-0"
+        className="hidden md:block flex-shrink-0 h-screen sticky top-0 z-50"
         animate={{ width: collapsed ? 64 : 240 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
       >

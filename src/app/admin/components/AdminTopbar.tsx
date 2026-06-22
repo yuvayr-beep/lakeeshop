@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Bell, Ticket, Sun, Moon, ChevronDown, User, KeyRound, LogOut,
-  Menu, PanelLeftClose, AlertTriangle, Package, Truck, Clock, TrendingDown
+  Menu, AlertTriangle, Package, Truck, Clock, TrendingDown
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { toggleTheme } from '@/redux/slices/themeSlice';
@@ -81,7 +81,7 @@ export default function AdminTopbar({ onToggleSidebar, onMobileMenu }: AdminTopb
         className="hidden md:flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-150"
         aria-label="Toggle sidebar"
       >
-        <PanelLeftClose size={18} />
+        <Menu size={18} />
       </button>
 
       {/* Mobile menu toggle */}
