@@ -22,14 +22,23 @@ interface ProductTableProps {
   onPerPageChange: (n: number) => void;
 }
 
-const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'muted' }> = {
+const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'muted' | 'danger' }> = {
+  ACTIVE: { label: 'Active', variant: 'success' },
   active: { label: 'Active', variant: 'success' },
+  BLOCKED: { label: 'Blocked', variant: 'danger' },
   inactive: { label: 'Inactive', variant: 'warning' },
+  TEMP_BLOCKED: { label: 'Temporary Blocked', variant: 'warning' },
   discontinued: { label: 'Discontinued', variant: 'muted' },
 };
 
+const offlineStatusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'danger' | 'muted' }> = {
+  ONLINE: { label: 'Online', variant: 'success' },
+  OFFLINE: { label: 'Offline', variant: 'danger' },
+  TEMP_OFFLINE: { label: 'Temporary Offline', variant: 'warning' },
+};
+
 function SortIcon({ col, sortCol, sortDir }: { col: string; sortCol: string; sortDir: 'asc' | 'desc' }) {
-  if (col !== sortCol) return <ArrowUpDown size={11} className="text-slate-400 ml-1" />;
+  if (col !== sortCol) return <ArrowUpDown size={11} className="text-black dark:text-slate-400 ml-1" />;
   return sortDir === 'asc'
     ? <ArrowUp size={11} className="text-blue-600 ml-1" />
     : <ArrowDown size={11} className="text-blue-600 ml-1" />;
@@ -93,9 +102,8 @@ function ImageCarouselModal({ images, productName, open, onClose }: ImageCarouse
                 <button
                   key={`thumb-${idx}`}
                   onClick={() => setCurrentIndex(idx)}
-                  className={`flex-shrink-0 w-14 h-14 rounded-lg border-2 overflow-hidden transition-colors ${
-                    idx === currentIndex ? 'border-blue-500' : 'border-slate-200 dark:border-slate-700'
-                  }`}
+                  className={`flex-shrink-0 w-14 h-14 rounded-lg border-2 overflow-hidden transition-colors ${idx === currentIndex ? 'border-blue-500' : 'border-slate-200 dark:border-slate-700'
+                    }`}
                 >
                   <img src={img.url} alt={img.alt} className="w-full h-full object-cover" />
                 </button>
@@ -137,16 +145,17 @@ export default function ProductTable({
   };
 
   const cols: { key: keyof Product; label: string; sortable?: boolean }[] = [
+    { key: 'isCombo', label: '', sortable: false },
     { key: 'id', label: 'Image', sortable: false },
     { key: 'sku', label: 'SKU', sortable: true },
     { key: 'name', label: 'Product Name', sortable: true },
-    { key: 'category', label: 'Category', sortable: true },
+    // { key: 'category', label: 'Category', sortable: true },
     { key: 'brand', label: 'Brand', sortable: true },
-    { key: 'isCombo', label: 'Is Combo', sortable: false },
     { key: 'productTypeName', label: 'Product Type', sortable: true },
     { key: 'modelName', label: 'Model', sortable: true },
-    { key: 'taxSlab', label: 'Tax', sortable: true },
-    { key: 'status', label: 'Status', sortable: true },
+    // { key: 'taxSlab', label: 'Tax', sortable: true },
+    { key: 'productStatusCode', label: 'Status', sortable: true },
+    { key: 'offlineStatusCode', label: 'Offline', sortable: true },
   ];
 
   const start = (page - 1) * perPage + 1;
@@ -181,9 +190,9 @@ export default function ProductTable({
               {cols.map((col) => (
                 <th
                   key={`th-${col.key}-${col.label}`}
-                  className={`px-3 py-3 text-xs font-600 text-slate-500 dark:text-slate-400 whitespace-nowrap text-left ${
-                    col.sortable ? 'cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 select-none' : ''
-                  }`}
+                  className={`px-3 py-3 text-xs font-600 text-black dark:text-slate-400 whitespace-nowrap text-left ${col.key === 'isCombo' ? 'w-10' : ''
+                    } ${col.sortable ? 'cursor-pointer hover:text-black/80 dark:hover:text-slate-200 select-none' : ''
+                    }`}
                   onClick={() => col.sortable && onSort(col.key)}
                 >
                   <span className="inline-flex items-center gap-0.5">
@@ -192,7 +201,7 @@ export default function ProductTable({
                   </span>
                 </th>
               ))}
-              <th className="px-3 py-3 text-xs font-600 text-slate-500 dark:text-slate-400 text-center w-20">Actions</th>
+              <th className="px-3 py-3 text-xs font-600 text-black dark:text-slate-400 text-center w-20">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -201,12 +210,11 @@ export default function ProductTable({
               return (
                 <tr
                   key={p.id}
-                  className={`border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors group ${
-                    isSelected
-                      ? 'bg-blue-50 dark:bg-blue-900/10'
-                      : i % 2 === 0
-                      ? 'hover:bg-slate-50 dark:hover:bg-slate-800/40' :'bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-800/40'
-                  }`}
+                  className={`border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors group ${isSelected
+                    ? 'bg-blue-50 dark:bg-blue-900/10'
+                    : i % 2 === 0
+                      ? 'hover:bg-slate-50 dark:hover:bg-slate-800/40' : 'bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-800/40'
+                    }`}
                 >
                   <td className="px-3 py-3">
                     <input
@@ -215,6 +223,17 @@ export default function ProductTable({
                       onChange={() => toggleOne(p.id)}
                       className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
                     />
+                  </td>
+                  <td className="px-3 py-3">
+                    {p.isCombo ? (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-orange-600 dark:bg-orange-700 text-white font-bold text-xs shadow-sm hover:scale-105 transition-transform select-none" title="Combo Product">
+                        C
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-600 dark:bg-emerald-700 text-white font-bold text-xs shadow-sm hover:scale-105 transition-transform select-none" title="Single Product">
+                        P
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-3">
                     {p.images && p.images.length > 0 ? (
@@ -237,29 +256,47 @@ export default function ProductTable({
                   <td className="px-3 py-3 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap">{p.sku}</td>
                   <td className="px-3 py-3">
                     <div className="max-w-[180px]">
-                      <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">{p.name}</p>
-                      <p className="text-[10px] text-slate-400 truncate">{p.hsnCode}</p>
+                      <p className="text-xs font-medium text-black dark:text-slate-200 truncate">{p.name}</p>
+                      <p className="text-[10px] text-black dark:text-slate-400 truncate">{p.hsnCode}</p>
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{p.category}</td>
-                  <td className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{p.brand}</td>
-                  <td className="px-3 py-3">
-                    <Badge variant={p.isCombo ? 'success' : 'muted'} size="sm">
-                      {p.isCombo ? 'Yes' : 'No'}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{p.productTypeName}</td>
+                  {/* <td className="px-3 py-3 text-xs text-black dark:text-slate-400 whitespace-nowrap">{p.category}</td> */}
+                  <td className="px-3 py-3 text-xs text-black dark:text-slate-400 whitespace-nowrap">{p.brand}</td>
+                  <td className="px-3 py-3 text-xs text-black dark:text-slate-400 whitespace-nowrap">{p.productTypeName}</td>
                   <td className="px-3 py-3">
                     <div className="max-w-[140px]">
-                      <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">{p.modelName}</p>
-                      <p className="text-[10px] text-slate-400 truncate">{p.modelNumber}</p>
+                      <p className="text-xs font-medium text-black dark:text-slate-200 truncate">{p.modelName}</p>
+                      <p className="text-[10px] text-black dark:text-slate-400 truncate">{p.modelNumber}</p>
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{p.taxSlab}</td>
+                  {/* <td className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{p.taxSlab}</td> */}
                   <td className="px-3 py-3">
-                    <Badge variant={statusConfig[p.status].variant} size="sm">
-                      {statusConfig[p.status].label}
-                    </Badge>
+                    {(() => {
+                      const statusCode = p.productStatusCode || (p.status === 'active' ? 'ACTIVE' : 'BLOCKED');
+                      const statusInfo = statusConfig[statusCode] || { label: statusCode, variant: 'muted' };
+                      const labelParts = statusInfo.label.split(' ');
+                      return (
+                        <Badge variant={statusInfo.variant} size="sm" className="flex-col text-center justify-center items-center py-1">
+                          {labelParts.map((part, idx) => (
+                            <span key={idx} className="block leading-tight">{part}</span>
+                          ))}
+                        </Badge>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-3 py-3">
+                    {(() => {
+                      const offlineCode = p.offlineStatusCode || 'ONLINE';
+                      const offlineInfo = offlineStatusConfig[offlineCode] || { label: offlineCode, variant: 'muted' };
+                      const labelParts = offlineInfo.label.split(' ');
+                      return (
+                        <Badge variant={offlineInfo.variant} size="sm" className="flex-col text-center justify-center items-center py-1">
+                          {labelParts.map((part, idx) => (
+                            <span key={idx} className="block leading-tight">{part}</span>
+                          ))}
+                        </Badge>
+                      );
+                    })()}
                   </td>
                   <td className="px-3 py-3">
                     <div className="hidden group-hover:flex items-center justify-center gap-1">
@@ -300,15 +337,15 @@ export default function ProductTable({
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+          <span className="text-xs text-black dark:text-slate-400 tabular-nums">
             Showing {start}–{end} of {total} products
           </span>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Per page:</span>
+            <span className="text-xs text-black dark:text-slate-400">Per page:</span>
             <select
               value={perPage}
               onChange={(e) => onPerPageChange(Number(e.target.value))}
-              className="h-7 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-300"
+              className="h-7 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-black dark:text-slate-300"
             >
               {PER_PAGE_OPTIONS.map((opt) => (
                 <option key={`per-page-${opt}`} value={opt}>{opt}</option>
@@ -321,22 +358,21 @@ export default function ProductTable({
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page === 1}
-            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-500 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-black dark:text-slate-400 transition-colors"
           >
             <ChevronLeft size={14} />
           </button>
           {pageNumbers.map((pn, idx) =>
             typeof pn === 'string' ? (
-              <span key={`ellipsis-${idx}`} className="px-1 text-xs text-slate-400">…</span>
+              <span key={`ellipsis-${idx}`} className="px-1 text-xs text-black dark:text-slate-400">…</span>
             ) : (
               <button
                 key={`page-${pn}`}
                 onClick={() => onPageChange(pn)}
-                className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${
-                  pn === page
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400'
-                }`}
+                className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${pn === page
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-black dark:text-slate-400'
+                  }`}
               >
                 {pn}
               </button>
@@ -345,7 +381,7 @@ export default function ProductTable({
           <button
             onClick={() => onPageChange(page + 1)}
             disabled={page === totalPages}
-            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-500 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-black dark:text-slate-400 transition-colors"
           >
             <ChevronRight size={14} />
           </button>

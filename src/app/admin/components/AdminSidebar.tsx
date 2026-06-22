@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -36,12 +36,19 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const [expandedModules, setExpandedModules] = useState<string[]>(['DASH']);
+  const [expandedModule, setExpandedModule] = useState<string | null>('DASH');
+
+  useEffect(() => {
+    const activeModule = mockMenuData.find((module) =>
+      module.screens.some((s) => pathname === s.href)
+    );
+    if (activeModule) {
+      setExpandedModule(activeModule.code);
+    }
+  }, [pathname]);
 
   const toggleModule = (code: string) => {
-    setExpandedModules((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
-    );
+    setExpandedModule((prev) => (prev === code ? null : code));
   };
 
   const handleLogout = async () => {
@@ -70,7 +77,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
       <div className="flex-1 overflow-y-auto scrollbar-thin py-3 px-2 space-y-0.5">
         {mockMenuData.map((module) => {
           const IconComp = iconMap[module.icon || 'LayoutDashboard'] || LayoutDashboard;
-          const isExpanded = expandedModules.includes(module.code);
+          const isExpanded = expandedModule === module.code;
           const hasActiveChild = module.screens.some((s) => pathname === s.href);
 
           return (

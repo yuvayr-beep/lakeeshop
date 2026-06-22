@@ -15,6 +15,9 @@ export interface Product {
   modelNumber: string;
   taxSlab: string;
   status: 'active' | 'inactive' | 'discontinued';
+  productStatusCode?: string;
+  offlineStatusCode?: string;
+  defaultCourierPrice?: number | null;
   uom: string;
   hsnCode: string;
   unitPrice: number;

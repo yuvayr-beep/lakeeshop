@@ -1,12 +1,21 @@
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Eye, Send, CheckCircle2, AlertCircle,
-  LayoutGrid, Bold, Italic, Link, List, ListOrdered, ImageIcon, Loader2,
+  LayoutGrid, Bold, Italic, Link, List, ListOrdered, ImageIcon, Loader2, Code,
 } from 'lucide-react';
 import ProductDataTabs, { defaultProductDataState, ProductDataState } from './components/ProductDataTabs';
 import { ProductImageBox, ProductGalleryBox, CategoriesBox, BrandBox, ProductTypeBox } from './components/ProductSidebar';
+import axiosInstance from '@/lib/axios';
+
+const stripHtml = (html: string) => {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .trim();
+};
 
 type Notif = { type: 'success' | 'error'; msg: string } | null;
 
@@ -31,15 +40,19 @@ export default function ProductCreateScreen() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [plainText, setPlainText] = useState('');
   const [shortDesc, setShortDesc] = useState('');
-  const [editorMode, setEditorMode] = useState<'visual' | 'text'>('visual');
+  const [editorMode, setEditorMode] = useState<'visual' | 'html'>('visual');
   const [notif, setNotif] = useState<Notif>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
   const [activeSection, setActiveSection] = useState('identity');
   const [loading, setLoading] = useState(false);
   const [categoryId, setCategoryId] = useState('1');
   const [brandId, setBrandId] = useState('1');
   const [productTypeId, setProductTypeId] = useState('1');
   const [productData, setProductData] = useState<ProductDataState>(defaultProductDataState);
+  const [mainImage, setMainImage] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -56,7 +69,31 @@ export default function ProductCreateScreen() {
     setActiveSection(id);
   };
 
-  const wordCount = description.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = plainText.trim().split(/\s+/).filter(Boolean).length;
+
+  useEffect(() => {
+    if (editorMode === 'visual' && editorRef.current) {
+      if (editorRef.current.innerHTML !== description) {
+        editorRef.current.innerHTML = description;
+      }
+    }
+  }, [editorMode, description]);
+
+  const handleVisualInput = (e: React.FormEvent<HTMLDivElement>) => {
+    const html = e.currentTarget.innerHTML;
+    setDescription(html);
+    setPlainText(e.currentTarget.innerText || '');
+  };
+
+  const executeCommand = (command: string, value: string = '') => {
+    if (editorMode !== 'visual') return;
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+      const html = editorRef.current.innerHTML;
+      setDescription(html);
+      setPlainText(editorRef.current.innerText || '');
+    }
+  };
 
   const handlePublish = async () => {
     if (!title.trim()) {
@@ -64,9 +101,25 @@ export default function ProductCreateScreen() {
       return;
     }
     setLoading(true);
+    let payload: any = null;
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') || '' : '';
-      const payload = {
+      const imagesPayload = [];
+      if (mainImage) {
+        imagesPayload.push({
+          alt: 'Front view',
+          url: mainImage,
+          priority: 1,
+        });
+      }
+      galleryImages.forEach((url, i) => {
+        imagesPayload.push({
+          alt: `Gallery view ${i + 1}`,
+          url,
+          priority: i + 2,
+        });
+      });
+
+      payload = {
         baseProductName: title,
         defaultSku: productData.sku,
         eanCode: productData.eanCode,
@@ -88,11 +141,12 @@ export default function ProductCreateScreen() {
         mrp: productData.mrp ? Number(productData.mrp) : 0,
         hsnId: Number(productData.selectedHsn),
         costPrice: productData.costPrice ? Number(productData.costPrice) : 0,
+        defaultCourierPrice: productData.defaultCourierPrice ? Number(productData.defaultCourierPrice) : null,
         isCombo: productData.productType === 'grouped',
         shortDescription: shortDesc,
-        longDescription: description,
+        longDescription: plainText,
         longDescriptionHtml: description,
-        images: [],
+        images: imagesPayload,
         dimensions: {
           length: productData.length ? Number(productData.length) : 0,
           width: productData.width ? Number(productData.width) : 0,
@@ -106,34 +160,32 @@ export default function ProductCreateScreen() {
         preferredShipmentMode: productData.preferredShipmentMode,
         handlingCode: productData.selectedHandling,
         isSplit: productData.isSplit,
-        splitQuantity: productData.splitQuantity ? Number(productData.splitQuantity) : 0,
+        splitQuantity: productData.splitQuantity ? Number(productData.splitQuantity) : null,
         surfaceQuantity: productData.surfaceQuantity ? Number(productData.surfaceQuantity) : 1,
-        isExternal: productData.externalProduct,
-        comboItems: productData.comboProducts.map((c) => ({
+        isExternal: !!productData.externalProduct,
+        comboItems: productData.productType === 'grouped' ? productData.comboProducts.map((c) => ({
           componentProductId: c.componentProductId,
           quantity: c.quantity,
-        })),
+        })) : [],
       };
 
-      const response = await fetch('https://v2.lakeetech.com/prod/products', {
-        method: 'POST',
+      await axiosInstance.post('/prod/products', payload, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'accept': 'application/x-ndjson',
-        },
-        body: JSON.stringify(payload),
+          'accept': 'application/x-ndjson'
+        }
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create product: ${response.status}`);
-      }
 
       showNotif('success', 'Product created successfully!');
       setTimeout(() => router.push('/admin/products/list'), 1500);
-    } catch (err) {
-      console.error(err);
-      showNotif('error', 'Failed to create product. Please try again.');
+    } catch (err: any) {
+      console.error('API Error details:', err);
+      console.log('Request Payload:', payload);
+      if (err.response) {
+        console.log('Response Status:', err.response.status);
+        console.log('Response Data:', err.response.data);
+      }
+      const errMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to create product. Please try again.';
+      showNotif('error', errMsg);
     } finally {
       setLoading(false);
     }
@@ -248,34 +300,56 @@ export default function ProductCreateScreen() {
               <SectionHeader index="02" title="Long Description" />
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl overflow-hidden">
                 <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60 flex items-center gap-1 flex-wrap">
-                  <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700/60 mr-2">
-                    {(['visual', 'text'] as const).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setEditorMode(m)}
-                        className={`px-3 py-1 text-xs capitalize transition-colors ${
-                          editorMode === m
-                            ? 'bg-indigo-600 text-white' :'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
+                  <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700/60 mr-2 bg-slate-100 dark:bg-slate-800 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setEditorMode('visual')}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                        editorMode === 'visual'
+                          ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                    >
+                      Visual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditorMode('html')}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                        editorMode === 'html'
+                          ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                    >
+                      <Code size={12} />
+                      HTML
+                    </button>
                   </div>
                   {[
-                    { icon: <Bold size={13} />, title: 'Bold' },
-                    { icon: <Italic size={13} />, title: 'Italic' },
-                    { icon: <Link size={13} />, title: 'Link' },
-                    { icon: <List size={13} />, title: 'Unordered list' },
-                    { icon: <ListOrdered size={13} />, title: 'Ordered list' },
-                    { icon: <ImageIcon size={13} />, title: 'Image' },
-                  ].map(({ icon, title: t }) => (
+                    { icon: <Bold size={13} />, title: 'Bold', action: () => executeCommand('bold') },
+                    { icon: <Italic size={13} />, title: 'Italic', action: () => executeCommand('italic') },
+                    { icon: <Link size={13} />, title: 'Link', action: () => {
+                      const url = prompt('Enter link URL:');
+                      if (url) executeCommand('createLink', url);
+                    }},
+                    { icon: <List size={13} />, title: 'Unordered list', action: () => executeCommand('insertUnorderedList') },
+                    { icon: <ListOrdered size={13} />, title: 'Ordered list', action: () => executeCommand('insertOrderedList') },
+                    { icon: <ImageIcon size={13} />, title: 'Image', action: () => {
+                      const url = prompt('Enter image URL:');
+                      if (url) executeCommand('insertImage', url);
+                    }},
+                  ].map(({ icon, title: t, action }) => (
                     <button
                       key={t}
                       type="button"
                       title={t}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                      onClick={action}
+                      disabled={editorMode !== 'visual'}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+                        editorMode === 'visual'
+                          ? 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
+                          : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                      }`}
                     >
                       {icon}
                     </button>
@@ -284,20 +358,35 @@ export default function ProductCreateScreen() {
                     <span className="text-xs text-slate-400 font-mono">{wordCount} words</span>
                   </div>
                 </div>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Write a detailed product description. Describe features, benefits, materials, and what makes this product special…"
-                  rows={10}
-                  className="w-full p-5 bg-transparent focus:outline-none text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 resize-none leading-relaxed"
-                />
+                {editorMode === 'visual' ? (
+                  <div
+                    ref={editorRef}
+                    contentEditable
+                    onInput={handleVisualInput}
+                    placeholder="Write a detailed product description in visual mode…"
+                    className="w-full min-h-[250px] p-5 focus:outline-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed overflow-y-auto bg-white dark:bg-slate-900 border-none prose dark:prose-invert max-w-none focus:ring-0"
+                    style={{ outline: 'none' }}
+                  />
+                ) : (
+                  <textarea
+                    value={description}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDescription(val);
+                      setPlainText(stripHtml(val));
+                    }}
+                    placeholder="Write HTML markup directly in this editor…"
+                    rows={10}
+                    className="w-full p-5 bg-transparent focus:outline-none text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 resize-none leading-relaxed font-mono"
+                  />
+                )}
               </div>
             </section>
 
             {/* Section 3: Product Data */}
             <section ref={(el) => { sectionRefs.current['data'] = el; }} className="scroll-mt-20">
               <SectionHeader index="03" title="Product Data" />
-              <ProductDataTabs data={productData} onChange={setProductData} />
+              <ProductDataTabs data={productData} onChange={setProductData} hideLinkedProducts={true} />
             </section>
 
             {/* Section 4: Short Description */}
@@ -330,10 +419,10 @@ export default function ProductCreateScreen() {
           {/* Right sidebar */}
           <aside className="w-72 flex-shrink-0 space-y-4">
             <div className="sticky top-[88px] space-y-4">
-              <ProductImageBox />
-              <ProductGalleryBox />
-              <ProductTypeBox productTypeId={productTypeId} onProductTypeChange={setProductTypeId} />
               <CategoriesBox categoryId={categoryId} onCategoryChange={setCategoryId} />
+              <ProductImageBox image={mainImage} onChange={setMainImage} />
+              <ProductGalleryBox images={galleryImages} onChange={setGalleryImages} />
+              <ProductTypeBox productTypeId={productTypeId} onProductTypeChange={setProductTypeId} />
               <BrandBox brandId={brandId} onBrandChange={setBrandId} />
             </div>
           </aside>

@@ -49,9 +49,11 @@ interface ProductDetails {
   longDescription: string;
   longDescriptionHtml: string;
   productStatusCode: string;
+  offlineStatusCode?: string;
   isOffline: boolean;
   isBlocked: boolean;
   status: boolean;
+  defaultCourierPrice?: number | null;
   images: ProductImage[];
   dimensions?: {
     width: number;
@@ -69,6 +71,10 @@ interface ProductDetails {
   splitQuantity: number | null;
   surfaceQuantity: number;
   isExternal: boolean;
+  manageStock?: boolean;
+  stockQty?: number;
+  allowBackorders?: string;
+  stockStatus?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -590,13 +596,34 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                 COMBO PACK
               </span>
             )}
-            <Badge
-              variant={product.productStatusCode === 'ACTIVE' ? 'success' : 'muted'}
-              className="absolute top-4 right-4"
-              size="sm"
-            >
-              {product.productStatusCode}
-            </Badge>
+            <div className="absolute top-4 right-4 flex items-center gap-1.5 flex-wrap justify-end">
+              {(() => {
+                const pStatus = product.productStatusCode || (product.status ? 'ACTIVE' : 'BLOCKED');
+                let variant: 'success' | 'danger' | 'warning' | 'muted' = 'muted';
+                if (pStatus === 'ACTIVE') variant = 'success';
+                else if (pStatus === 'BLOCKED') variant = 'danger';
+                else if (pStatus === 'TEMP_BLOCKED') variant = 'warning';
+
+                return (
+                  <Badge variant={variant} size="sm">
+                    {pStatus.replace('_', ' ')}
+                  </Badge>
+                );
+              })()}
+              {(() => {
+                const offStatus = product.offlineStatusCode || (product.isOffline ? 'OFFLINE' : 'ONLINE');
+                let variant: 'success' | 'danger' | 'warning' | 'muted' = 'success';
+                if (offStatus === 'ONLINE') variant = 'success';
+                else if (offStatus === 'OFFLINE') variant = 'danger';
+                else if (offStatus === 'TEMP_OFFLINE') variant = 'warning';
+
+                return (
+                  <Badge variant={variant} size="sm">
+                    {offStatus.replace('_', ' ')}
+                  </Badge>
+                );
+              })()}
+            </div>
           </div>
 
           {/* Thumbnails grid */}
@@ -647,6 +674,12 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                     ₹{product.costPrice || 0}
                   </span>
                 </div>
+                <div className="space-y-0.5">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Cou Price</p>
+                  <span className="text-lg font-bold text-slate-800 dark:text-white">
+                    ₹{product.defaultCourierPrice ?? 0}
+                  </span>
+                </div>
                 {/* {product.costPrice > 0 && product.costPrice < product.mrp && (
                   <div className="mt-2 sm:mt-0">
                     <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1 rounded-lg">
@@ -688,7 +721,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                 <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block mb-1.5">
                   Short Description
                 </span>
-                <p className="leading-relaxed font-medium text-slate-700 dark:text-slate-350">
+                <p className="leading-relaxed font-medium text-slate-700 dark:text-slate-300">
                   {product.shortDescription}
                 </p>
               </div>
@@ -749,6 +782,18 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                 <div>
                   <span className="text-slate-400 block mb-0.5">Handling Code</span>
                   <span className="font-medium text-slate-700 dark:text-slate-300">{product.handlingCode || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Stock Status</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300 capitalize">{product.stockStatus || 'instock'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Stock Qty</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{product.stockQty !== undefined ? product.stockQty : 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Preorder (Backorder)</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{product.allowBackorders === 'yes' ? 'Yes' : product.allowBackorders === 'notify' ? 'Notify' : 'No'}</span>
                 </div>
               </div>
             </div>
@@ -1019,7 +1064,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                     </td>
                     <td className="py-3 px-3 font-bold text-slate-800 dark:text-white">₹{row.price}</td>
                     <td className="py-3 px-3">
-                      <span className={`font-medium ${row.stock === 'Out of Stock' ? 'text-red-500' : 'text-slate-600 dark:text-slate-350'
+                      <span className={`font-medium ${row.stock === 'Out of Stock' ? 'text-red-500' : 'text-slate-600 dark:text-slate-300'
                         }`}>{row.stock}</span>
                     </td>
                     <td className="py-3 px-3 text-slate-500">{row.leadTime}</td>
