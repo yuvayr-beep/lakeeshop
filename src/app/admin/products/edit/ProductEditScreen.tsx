@@ -40,6 +40,49 @@ interface ProductEditScreenProps {
   productId: string;
 }
 
+const parseNdjson = (raw: any): any[] => {
+  if (!raw) return [];
+  if (typeof raw === 'object') {
+    if (raw && 'success' in raw && 'data' in raw) {
+      return parseNdjson(raw.data);
+    }
+    return Array.isArray(raw) ? raw : [raw];
+  }
+  const trimmed = String(raw).trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && typeof parsed === 'object') {
+      if ('success' in parsed && 'data' in parsed) {
+        return parseNdjson(parsed.data);
+      }
+      return Array.isArray(parsed) ? parsed : [parsed];
+    }
+  } catch {
+    return trimmed
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          const parsedLine = JSON.parse(line);
+          if (parsedLine && typeof parsedLine === 'object' && 'success' in parsedLine && 'data' in parsedLine) {
+            return parsedLine.data;
+          }
+          return parsedLine;
+        } catch {
+          return line;
+        }
+      });
+  }
+  return [trimmed];
+};
+
+const parseSingleProduct = (resData: any): any => {
+  const parsed = parseNdjson(resData);
+  return parsed.length > 0 ? parsed[0] : null;
+};
+
 export default function ProductEditScreen({ productId }: ProductEditScreenProps) {
   const router = useRouter();
   const [loadingProduct, setLoadingProduct] = useState(true);
@@ -107,7 +150,8 @@ export default function ProductEditScreen({ productId }: ProductEditScreenProps)
       setLoadingProduct(true);
       try {
         const response = await axiosInstance.get(`/prod/products/${productId}`);
-        const data = response.data;
+        const data = parseSingleProduct(response.data);
+        if (!data) throw new Error('Product details empty or malformed');
         setOriginalProduct(data);
         
         setTitle(data.baseProductName || '');
@@ -135,10 +179,11 @@ export default function ProductEditScreen({ productId }: ProductEditScreenProps)
             data.comboItems.map(async (item: any) => {
               try {
                 const compRes = await axiosInstance.get(`/prod/products/${item.componentProductId}`);
+                const parsedComp = parseSingleProduct(compRes.data);
                 return {
                   componentProductId: item.componentProductId,
                   quantity: item.quantity,
-                  name: compRes.data.baseProductName || `Product #${item.componentProductId}`
+                  name: (parsedComp && parsedComp.baseProductName) || `Product #${item.componentProductId}`
                 };
               } catch (err) {
                 console.error(`Failed to fetch component product ${item.componentProductId}:`, err);
@@ -506,7 +551,7 @@ export default function ProductEditScreen({ productId }: ProductEditScreenProps)
             {/* Section 3: Product Data */}
             <section ref={(el) => { sectionRefs.current['data'] = el; }} className="scroll-mt-20">
               <SectionHeader index="03" title="Product Data" />
-              <ProductDataTabs data={productData} onChange={setProductData} hideLinkedProducts={true} />
+              <ProductDataTabs data={productData} onChange={setProductData} hideLinkedProducts={true} productId={productId} />
             </section>
 
             {/* Section 4: Short Description */}

@@ -253,6 +253,49 @@ const MOCK_ALTERNATES = [
   }
 ];
 
+const parseNdjson = (raw: any): any[] => {
+  if (!raw) return [];
+  if (typeof raw === 'object') {
+    if (raw && 'success' in raw && 'data' in raw) {
+      return parseNdjson(raw.data);
+    }
+    return Array.isArray(raw) ? raw : [raw];
+  }
+  const trimmed = String(raw).trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && typeof parsed === 'object') {
+      if ('success' in parsed && 'data' in parsed) {
+        return parseNdjson(parsed.data);
+      }
+      return Array.isArray(parsed) ? parsed : [parsed];
+    }
+  } catch {
+    return trimmed
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          const parsedLine = JSON.parse(line);
+          if (parsedLine && typeof parsedLine === 'object' && 'success' in parsedLine && 'data' in parsedLine) {
+            return parsedLine.data;
+          }
+          return parsedLine;
+        } catch {
+          return line;
+        }
+      });
+  }
+  return [trimmed];
+};
+
+const parseSingleProduct = (resData: any): any => {
+  const parsed = parseNdjson(resData);
+  return parsed.length > 0 ? parsed[0] : null;
+};
+
 export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
   const router = useRouter();
   const [product, setProduct] = useState<ProductDetails | null>(null);
@@ -279,9 +322,10 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
       setLoading(true);
       setError('');
       try {
-        const response = await axiosInstance.get<ProductDetails>(`/prod/products/${sku}`);
-        if (response.data && response.data.defaultSku) {
-          setProduct(response.data);
+        const response = await axiosInstance.get<any>(`/prod/products/${sku}`);
+        const productData = parseSingleProduct(response.data);
+        if (productData && productData.defaultSku) {
+          setProduct(productData);
           setIsFallback(false);
         } else {
           // If response succeeded but has no valid product data
@@ -315,14 +359,16 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
       }
       setComboLoading(true);
       try {
-        const res = await axiosInstance.get<ComboComponent[]>(`/prod/combos/product/${product.id}`);
-        if (res.data && Array.isArray(res.data)) {
+        const res = await axiosInstance.get<any>(`/prod/combos/product/${product.id}`);
+        const comboData = parseNdjson(res.data);
+        if (comboData && Array.isArray(comboData)) {
           // Fetch details for each componentProductId
           const detailedComponents = await Promise.all(
-            res.data.map(async (item) => {
+            comboData.map(async (item) => {
               try {
-                const pRes = await axiosInstance.get<ProductDetails>(`/prod/products/${item.componentProductId}`);
-                return { product: pRes.data, quantity: item.quantity };
+                const pRes = await axiosInstance.get<any>(`/prod/products/${item.componentProductId}`);
+                const parsedComp = parseSingleProduct(pRes.data);
+                return { product: parsedComp || item, quantity: item.quantity };
               } catch (e) {
                 console.error(`Error fetching combo component ${item.componentProductId}`, e);
                 // Create a minimal fallback object
@@ -363,14 +409,16 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
     async function loadAlternates() {
       setAlternatesLoading(true);
       try {
-        const res = await axiosInstance.get<AlternateRelation[]>(`/prod/alternate/product/${product.id}`);
-        if (res.data && Array.isArray(res.data)) {
+        const res = await axiosInstance.get<any>(`/prod/alternate/product/${product.id}`);
+        const alternateData = parseNdjson(res.data);
+        if (alternateData && Array.isArray(alternateData)) {
           // Fetch details for each alternateProductId
           const detailedAlternates = await Promise.all(
-            res.data.map(async (item) => {
+            alternateData.map(async (item) => {
               try {
-                const pRes = await axiosInstance.get<ProductDetails>(`/prod/products/${item.alternateProductId}`);
-                return pRes.data;
+                const pRes = await axiosInstance.get<any>(`/prod/products/${item.alternateProductId}`);
+                const parsedAlt = parseSingleProduct(pRes.data);
+                return parsedAlt || item;
               } catch (e) {
                 console.error(`Error fetching alternate product ${item.alternateProductId}`, e);
                 // Create a fallback

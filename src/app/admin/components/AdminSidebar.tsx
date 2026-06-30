@@ -37,13 +37,24 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
   const dispatch = useAppDispatch();
   const router = useRouter();
   const [expandedModule, setExpandedModule] = useState<string | null>('DASH');
+  const [expandedScreen, setExpandedScreen] = useState<string | null>(null);
 
   useEffect(() => {
     const activeModule = mockMenuData.find((module) =>
-      module.screens.some((s) => pathname === s.href)
+      module.screens.some((s) => {
+        if (pathname === s.href) return true;
+        if (s.subScreens?.some((sub) => pathname === sub.href)) return true;
+        return false;
+      })
     );
     if (activeModule) {
       setExpandedModule(activeModule.code);
+      const activeScreen = activeModule.screens.find((s) =>
+        pathname === s.href || s.subScreens?.some((sub) => pathname === sub.href)
+      );
+      if (activeScreen && activeScreen.subScreens) {
+        setExpandedScreen(activeScreen.code);
+      }
     }
   }, [pathname]);
 
@@ -78,7 +89,11 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
         {mockMenuData.map((module) => {
           const IconComp = iconMap[module.icon || 'LayoutDashboard'] || LayoutDashboard;
           const isExpanded = expandedModule === module.code;
-          const hasActiveChild = module.screens.some((s) => pathname === s.href);
+          const hasActiveChild = module.screens.some((s) => {
+            if (pathname === s.href) return true;
+            if (s.subScreens?.some((sub) => pathname === sub.href)) return true;
+            return false;
+          });
 
           return (
             <div key={module.code}>
@@ -124,11 +139,69 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                     className="overflow-hidden ml-3 pl-3 border-l border-slate-100 dark:border-slate-700/60 mt-0.5 mb-1 space-y-0.5"
                   >
                     {module.screens.map((screen) => {
+                      if (screen.subScreens && screen.subScreens.length > 0) {
+                        const isScreenExpanded = expandedScreen === screen.code;
+                        const hasActiveSubChild = screen.subScreens.some((sub) => pathname === sub.href);
+
+                        return (
+                          <div key={screen.code} className="space-y-0.5" style={{ width: '100%' }}>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedScreen((prev) => (prev === screen.code ? null : screen.code))}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-600 transition-all duration-150 ${
+                                hasActiveSubChild
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold'
+                                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-700 dark:hover:text-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${hasActiveSubChild ? 'bg-blue-600 dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                                <span>{screen.title}</span>
+                              </div>
+                              <ChevronDown
+                                size={12}
+                                className={`flex-shrink-0 transition-transform duration-200 ${isScreenExpanded ? 'rotate-180' : ''}`}
+                              />
+                            </button>
+
+                            <AnimatePresence>
+                              {isScreenExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.15, ease: 'easeInOut' }}
+                                  className="overflow-hidden ml-3 pl-3 border-l border-slate-100 dark:border-slate-800 mt-0.5 space-y-0.5"
+                                >
+                                  {screen.subScreens.map((subScreen) => {
+                                    const isSubActive = pathname === subScreen.href;
+                                    return (
+                                      <Link
+                                        key={subScreen.code}
+                                        href={subScreen.href!}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150 ${
+                                          isSubActive
+                                            ? 'bg-blue-600 text-white shadow-sm font-semibold'
+                                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-700 dark:hover:text-white'
+                                        }`}
+                                      >
+                                        <span className={`w-1 h-1 rounded-full flex-shrink-0 ${isSubActive ? 'bg-white' : 'bg-slate-350 dark:bg-slate-650'}`} />
+                                        {subScreen.title}
+                                      </Link>
+                                    );
+                                  })}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      }
+
                       const isActive = pathname === screen.href;
                       return (
                         <Link
                           key={screen.code}
-                          href={screen.href}
+                          href={screen.href!}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-600 transition-all duration-150 ${
                             isActive
                               ? 'bg-blue-600 text-white shadow-sm'
