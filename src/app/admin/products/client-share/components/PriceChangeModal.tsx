@@ -51,6 +51,75 @@ export default function PriceChangeModal({
     }
   }, [editItem, open]);
 
+  const [displayText, setDisplayText] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Sync display text when clientShareId or open changes
+  useEffect(() => {
+    if (clientShareId) {
+      const s = sharesList.find(x => x.clientShareId === Number(clientShareId));
+      if (s) {
+        const pName = productCache[s.productId] || `Product ID ${s.productId}`;
+        const sName = s.clientSkuCode || `SKU ID ${s.skuId}`;
+        setDisplayText(`${pName} (${sName})`);
+      } else {
+        setDisplayText('');
+      }
+    } else {
+      setDisplayText('');
+    }
+  }, [clientShareId, open, sharesList, productCache]);
+
+  // Click outside handler
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        // Reset display text to the selected share's label
+        if (clientShareId) {
+          const s = sharesList.find(x => x.clientShareId === Number(clientShareId));
+          if (s) {
+            const pName = productCache[s.productId] || `Product ID ${s.productId}`;
+            const sName = s.clientSkuCode || `SKU ID ${s.skuId}`;
+            setDisplayText(`${pName} (${sName})`);
+          } else {
+            setDisplayText('');
+          }
+        } else {
+          setDisplayText('');
+        }
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [clientShareId, sharesList, productCache]);
+
+  const filteredShares = React.useMemo(() => {
+    const selectedLabel = clientShareId ? (() => {
+      const s = sharesList.find(x => x.clientShareId === Number(clientShareId));
+      if (s) {
+        const pName = productCache[s.productId] || `Product ID ${s.productId}`;
+        const sName = s.clientSkuCode || `SKU ID ${s.skuId}`;
+        return `${pName} (${sName})`;
+      }
+      return '';
+    })() : '';
+
+    if (!displayText || displayText === selectedLabel) {
+      return sharesList;
+    }
+
+    const query = displayText.toLowerCase();
+    return sharesList.filter(s => {
+      const pName = (productCache[s.productId] || `Product ID ${s.productId}`).toLowerCase();
+      const sName = (s.clientSkuCode || `SKU ID ${s.skuId}`).toLowerCase();
+      return pName.includes(query) || sName.includes(query);
+    });
+  }, [sharesList, displayText, clientShareId, productCache]);
+
   if (!open) return null;
 
   const handleShareChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -133,27 +202,70 @@ export default function PriceChangeModal({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Select Product Share (Create Mode Only) */}
           {!editItem ? (
-            <div>
+            <div ref={dropdownRef} className="relative">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Select Product / SKU <span className="text-red-500">*</span>
               </label>
-              <select
-                required
-                value={clientShareId}
-                onChange={handleShareChange}
-                className="w-full px-3.5 py-2 text-xs bg-slate-50 focus:bg-white dark:bg-slate-950 border border-slate-200 hover:border-slate-350 focus:border-blue-500 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-850 dark:text-slate-100 placeholder:text-slate-400 transition-all font-medium"
-              >
-                <option value="">-- Choose Product Share --</option>
-                {sharesList.map((s) => {
-                  const pName = productCache[s.productId] || `Product ID ${s.productId}`;
-                  const sName = s.clientSkuCode || `SKU ID ${s.skuId}`;
-                  return (
-                    <option key={`share-option-${s.clientShareId}`} value={s.clientShareId}>
-                      {pName} ({sName})
-                    </option>
-                  );
-                })}
-              </select>
+              <div className="relative">
+                <input
+                  required
+                  type="text"
+                  placeholder="Type to search product or SKU..."
+                  value={displayText}
+                  onFocus={() => setIsOpen(true)}
+                  onChange={(e) => {
+                    setDisplayText(e.target.value);
+                    setIsOpen(true);
+                  }}
+                  className="w-full px-3.5 py-2 pr-10 text-xs bg-slate-50 focus:bg-white dark:bg-slate-950 border border-slate-200 hover:border-slate-350 focus:border-blue-500 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-850 dark:text-slate-100 placeholder:text-slate-400 transition-all font-medium"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+
+              {isOpen && (
+                <div className="absolute z-50 w-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60 overflow-y-auto scrollbar-thin py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                  {filteredShares.length === 0 ? (
+                    <div className="px-4 py-2.5 text-xs text-slate-400 text-center font-medium">
+                      No matching product shares found
+                    </div>
+                  ) : (
+                    filteredShares.map((s) => {
+                      const pName = productCache[s.productId] || `Product ID ${s.productId}`;
+                      const sName = s.clientSkuCode || `SKU ID ${s.skuId}`;
+                      const isSelected = clientShareId === s.clientShareId;
+                      return (
+                        <button
+                          key={`share-option-${s.clientShareId}`}
+                          type="button"
+                          onClick={() => {
+                            setClientShareId(s.clientShareId);
+                            setProductSku(s.clientSkuCode || '');
+                            setSellingPrice(s.sellingPrice || '');
+                            setTransferPrice(s.transferPrice || '');
+                            setIsOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-xs transition-colors font-medium flex items-center justify-between ${
+                            isSelected
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-bold'
+                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                          }`}
+                        >
+                          <span className="truncate">{pName} ({sName})</span>
+                          {isSelected && (
+                            <svg className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div>

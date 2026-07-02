@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, ShoppingCart, Package, User, ChevronDown,
-  LogOut, BarChart3, Briefcase, KeyRound
+  LogOut, BarChart3, Briefcase, KeyRound, Users, Truck, X
 } from 'lucide-react';
 import { mockMenuData } from '@/constants/menuData';
 import { useAppDispatch } from '@/redux/hooks';
@@ -23,6 +23,8 @@ const iconMap: Record<string, React.ElementType> = {
   BarChart3,
   Briefcase,
   KeyRound,
+  Users,
+  Truck,
 };
 
 interface SidebarProps {
@@ -38,6 +40,8 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
   const router = useRouter();
   const [expandedModule, setExpandedModule] = useState<string | null>('DASH');
   const [expandedScreen, setExpandedScreen] = useState<string | null>(null);
+
+  const isCollapsed = collapsed && !mobileOpen;
 
   useEffect(() => {
     const activeModule = mockMenuData.find((module) =>
@@ -74,14 +78,23 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700/60">
       {/* Logo */}
-      <div className={`flex items-center px-4 py-4 border-b border-slate-100 dark:border-slate-700/60 ${collapsed ? 'justify-center' : ''}`}>
+      <div className={`flex items-center justify-between px-4 py-4 border-b border-slate-100 dark:border-slate-700/60 ${isCollapsed ? 'justify-center' : ''}`}>
         <Image
-          src={collapsed ? '/assets/images/small_logo.png' : '/assets/images/app_logo.png'}
+          src={isCollapsed ? '/assets/images/small_logo.png' : '/assets/images/app_logo.png'}
           alt="LAKEEE Admin Portal"
-          width={collapsed ? 32 : 160}
-          height={collapsed ? 32 : 40}
-          className={collapsed ? 'h-8 w-8 object-contain' : 'h-10 max-w-full object-contain'}
+          width={isCollapsed ? 32 : 160}
+          height={isCollapsed ? 32 : 40}
+          className={isCollapsed ? 'h-8 w-8 object-contain' : 'h-10 max-w-full object-contain'}
         />
+        {mobileOpen && (
+          <button
+            onClick={onMobileClose}
+            className="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors md:hidden"
+            aria-label="Close sidebar"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -99,16 +112,16 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
             <div key={module.code}>
               {/* Module header */}
               <button
-                onClick={() => collapsed ? onRequestOpen() : toggleModule(module.code)}
+                onClick={() => isCollapsed ? onRequestOpen() : toggleModule(module.code)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-600 transition-all duration-150 ${
                   hasActiveChild
                     ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' :'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-white'
-                } ${collapsed ? 'justify-center' : ''}`}
-                title={collapsed ? module.module : undefined}
+                } ${isCollapsed ? 'justify-center' : ''}`}
+                title={isCollapsed ? module.module : undefined}
               >
                 <IconComp size={17} className="flex-shrink-0" />
                 <AnimatePresence>
-                  {!collapsed && (
+                  {!isCollapsed && (
                     <motion.span
                       className="flex-1 text-left truncate"
                       initial={{ opacity: 0 }}
@@ -120,7 +133,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                     </motion.span>
                   )}
                 </AnimatePresence>
-                {!collapsed && (
+                {!isCollapsed && (
                   <ChevronDown
                     size={14}
                     className={`flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
@@ -130,7 +143,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
 
               {/* Sub-menu */}
               <AnimatePresence>
-                {!collapsed && isExpanded && (
+                {!isCollapsed && isExpanded && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
@@ -222,8 +235,8 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
       </div>
 
       {/* Logout */}
-      <div className={`border-t border-slate-100 dark:border-slate-700/60 p-3 ${collapsed ? 'flex justify-center' : ''}`}>
-        {collapsed ? (
+      <div className={`border-t border-slate-100 dark:border-slate-700/60 p-3 ${isCollapsed ? 'flex justify-center' : ''}`}>
+        {isCollapsed ? (
           <button
             onClick={handleLogout}
             className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 flex items-center justify-center transition-colors"

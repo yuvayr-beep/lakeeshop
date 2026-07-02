@@ -26,18 +26,18 @@ export const mockMenuData: MenuModule[] = [
     icon: 'LayoutDashboard',
     screens: [
       { code: 'DASH_OPS', title: 'Operations Dashboard', href: '/admin/dashboard/operations', actions: ['READ'] },
-      { code: 'DASH_ACC', title: 'Accounts Dashboard', href: '/admin/dashboard/accounts', actions: ['READ'] },
-      { code: 'DASH_OWN', title: 'Owner Dashboard', href: '/admin/dashboard/owner', actions: ['READ'] },
+      // { code: 'DASH_ACC', title: 'Accounts Dashboard', href: '/admin/dashboard/accounts', actions: ['READ'] },
+      // { code: 'DASH_OWN', title: 'Owner Dashboard', href: '/admin/dashboard/owner', actions: ['READ'] },
     ],
   },
-  {
-    code: 'ORDER',
-    module: 'Order Process',
-    icon: 'ShoppingCart',
-    screens: [
-      { code: 'BATCH', title: 'Batch Order', href: '/admin/orders/batch', actions: ['READ', 'WRITE'] },
-    ],
-  },
+  // {
+  //   code: 'ORDER',
+  //   module: 'Order Process',
+  //   icon: 'ShoppingCart',
+  //   screens: [
+  //     { code: 'BATCH', title: 'Batch Order', href: '/admin/orders/batch', actions: ['READ', 'WRITE'] },
+  //   ],
+  // },
   {
     code: 'PROD',
     module: 'Products',
@@ -69,4 +69,33 @@ export const mockMenuData: MenuModule[] = [
       }
     ],
   },
+  {
+    code: 'CLIENTS',
+    module: 'Clients',
+    icon: 'Users',
+    screens: [
+      { code: 'CLI_PROFILE', title: 'Profile', href: '/admin/clients/profile', actions: ['READ', 'WRITE'] },
+      { code: 'CLI_BU', title: 'Business Unit', href: '/admin/clients/business-unit', actions: ['READ', 'WRITE'] },
+      { code: 'CLI_ADDR', title: 'Address', href: '/admin/clients/address', actions: ['READ', 'WRITE'] },
+      { code: 'CLI_CONT', title: 'Contacts', href: '/admin/clients/contacts', actions: ['READ', 'WRITE'] },
+      { code: 'CLI_BANK', title: 'Banks', href: '/admin/clients/banks', actions: ['READ', 'WRITE'] },
+      { code: 'CLI_DOCS', title: 'Documents', href: '/admin/clients/documents', actions: ['READ', 'WRITE'] },
+      { code: 'CLI_TAX', title: 'Tax', href: '/admin/clients/tax', actions: ['READ', 'WRITE'] },
+    ]
+  },
+  {
+    code: 'SUPPLIERS',
+    module: 'Suppliers',
+    icon: 'Truck',
+    screens: [
+      { code: 'SUP_PROFILE', title: 'Profile', href: '/admin/suppliers/profile', actions: ['READ', 'WRITE'] },
+      { code: 'SUP_ADDR', title: 'Address', href: '/admin/suppliers/address', actions: ['READ', 'WRITE'] },
+      { code: 'SUP_CONT', title: 'Contacts', href: '/admin/suppliers/contacts', actions: ['READ', 'WRITE'] },
+      { code: 'SUP_BANK', title: 'Banks', href: '/admin/suppliers/banks', actions: ['READ', 'WRITE'] },
+      { code: 'SUP_DOCS', title: 'Documents', href: '/admin/suppliers/documents', actions: ['READ', 'WRITE'] },
+      { code: 'SUP_EMAIL', title: 'Emails', href: '/admin/suppliers/emails', actions: ['READ', 'WRITE'] },
+      { code: 'SUP_LOGS', title: 'Status Logs', href: '/admin/suppliers/status-logs', actions: ['READ', 'WRITE'] },
+      { code: 'SUP_TAX', title: 'Tax', href: '/admin/suppliers/tax', actions: ['READ', 'WRITE'] },
+    ]
+  }
 ];

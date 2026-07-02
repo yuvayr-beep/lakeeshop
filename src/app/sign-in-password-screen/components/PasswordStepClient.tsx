@@ -51,7 +51,7 @@ export default function PasswordStepClient() {
       localStorage.setItem('userPhone', phone);
       dispatch(setCredentials({ token: response.accessToken, phoneNumber: phone }));
       toast.success('Successfully Logged In', {
-        description: 'Welcome back to LAKEEE Partner Portal',
+        description: 'Welcome back to Lakeeshop Erp',
       });
       sessionStorage.removeItem('auth_phone');
       router.push('/admin/dashboard/operations');

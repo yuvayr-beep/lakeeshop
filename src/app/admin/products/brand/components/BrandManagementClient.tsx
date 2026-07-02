@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Plus, Edit3, Trash2, Download, Upload, RefreshCw, Search, Loader2, 
-  ChevronLeft, ChevronRight, Image as ImageIcon, FolderOpen, AlertCircle 
+  ChevronLeft, ChevronRight, Image as ImageIcon, FolderOpen, AlertCircle,
+  FileText, Check
 } from 'lucide-react';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
@@ -37,6 +38,9 @@ export default function BrandManagementClient() {
   const [showCc, setShowCc] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showUploadArea, setShowUploadArea] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Pagination (client‑side)
   const [currentPage, setCurrentPage] = useState(1);
@@ -214,14 +218,37 @@ export default function BrandManagementClient() {
     }
   };
 
-  // Upload handling
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      if (extension === 'xlsx' || extension === 'xls') {
+        setSelectedFile(file);
+      } else {
+        toast.error('Invalid file type. Please upload an Excel file (.xlsx or .xls)');
+      }
+    }
+  };
+
+  const handleUploadExcel = async () => {
+    if (!selectedFile) return;
     setUploading(true);
-    const toastId = toast.loading('Uploading…');
+    const toastId = toast.loading('Uploading brand excel file...');
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', selectedFile);
     try {
       const { data } = await axiosInstance.post<string>('/prod/brands/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -233,13 +260,14 @@ export default function BrandManagementClient() {
         if (parsed.success) toast.success(parsed.message, { id: toastId });
         else toast.error(parsed.message, { id: toastId });
       });
+      setSelectedFile(null);
+      setShowUploadArea(false);
       fetchBrands();
     } catch (err: any) {
       console.error(err);
       toast.error('Upload failed', { id: toastId });
     } finally {
       setUploading(false);
-      (e.target as HTMLInputElement).value = '';
     }
   };
 
@@ -275,15 +303,17 @@ export default function BrandManagementClient() {
             <Download size={14} /> Export Excel
           </button>
           <button
-            onClick={handleDownloadTemplate}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-250 dark:border-slate-700 shadow-sm transition-colors"
+            onClick={() => {
+              setShowUploadArea(!showUploadArea);
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl shadow-sm transition-all ${
+              showUploadArea
+                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/50'
+            }`}
           >
-            <Download size={14} /> Template
-          </button>
-          <label className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-250 dark:border-slate-700 shadow-sm cursor-pointer transition-colors">
             <Upload size={14} /> Upload
-            <input type="file" accept=".xlsx" className="hidden" onChange={handleUpload} disabled={uploading} />
-          </label>
+          </button>
           <button
             onClick={handleCreateClick}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow"
@@ -317,6 +347,96 @@ export default function BrandManagementClient() {
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
+
+      {/* Upload Files Expandable Area */}
+      {showUploadArea && (
+        <div className="bg-slate-50 dark:bg-slate-950/10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6 transition-all animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                Bulk Brand Upload via Excel Upload
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Download the sample Excel template, fill in the brand details, and upload it below.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowUploadArea(false);
+                setSelectedFile(null);
+              }}
+              className="px-2.5 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-850 rounded-lg transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center justify-center p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
+            <label
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              className={`flex flex-col items-center justify-center w-full max-w-lg h-36 border-2 border-dashed rounded-xl cursor-pointer transition-all p-4 group ${
+                dragActive
+                  ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10 shadow-inner'
+                  : 'border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 bg-slate-50/50 hover:bg-slate-100/55 dark:bg-slate-950/20 dark:hover:bg-slate-950/40'
+              }`}
+            >
+              <div className="flex flex-col items-center justify-center space-y-2 text-center pointer-events-none">
+                <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl group-hover:scale-110 transition-transform shadow-sm">
+                  <FileText size={20} />
+                </div>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {selectedFile ? (
+                    <span className="text-blue-600 font-bold">{selectedFile.name}</span>
+                  ) : (
+                    <span>
+                      Drag your file here or <span className="text-blue-600 hover:underline">Browse</span>
+                    </span>
+                  )}
+                </p>
+                <p className="text-[10px] text-slate-400">File format: .xls & .xlsx</p>
+              </div>
+              <input
+                type="file"
+                accept=".xls,.xlsx"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setSelectedFile(e.target.files[0]);
+                  }
+                }}
+              />
+            </label>
+
+            <div className="flex items-center gap-3 mt-5">
+              <button
+                onClick={handleDownloadTemplate}
+                className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-650 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-750 transition-colors shadow-sm"
+              >
+                <Upload size={12} className="rotate-180" />
+                Download Sample Excel
+              </button>
+
+              {selectedFile && (
+                <button
+                  onClick={handleUploadExcel}
+                  disabled={uploading}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all"
+                >
+                  {uploading ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Check size={12} />
+                  )}
+                  {uploading ? 'Uploading...' : 'Submit Upload'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content (Table) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">

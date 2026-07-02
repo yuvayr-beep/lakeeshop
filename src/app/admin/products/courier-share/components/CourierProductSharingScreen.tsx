@@ -86,6 +86,7 @@ export default function CourierProductSharingScreen({
   const [uploadMode, setUploadMode] = useState<'block' | 'unblock' | 'approve' | 'add' | 'priceChange'>('block');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingExcel, setUploadingExcel] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   // Delete Confirmation Modal states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -532,6 +533,31 @@ export default function CourierProductSharingScreen({
     }
   };
 
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      if (extension === 'xlsx' || extension === 'xls') {
+        setSelectedFile(file);
+      } else {
+        toast.error('Invalid file type. Please upload an Excel file (.xlsx or .xls)');
+      }
+    }
+  };
+
   // Upload Excel file
   const handleUploadExcel = async () => {
     if (!selectedFile) return;
@@ -904,8 +930,18 @@ export default function CourierProductSharingScreen({
               </div>
 
               <div className="flex flex-col items-center justify-center p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
-                <label className="flex flex-col items-center justify-center w-full max-w-lg h-36 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 bg-slate-50/50 hover:bg-slate-100/55 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 rounded-xl cursor-pointer transition-all p-4 group">
-                  <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                <label
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  className={`flex flex-col items-center justify-center w-full max-w-lg h-36 border-2 border-dashed rounded-xl cursor-pointer transition-all p-4 group ${
+                    dragActive
+                      ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10 shadow-inner'
+                      : 'border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 bg-slate-50/50 hover:bg-slate-100/55 dark:bg-slate-950/20 dark:hover:bg-slate-950/40'
+                  }`}
+                >
+                  <div className="flex flex-col items-center justify-center space-y-2 text-center pointer-events-none">
                     <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl group-hover:scale-110 transition-transform shadow-sm">
                       <FileText size={20} />
                     </div>
@@ -1237,8 +1273,18 @@ export default function CourierProductSharingScreen({
               </div>
 
               <div className="flex flex-col items-center justify-center p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
-                <label className="flex flex-col items-center justify-center w-full max-w-lg h-36 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 bg-slate-50/50 hover:bg-slate-100/55 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 rounded-xl cursor-pointer transition-all p-4 group">
-                  <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                <label
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  className={`flex flex-col items-center justify-center w-full max-w-lg h-36 border-2 border-dashed rounded-xl cursor-pointer transition-all p-4 group ${
+                    dragActive
+                      ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10 shadow-inner'
+                      : 'border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 bg-slate-50/50 hover:bg-slate-100/55 dark:bg-slate-950/20 dark:hover:bg-slate-950/40'
+                  }`}
+                >
+                  <div className="flex flex-col items-center justify-center space-y-2 text-center pointer-events-none">
                     <div className="p-2.5 bg-blue-50 dark:bg-blue-955/50 text-blue-600 dark:text-blue-400 rounded-xl group-hover:scale-110 transition-transform shadow-sm">
                       <FileText size={20} />
                     </div>

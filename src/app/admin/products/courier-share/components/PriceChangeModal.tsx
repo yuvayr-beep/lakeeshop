@@ -59,6 +59,75 @@ export default function PriceChangeModal({
     }
   };
 
+  const [displayText, setDisplayText] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Sync display text when clientShareId or open changes
+  useEffect(() => {
+    if (clientShareId) {
+      const s = sharesList.find(x => String(x.clientShareId) === clientShareId);
+      if (s) {
+        const pName = productCache[s.productId] || `Product #${s.productId}`;
+        const sName = skuCache[s.skuId] || s.clientSkuCode || `SKU #${s.skuId}`;
+        setDisplayText(`${pName} (${sName})`);
+      } else {
+        setDisplayText('');
+      }
+    } else {
+      setDisplayText('');
+    }
+  }, [clientShareId, open, sharesList, productCache, skuCache]);
+
+  // Click outside handler
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        // Reset display text to the selected share's label
+        if (clientShareId) {
+          const s = sharesList.find(x => String(x.clientShareId) === clientShareId);
+          if (s) {
+            const pName = productCache[s.productId] || `Product #${s.productId}`;
+            const sName = skuCache[s.skuId] || s.clientSkuCode || `SKU #${s.skuId}`;
+            setDisplayText(`${pName} (${sName})`);
+          } else {
+            setDisplayText('');
+          }
+        } else {
+          setDisplayText('');
+        }
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [clientShareId, sharesList, productCache, skuCache]);
+
+  const filteredShares = React.useMemo(() => {
+    const selectedLabel = clientShareId ? (() => {
+      const s = sharesList.find(x => String(x.clientShareId) === clientShareId);
+      if (s) {
+        const pName = productCache[s.productId] || `Product #${s.productId}`;
+        const sName = skuCache[s.skuId] || s.clientSkuCode || `SKU #${s.skuId}`;
+        return `${pName} (${sName})`;
+      }
+      return '';
+    })() : '';
+
+    if (!displayText || displayText === selectedLabel) {
+      return sharesList;
+    }
+
+    const query = displayText.toLowerCase();
+    return sharesList.filter(s => {
+      const pName = (productCache[s.productId] || `Product #${s.productId}`).toLowerCase();
+      const sName = (skuCache[s.skuId] || s.clientSkuCode || `SKU #${s.skuId}`).toLowerCase();
+      return pName.includes(query) || sName.includes(query);
+    });
+  }, [sharesList, displayText, clientShareId, productCache, skuCache]);
+
   if (!open) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,27 +191,68 @@ export default function PriceChangeModal({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Select Product Share / Mapping (only editable when creating) */}
-          <div>
+          <div ref={dropdownRef} className="relative">
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               Select Product Share <span className="text-red-500">*</span>
             </label>
-            <select
-              disabled={!!editItem}
-              value={clientShareId}
-              onChange={(e) => handleMappingChange(e.target.value)}
-              className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="">-- Choose Mapped Product --</option>
-              {sharesList.map((item) => {
-                const prodName = productCache[item.productId] || `Product #${item.productId}`;
-                const sCode = skuCache[item.skuId] || item.clientSkuCode || `SKU #${item.skuId}`;
-                return (
-                  <option key={`share-opt-${item.clientShareId}`} value={item.clientShareId}>
-                    {prodName} ({sCode})
-                  </option>
-                );
-              })}
-            </select>
+            <div className="relative">
+              <input
+                required
+                disabled={!!editItem}
+                type="text"
+                placeholder="Type to search product share..."
+                value={displayText}
+                onFocus={() => !editItem && setIsOpen(true)}
+                onChange={(e) => {
+                  setDisplayText(e.target.value);
+                  setIsOpen(true);
+                }}
+                className="w-full px-3.5 py-2 pr-10 text-xs bg-slate-50 focus:bg-white dark:bg-slate-950 border border-slate-200 hover:border-slate-350 focus:border-blue-500 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-850 dark:text-slate-100 placeholder:text-slate-400 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+            {isOpen && !editItem && (
+              <div className="absolute z-50 w-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60 overflow-y-auto scrollbar-thin py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                {filteredShares.length === 0 ? (
+                  <div className="px-4 py-2.5 text-xs text-slate-400 text-center font-medium">
+                    No matching product shares found
+                  </div>
+                ) : (
+                  filteredShares.map((item) => {
+                    const prodName = productCache[item.productId] || `Product #${item.productId}`;
+                    const sCode = skuCache[item.skuId] || item.clientSkuCode || `SKU #${item.skuId}`;
+                    const isSelected = clientShareId === String(item.clientShareId);
+                    return (
+                      <button
+                        key={`share-opt-${item.clientShareId}`}
+                        type="button"
+                        onClick={() => {
+                          handleMappingChange(String(item.clientShareId));
+                          setIsOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-xs transition-colors font-medium flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 font-bold'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        }`}
+                      >
+                        <span className="truncate">{prodName} ({sCode})</span>
+                        {isSelected && (
+                          <svg className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
 
           {/* Readonly details when a share is selected */}
