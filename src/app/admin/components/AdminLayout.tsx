@@ -1,12 +1,14 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
 import AdminFooter from './AdminFooter';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { setTheme } from '@/redux/slices/themeSlice';
 import { fetchUserProfile } from '@/redux/slices/userSlice';
+import { clearSelectedClient } from '@/redux/slices/clientSlice';
+import { clearSelectedSupplier } from '@/redux/slices/supplierSlice';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,10 +16,49 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
+  const selectedClientId = useAppSelector((state) => state.client.selectedClientId);
+  const selectedSupplierId = useAppSelector((state) => state.supplier.selectedSupplierId);
+
+  useEffect(() => {
+    if (selectedClientId && pathname && !pathname.startsWith('/admin/clients')) {
+      dispatch(clearSelectedClient());
+    }
+    if (selectedSupplierId && pathname && !pathname.startsWith('/admin/suppliers')) {
+      dispatch(clearSelectedSupplier());
+    }
+  }, [pathname, selectedClientId, selectedSupplierId, dispatch]);
   const themeMode = useAppSelector((s) => s.theme.mode);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSidebar = localStorage.getItem('adminSidebarOpen');
+      if (savedSidebar === 'true') {
+        setSidebarOpen(true);
+      }
+      const savedMobileSidebar = localStorage.getItem('adminMobileSidebarOpen');
+      if (savedMobileSidebar === 'true') {
+        setMobileSidebarOpen(true);
+      }
+    }
+  }, []);
+
+  const handleToggleSidebar = (val: boolean) => {
+    setSidebarOpen(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('adminSidebarOpen', String(val));
+    }
+  };
+
+  const handleToggleMobileSidebar = (val: boolean) => {
+    setMobileSidebarOpen(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('adminMobileSidebarOpen', String(val));
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -50,23 +91,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <AdminSidebar
         collapsed={!sidebarOpen}
         mobileOpen={mobileSidebarOpen}
-        onMobileClose={() => setMobileSidebarOpen(false)}
-        onRequestOpen={() => setSidebarOpen(true)}
+        onMobileClose={() => handleToggleMobileSidebar(false)}
+        onRequestOpen={() => handleToggleSidebar(true)}
       />
-
-      {sidebarOpen && (
-        <button
-          type="button"
-          aria-label="Close sidebar"
-          className="fixed inset-0 z-40 hidden cursor-default border-0 bg-transparent p-0 md:block"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
 
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         <AdminTopbar
-          onToggleSidebar={() => setSidebarOpen(true)}
-          onMobileMenu={() => setMobileSidebarOpen(true)}
+          onToggleSidebar={() => handleToggleSidebar(!sidebarOpen)}
+          onMobileMenu={() => handleToggleMobileSidebar(true)}
         />
         <main className="flex-1 overflow-auto scrollbar-thin px-4 md:px-6 xl:px-8 py-6 max-w-screen-2xl mx-auto w-full">
           {children}
@@ -77,7 +109,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {mobileSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-30 md:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
         />
       )}
     </div>

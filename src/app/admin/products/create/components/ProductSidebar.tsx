@@ -4,6 +4,44 @@ import { ImagePlus, X, Plus, Upload, ChevronDown } from 'lucide-react';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 
+const parseNdjson = (raw: any): any[] => {
+  if (!raw) return [];
+  if (typeof raw === 'object') {
+    if (raw && 'success' in raw && 'data' in raw) {
+      return parseNdjson(raw.data);
+    }
+    return Array.isArray(raw) ? raw : [raw];
+  }
+  const trimmed = String(raw).trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && typeof parsed === 'object') {
+      if ('success' in parsed && 'data' in parsed) {
+        return parseNdjson(parsed.data);
+      }
+      return Array.isArray(parsed) ? parsed : [parsed];
+    }
+  } catch {
+    return trimmed
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          const parsedLine = JSON.parse(line);
+          if (parsedLine && typeof parsedLine === 'object' && 'success' in parsedLine && 'data' in parsedLine) {
+            return parsedLine.data;
+          }
+          return parsedLine;
+        } catch {
+          return line;
+        }
+      });
+  }
+  return [trimmed];
+};
+
 function Panel({ title, badge, headerActions, children }: { title: string; badge?: string; headerActions?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
@@ -512,23 +550,7 @@ export function CategoriesBox({ categoryId, onCategoryChange }: { categoryId: st
       try {
         setLoading(true);
         const response = await axiosInstance.get('/prod/categories/client/0/export');
-        const rawData = response.data;
-
-        let parsed: any[] = [];
-        if (typeof rawData === 'string') {
-          rawData.split('\n').forEach((line) => {
-            if (line.trim()) {
-              try {
-                parsed.push(JSON.parse(line));
-              } catch (e) {
-                console.error('Failed to parse line:', line, e);
-              }
-            }
-          });
-        } else if (Array.isArray(rawData)) {
-          parsed = rawData;
-        }
-
+        const parsed = parseNdjson(response.data);
         setFlatCategories(parsed);
 
         const map = new Map<number, CategoryNode>();
@@ -710,23 +732,7 @@ export function BrandBox({ brandId, onBrandChange }: { brandId: string; onBrandC
     ccEmail: ''
   });
 
-  const parseNdjson = (rawData: any) => {
-    if (typeof rawData === 'string') {
-      const parsed: any[] = [];
-      rawData.split('\n').forEach((line) => {
-        if (line.trim()) {
-          try {
-            parsed.push(JSON.parse(line));
-          } catch {}
-        }
-      });
-      return parsed;
-    }
-    if (Array.isArray(rawData)) {
-      return rawData;
-    }
-    return [];
-  };
+
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -875,23 +881,7 @@ export function ProductTypeBox({ productTypeId, onProductTypeChange }: { product
     namingTemplate: '{brand} {model_name} {capacity} {color}'
   });
 
-  const parseNdjson = (rawData: any) => {
-    if (typeof rawData === 'string') {
-      const parsed: any[] = [];
-      rawData.split('\n').forEach((line) => {
-        if (line.trim()) {
-          try {
-            parsed.push(JSON.parse(line));
-          } catch {}
-        }
-      });
-      return parsed;
-    }
-    if (Array.isArray(rawData)) {
-      return rawData;
-    }
-    return [];
-  };
+
 
   useEffect(() => {
     const fetchProductTypes = async () => {

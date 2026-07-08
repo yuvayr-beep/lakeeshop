@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, Download, Upload, RefreshCw, Package, AlertCircle, Zap } from 'lucide-react';
+import { Plus, Search, Filter, Download, Upload, RefreshCw, Package, AlertCircle, Zap, ChevronDown } from 'lucide-react';
 import ProductTable from './ProductTable';
 import ProductFilters from './ProductFilters';
 import EmptyState from '@/components/ui/EmptyState';
@@ -9,6 +9,8 @@ import { Product, ProductImage } from '../data/mockProducts';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 import QuickProductModal from './QuickProductModal';
+import ProductImportModal from './ProductImportModal';
+import ProductExportModal from './ProductExportModal';
 
 
 type ApiProductImage = ProductImage & { priority?: number };
@@ -210,6 +212,9 @@ export default function ProductManagementClient() {
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importMode, setImportMode] = useState<'create' | 'edit' | 'status' | 'offline'>('create');
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortCol, setSortCol] = useState<keyof Product>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -978,7 +983,7 @@ export default function ProductManagementClient() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
 
-          {/* Download All Products (API Server Export) */}
+          {/* Download All Products (API Server Export)
           <button
             onClick={handleExportAll}
             disabled={exporting}
@@ -995,7 +1000,23 @@ export default function ProductManagementClient() {
               {exporting ? `Preparing All ${exportProgress}%` : 'Download All Products'}
             </span>
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
+          */}
+          {/* Download Options Modal Trigger */}
+          <button
+            onClick={() => setExportModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 active:scale-95 transition-all duration-150"
+          >
+            <Download size={13} />
+            Download
+          </button>
+          {/* Import Button */}
+          <button
+            onClick={() => {
+              setImportMode('create');
+              setImportModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-amber-500 text-white rounded-lg hover:bg-amber-600 active:scale-95 transition-all duration-150"
+          >
             <Upload size={13} />
             Import
           </button>
@@ -1255,6 +1276,21 @@ export default function ProductManagementClient() {
           )}
         </div>
       )}
+
+      <ProductImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={fetchProducts}
+        initialMode={importMode}
+      />
+
+      <ProductExportModal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        onExportAll={handleExportAll}
+        exportingAll={exporting}
+        exportProgress={exportProgress}
+      />
     </div>
   );
 }

@@ -1,14 +1,14 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   DollarSign, Package, Truck, Link2, Sliders, Settings2,
-  Plus, X, ChevronDown, Trash2,
+  Plus, X, ChevronDown, Trash2, Edit3, Shuffle, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { SearchSelect } from './ProductSidebar';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 
-type Tab = 'general' | 'inventory' | 'shipping' | 'linked' | 'attributes' | 'combo' | 'advanced';
+type Tab = 'general' | 'inventory' | 'shipping' | 'linked' | 'attributes' | 'combo' | 'alternate' | 'advanced';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode; desc: string }[] = [
   { id: 'general', label: 'General', icon: <DollarSign size={15} />, desc: 'Pricing & tax' },
@@ -17,6 +17,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode; desc: string }[] = 
   { id: 'linked', label: 'Linked Products', icon: <Link2 size={15} />, desc: 'Upsells & cross-sells' },
   { id: 'attributes', label: 'Attributes', icon: <Sliders size={15} />, desc: 'Variants & specs' },
   { id: 'combo', label: 'Combo Products', icon: <Package size={15} />, desc: 'Bundle components' },
+  { id: 'alternate', label: 'Alternate', icon: <Shuffle size={15} />, desc: 'Alternate options' },
   { id: 'advanced', label: 'Advanced', icon: <Settings2 size={15} />, desc: 'Notes & order' },
 ];
 
@@ -112,6 +113,7 @@ interface ProductDataTabsProps {
   data: ProductDataState;
   onChange: (data: ProductDataState) => void;
   hideLinkedProducts?: boolean;
+  productId?: string;
 }
 
 export const defaultProductDataState: ProductDataState = {
@@ -161,7 +163,7 @@ export const defaultProductDataState: ProductDataState = {
 
 
 
-export default function ProductDataTabs({ data, onChange, hideLinkedProducts }: ProductDataTabsProps) {
+export default function ProductDataTabs({ data, onChange, hideLinkedProducts, productId }: ProductDataTabsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const [showHsnCreate, setShowHsnCreate] = useState(false);
   const [hsnForm, setHsnForm] = useState({
@@ -184,6 +186,154 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts }: 
   ]);
   const [showHandlingCreate, setShowHandlingCreate] = useState(false);
   const [handlingForm, setHandlingForm] = useState({ handlingCode: '', displayName: '', description: '' });
+
+  // Multiple SKUs management state
+  const [skus, setSkus] = useState<any[]>([]);
+  const [loadingSkus, setLoadingSkus] = useState(false);
+  const [showSkuModal, setShowSkuModal] = useState(false);
+  const [editingSkuId, setEditingSkuId] = useState<number | null>(null);
+  const [skuForm, setSkuForm] = useState({
+    skuCode: '',
+    price: '',
+    attributes: {
+      color: '',
+      size: ''
+    },
+    isDefault: false
+  });
+
+  const parseNdjson = (raw: any): any[] => {
+    if (!raw) return [];
+    if (typeof raw === 'object') {
+      if (raw && 'success' in raw && 'data' in raw) {
+        return parseNdjson(raw.data);
+      }
+      return Array.isArray(raw) ? raw : [raw];
+    }
+    const trimmed = String(raw).trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === 'object') {
+        if ('success' in parsed && 'data' in parsed) {
+          return parseNdjson(parsed.data);
+        }
+        return Array.isArray(parsed) ? parsed : [parsed];
+      }
+    } catch {
+      return trimmed
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          try {
+            const parsedLine = JSON.parse(line);
+            if (parsedLine && typeof parsedLine === 'object' && 'success' in parsedLine && 'data' in parsedLine) {
+              return parsedLine.data;
+            }
+            return parsedLine;
+          } catch {
+            return line;
+          }
+        });
+    }
+    return [trimmed];
+  };
+
+  const fetchSkus = useCallback(async () => {
+    if (!productId) return;
+    setLoadingSkus(true);
+    try {
+      const response = await axiosInstance.get(`/prod/sku/product/${productId}`);
+      const parsed = parseNdjson(response.data);
+      setSkus(parsed);
+    } catch (err) {
+      console.warn('Failed to fetch SKUs by product endpoint, trying query param or list:', err);
+      try {
+        const response = await axiosInstance.get(`/prod/sku`);
+        const parsed = parseNdjson(response.data);
+        const filtered = parsed.filter((s: any) => String(s.productId) === String(productId));
+        setSkus(filtered);
+      } catch (err2) {
+        console.error('Failed to load SKUs:', err2);
+      }
+    } finally {
+      setLoadingSkus(false);
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    if (productId) {
+      fetchSkus();
+    }
+  }, [productId, fetchSkus]);
+
+  const handleEditSkuClick = (skuItem: any) => {
+    setEditingSkuId(skuItem.skuId);
+    setSkuForm({
+      skuCode: skuItem.skuCode,
+      price: String(skuItem.price || ''),
+      attributes: {
+        color: skuItem.attributes?.color || '',
+        size: skuItem.attributes?.size || ''
+      },
+      isDefault: !!skuItem.isDefault
+    });
+    setShowSkuModal(true);
+  };
+
+  const saveSku = async () => {
+    if (!skuForm.skuCode.trim()) {
+      toast.error('SKU Code is required');
+      return;
+    }
+    try {
+      const payload = {
+        productId: Number(productId),
+        skuCode: skuForm.skuCode.trim(),
+        clientId: 0,
+        attributes: {
+          color: skuForm.attributes.color.trim() || undefined,
+          size: skuForm.attributes.size.trim() || undefined
+        },
+        price: Number(skuForm.price || 0),
+        isDefault: skuForm.isDefault
+      };
+
+      if (editingSkuId) {
+        await axiosInstance.put(`/prod/sku/${editingSkuId}`, payload);
+        toast.success('SKU updated successfully');
+      } else {
+        await axiosInstance.post('/prod/sku', payload);
+        toast.success('SKU added successfully');
+      }
+
+      setSkuForm({
+        skuCode: '',
+        price: '',
+        attributes: { color: '', size: '' },
+        isDefault: false
+      });
+      setEditingSkuId(null);
+      setShowSkuModal(false);
+      fetchSkus();
+    } catch (err: any) {
+      console.error('Failed to save SKU:', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to save SKU');
+    }
+  };
+
+  const deleteSku = async (skuId: number) => {
+    if (!window.confirm('Are you sure you want to delete this SKU?')) return;
+    try {
+      await axiosInstance.delete(`/prod/sku/${skuId}`);
+      toast.success('SKU deleted successfully');
+      fetchSkus();
+    } catch (err: any) {
+      console.error('Failed to delete SKU:', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete SKU');
+    }
+  };
 
   const [shipmentModes, setShipmentModes] = useState<{ modeCode: string; displayName: string }[]>([
     { modeCode: 'DP', displayName: 'Direct Parcel (DP)' },
@@ -474,6 +624,114 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts }: 
   const [comboModalQuantity, setComboModalQuantity] = useState(1);
   const [availableProducts, setAvailableProducts] = useState<{ id: number; name: string }[]>([]);
 
+  // Alternate products management state
+  const [alternates, setAlternates] = useState<any[]>([]);
+  const [loadingAlternates, setLoadingAlternates] = useState(false);
+  const [showAlternateModal, setShowAlternateModal] = useState(false);
+  const [alternateModalProductId, setAlternateModalProductId] = useState('');
+
+  const fetchAlternates = useCallback(async () => {
+    if (!productId) return;
+    setLoadingAlternates(true);
+    try {
+      const response = await axiosInstance.get(`/prod/alternate/product/${productId}`, {
+        headers: { 'accept': 'application/x-ndjson' }
+      });
+      const parsed = parseNdjson(response.data);
+      const sorted = parsed.sort((a: any, b: any) => (a.priority || 0) - (b.priority || 0));
+      setAlternates(sorted);
+    } catch (err) {
+      console.error('Failed to load alternates:', err);
+    } finally {
+      setLoadingAlternates(false);
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    if (productId) {
+      fetchAlternates();
+    }
+  }, [productId, fetchAlternates]);
+
+  const addAlternateProduct = async () => {
+    if (!alternateModalProductId) return;
+    const altPid = Number(alternateModalProductId);
+    
+    if (alternates.some((a) => a.alternateProductId === altPid)) {
+      toast.error('Product is already added as an alternate');
+      return;
+    }
+
+    try {
+      const maxPriority = alternates.reduce((max, a) => Math.max(max, a.priority || 0), 0);
+      const payload = {
+        productId: Number(productId),
+        alternateProductId: altPid,
+        priority: maxPriority + 1,
+        clientId: 0
+      };
+
+      await axiosInstance.post('/prod/alternate', payload);
+      toast.success('Alternate product added successfully');
+      setAlternateModalProductId('');
+      setShowAlternateModal(false);
+      fetchAlternates();
+    } catch (err: any) {
+      console.error('Failed to add alternate product:', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to add alternate product');
+    }
+  };
+
+  const removeAlternateProduct = async (alternateId: number) => {
+    if (!window.confirm('Are you sure you want to remove this alternate product?')) return;
+    try {
+      await axiosInstance.delete(`/prod/alternate/${alternateId}`);
+      toast.success('Alternate product removed successfully');
+      fetchAlternates();
+    } catch (err: any) {
+      console.error('Failed to remove alternate product:', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to remove alternate product');
+    }
+  };
+
+  const moveAlternatePriority = async (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= alternates.length) return;
+
+    const itemA = alternates[index];
+    const itemB = alternates[targetIndex];
+
+    const newPriorityA = targetIndex + 1;
+    const newPriorityB = index + 1;
+
+    try {
+      const payloadA = {
+        productId: Number(productId),
+        alternateProductId: itemA.alternateProductId,
+        priority: newPriorityA,
+        clientId: itemA.clientId || 0
+      };
+
+      const payloadB = {
+        productId: Number(productId),
+        alternateProductId: itemB.alternateProductId,
+        priority: newPriorityB,
+        clientId: itemB.clientId || 0
+      };
+
+      await Promise.all([
+        axiosInstance.put(`/prod/alternate/${itemA.alternateId}`, payloadA),
+        axiosInstance.put(`/prod/alternate/${itemB.alternateId}`, payloadB)
+      ]);
+
+      toast.success('Priority updated successfully');
+      fetchAlternates();
+    } catch (err: any) {
+      console.error('Failed to update priority:', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to update priority');
+    }
+  };
+
   useEffect(() => {
     const fetchAvailableProducts = async () => {
       try {
@@ -708,43 +966,116 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts }: 
           {activeTab === 'inventory' && (
             <div>
               <Field label="SKU" hint="Unique stock-keeping unit">
-                <StyledInput placeholder="e.g. TPH-SPH-OTH-0001" value={data.sku} onChange={(e) => set('sku', e.target.value)} />
+                <StyledInput placeholder="e.g. TPH-SPH-OTH-0001" value={data.sku} onChange={(e) => set('sku', e.target.value)} disabled={!!productId} className={productId ? 'opacity-70 bg-slate-50 dark:bg-slate-900 cursor-not-allowed' : ''} />
               </Field>
-              {/* <Field label="Manage Stock">
-                <button type="button" onClick={() => set('manageStock', !data.manageStock)} className={toggleCls(data.manageStock)}>
-                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${data.manageStock ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                </button>
-              </Field>
-              {data.manageStock ? (
-                <>
-                  <Field label="Stock Quantity">
-                    <StyledInput type="number" min="0" placeholder="0" value={data.stockQty} onChange={(e) => set('stockQty', e.target.value)} />
-                  </Field>
-                  <Field label="Allow Backorders">
-                    <StyledSelect value={data.allowBackorders} onChange={(e) => set('allowBackorders', e.target.value)}>
-                      <option value="no">Do not allow</option>
-                      <option value="notify">Allow, but notify customer</option>
-                      <option value="yes">Allow</option>
-                    </StyledSelect>
-                  </Field>
-                  <Field label="Low Stock Threshold">
-                    <StyledInput type="number" min="0" placeholder="0" value={data.lowStockThreshold} onChange={(e) => set('lowStockThreshold', e.target.value)} />
-                  </Field>
-                </>
-              ) : (
-                <Field label="Stock Status">
-                  <StyledSelect value={data.stockStatus} onChange={(e) => set('stockStatus', e.target.value)}>
-                    <option value="instock">In stock</option>
-                    <option value="outofstock">Out of stock</option>
-                    <option value="onbackorder">On backorder</option>
-                  </StyledSelect>
-                </Field>
+
+              {productId && (
+                <div className="mt-8 border-t border-slate-350 dark:border-slate-700/60 pt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Product Stock Keeping Units (SKUs)</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage multiple custom SKUs, prices, and attributes for this product.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingSkuId(null);
+                        setSkuForm({
+                          skuCode: '',
+                          price: '',
+                          attributes: { color: '', size: '' },
+                          isDefault: false
+                        });
+                        setShowSkuModal(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                    >
+                      <Plus size={14} /> Add SKU
+                    </button>
+                  </div>
+
+                  {loadingSkus ? (
+                    <div className="py-8 text-center text-xs text-slate-500">Loading SKUs...</div>
+                  ) : skus.length === 0 ? (
+                    <div className="py-6 text-center border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
+                      <p className="text-xs text-slate-500 dark:text-slate-450">No additional SKUs created yet.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto border border-slate-300 dark:border-slate-800 rounded-xl">
+                      <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-850">
+                        <thead className="bg-slate-50 dark:bg-slate-900/50">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">SKU Code</th>
+                            <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Price</th>
+                            <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Attributes</th>
+                            <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                            <th className="px-4 py-2 text-right text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-950">
+                          {skus.map((skuItem) => {
+                            const isPrimary = skuItem.skuCode === data.sku || skuItem.isDefault;
+                            return (
+                              <tr key={skuItem.skuId} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10">
+                                <td className="px-4 py-2.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-250">
+                                  {skuItem.skuCode}
+                                </td>
+                                <td className="px-4 py-2.5 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                                  ₹{skuItem.price}
+                                </td>
+                                <td className="px-4 py-2.5 text-xs">
+                                  <div className="flex gap-1.5 flex-wrap">
+                                    {skuItem.attributes && Object.entries(skuItem.attributes).map(([k, v]) => (
+                                      v ? (
+                                        <span key={k} className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-medium text-slate-650 dark:text-slate-400">
+                                          {k}: <strong className="text-slate-800 dark:text-slate-200">{String(v)}</strong>
+                                        </span>
+                                      ) : null
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-2.5 text-xs">
+                                  {isPrimary ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-250/30">
+                                      Default / Primary
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-900 text-slate-550 dark:text-slate-400">
+                                      Additional
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2.5 text-right text-xs">
+                                  <div className="flex justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditSkuClick(skuItem)}
+                                      className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                      title="Edit SKU"
+                                    >
+                                      <Edit3 size={14} />
+                                    </button>
+                                    {!isPrimary && (
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteSku(skuItem.skuId)}
+                                        className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                                        title="Delete SKU"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               )}
-              <Field label="Sold Individually" hint="Limit purchases to 1 per order">
-                <button type="button" onClick={() => set('soldIndividually', !data.soldIndividually)} className={toggleCls(data.soldIndividually)}>
-                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${data.soldIndividually ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                </button>
-              </Field> */}
             </div>
           )}
 
@@ -920,6 +1251,111 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts }: 
             </div>
           )}
 
+          {/* ALTERNATE TAB */}
+          {activeTab === 'alternate' && (
+            <div>
+              {!productId ? (
+                <div className="text-center py-10 px-4 bg-slate-50 dark:bg-slate-800/10 border border-dashed border-slate-200 dark:border-slate-850 rounded-xl">
+                  <p className="text-sm font-semibold text-slate-650 dark:text-slate-300">
+                    Alternate products can only be configured after the product has been created.
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-455 mt-1">
+                    Please publish/save the product first.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Alternate Products</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage alternative or substitute products. Change priority using move controls.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAlternateModal(true)}
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                      <Plus size={14} /> Add Alternate Product
+                    </button>
+                  </div>
+
+                  {loadingAlternates ? (
+                    <div className="py-8 text-center text-xs text-slate-500">Loading alternate products...</div>
+                  ) : alternates.length === 0 ? (
+                    <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                      No alternate products added yet. Click "Add Alternate Product" to configure.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto border border-slate-200 dark:border-slate-750 rounded-xl">
+                      <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+                        <thead className="bg-slate-50 dark:bg-slate-900/50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">Product ID</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">Product Name</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 w-24">Priority</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 w-32">Move</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 w-20">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-950">
+                          {alternates.map((alt, idx) => {
+                            const name = availableProducts.find((p) => p.id === alt.alternateProductId)?.name || `Product #${alt.alternateProductId}`;
+                            return (
+                              <tr key={alt.alternateId} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10">
+                                <td className="px-4 py-3 text-xs font-mono font-bold text-slate-650 dark:text-slate-350">
+                                  #{alt.alternateProductId}
+                                </td>
+                                <td className="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                  {name}
+                                </td>
+                                <td className="px-4 py-3 text-xs font-mono font-bold text-center text-slate-700 dark:text-slate-300">
+                                  {alt.priority}
+                                </td>
+                                <td className="px-4 py-3 text-xs text-center">
+                                  <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-850 p-0.5 bg-slate-50 dark:bg-slate-900/50">
+                                    <button
+                                      type="button"
+                                      disabled={idx === 0}
+                                      onClick={() => moveAlternatePriority(idx, 'up')}
+                                      className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                      title="Move Up"
+                                    >
+                                      <ArrowUp size={14} />
+                                    </button>
+                                    <div className="w-px bg-slate-200 dark:bg-slate-850 mx-0.5" />
+                                    <button
+                                      type="button"
+                                      disabled={idx === alternates.length - 1}
+                                      onClick={() => moveAlternatePriority(idx, 'down')}
+                                      className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                      title="Move Down"
+                                    >
+                                      <ArrowDown size={14} />
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-right text-xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAlternateProduct(alt.alternateId)}
+                                    className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-slate-400 hover:text-red-500 transition-colors"
+                                    title="Delete Alternate"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ADVANCED TAB */}
           {activeTab === 'advanced' && (
             <div>
@@ -1075,6 +1511,154 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts }: 
             <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
               <button type="button" onClick={() => setShowComboModal(false)} className="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
               <button type="button" onClick={addComboProduct} className="px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Add</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alternate Add Modal */}
+      {showAlternateModal && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center px-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between rounded-t-xl">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Add Alternate Product</span>
+              <button
+                type="button"
+                onClick={() => setShowAlternateModal(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Select Alternate Product *</label>
+              <SearchSelect
+                value={alternateModalProductId}
+                onChange={setAlternateModalProductId}
+                items={availableProducts.filter(
+                  (p) =>
+                    p.id !== Number(productId) &&
+                    !alternates.some((a) => a.alternateProductId === p.id)
+                )}
+                getLabel={(p) => p.name}
+                getSearchString={(p) => p.name}
+                getId={(p) => String(p.id)}
+                placeholder="Select a product"
+              />
+            </div>
+            <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAlternateModal(false)}
+                className="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={addAlternateProduct}
+                disabled={!alternateModalProductId}
+                className="px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SKU Create Modal */}
+      {showSkuModal && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center px-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                {editingSkuId ? 'Edit Product SKU' : 'Add Product SKU'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowSkuModal(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">SKU Code *</label>
+                <input
+                  type="text"
+                  value={skuForm.skuCode}
+                  onChange={(e) => setSkuForm({ ...skuForm, skuCode: e.target.value })}
+                  placeholder="e.g. TES-TES-YUV-001"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Price *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={skuForm.price}
+                  onChange={(e) => setSkuForm({ ...skuForm, price: e.target.value })}
+                  placeholder="e.g. 0.1"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Color Attribute</label>
+                <input
+                  type="text"
+                  value={skuForm.attributes.color}
+                  onChange={(e) => setSkuForm({
+                    ...skuForm,
+                    attributes: { ...skuForm.attributes, color: e.target.value }
+                  })}
+                  placeholder="e.g. black"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Size Attribute</label>
+                <input
+                  type="text"
+                  value={skuForm.attributes.size}
+                  onChange={(e) => setSkuForm({
+                    ...skuForm,
+                    attributes: { ...skuForm.attributes, size: e.target.value }
+                  })}
+                  placeholder="e.g. 128GB"
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="isDefaultSku"
+                  checked={skuForm.isDefault}
+                  onChange={(e) => setSkuForm({ ...skuForm, isDefault: e.target.checked })}
+                  className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 bg-transparent"
+                />
+                <label htmlFor="isDefaultSku" className="text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                  Set as Default SKU for this product
+                </label>
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSkuModal(false)}
+                className="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveSku}
+                className="px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                {editingSkuId ? 'Save Changes' : 'Add SKU'}
+              </button>
             </div>
           </div>
         </div>
