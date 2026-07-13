@@ -17,6 +17,7 @@ export interface MenuModule {
   module: string;
   icon?: string;
   screens: MenuScreen[];
+  href?: string;
 }
 
 export const mockMenuData: MenuModule[] = [
@@ -73,29 +74,14 @@ export const mockMenuData: MenuModule[] = [
     code: 'CLIENTS',
     module: 'Clients',
     icon: 'Users',
-    screens: [
-      { code: 'CLI_PROFILE', title: 'Profile', href: '/admin/clients/profile', actions: ['READ', 'WRITE'] },
-      { code: 'CLI_BU', title: 'Business Unit', href: '/admin/clients/business-unit', actions: ['READ', 'WRITE'] },
-      { code: 'CLI_ADDR', title: 'Address', href: '/admin/clients/address', actions: ['READ', 'WRITE'] },
-      { code: 'CLI_CONT', title: 'Contacts', href: '/admin/clients/contacts', actions: ['READ', 'WRITE'] },
-      { code: 'CLI_BANK', title: 'Banks', href: '/admin/clients/banks', actions: ['READ', 'WRITE'] },
-      { code: 'CLI_DOCS', title: 'Documents', href: '/admin/clients/documents', actions: ['READ', 'WRITE'] },
-      { code: 'CLI_TAX', title: 'Tax', href: '/admin/clients/tax', actions: ['READ', 'WRITE'] },
-    ]
+    href: '/admin/clients/profile',
+    screens: [],
   },
   {
     code: 'SUPPLIERS',
     module: 'Suppliers',
     icon: 'Truck',
-    screens: [
-      { code: 'SUP_PROFILE', title: 'Profile', href: '/admin/suppliers/profile', actions: ['READ', 'WRITE'] },
-      { code: 'SUP_ADDR', title: 'Address', href: '/admin/suppliers/address', actions: ['READ', 'WRITE'] },
-      { code: 'SUP_CONT', title: 'Contacts', href: '/admin/suppliers/contacts', actions: ['READ', 'WRITE'] },
-      { code: 'SUP_BANK', title: 'Banks', href: '/admin/suppliers/banks', actions: ['READ', 'WRITE'] },
-      { code: 'SUP_DOCS', title: 'Documents', href: '/admin/suppliers/documents', actions: ['READ', 'WRITE'] },
-      { code: 'SUP_EMAIL', title: 'Emails', href: '/admin/suppliers/emails', actions: ['READ', 'WRITE'] },
-      { code: 'SUP_LOGS', title: 'Status Logs', href: '/admin/suppliers/status-logs', actions: ['READ', 'WRITE'] },
-      { code: 'SUP_TAX', title: 'Tax', href: '/admin/suppliers/tax', actions: ['READ', 'WRITE'] },
-    ]
+    href: '/admin/suppliers/profile',
+    screens: [],
   }
 ];

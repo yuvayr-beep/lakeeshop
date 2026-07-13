@@ -4,7 +4,7 @@ import ProductManagementClient from './components/ProductManagementClient';
 
 export default function ProductsPage() {
   return (
-    <AdminLayout>
+    <AdminLayout fullWidth={true}>
       <ProductManagementClient />
     </AdminLayout>
   );

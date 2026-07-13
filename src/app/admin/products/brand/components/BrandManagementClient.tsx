@@ -8,7 +8,6 @@ import {
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 import BrandModal from './BrandModal';
-import ImageModal from '@/app/admin/components/ImageModal';
 import CcEmailModal from '@/app/admin/components/CcEmailModal';
 
 type Brand = {
@@ -34,7 +33,6 @@ export default function BrandManagementClient() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
-  const [showImage, setShowImage] = useState<string | null>(null);
   const [showCc, setShowCc] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -475,7 +473,7 @@ export default function BrandManagementClient() {
                       className="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer transition-all"
                     />
                   </th>
-                  <th className="w-20 py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Logo</th>
+                  <th className="w-24 py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Logo</th>
                   <th className="py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Brand Name</th>
                   <th className="py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Email</th>
                   <th className="py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">CC Email</th>
@@ -502,19 +500,13 @@ export default function BrandManagementClient() {
                       </td>
                       <td className="py-1.5 px-4">
                         {brand.logoUrl ? (
-                          <button
-                            onClick={() => setShowImage(brand.logoUrl!)}
-                            className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-400 overflow-hidden transition-colors"
-                            title="View Logo"
-                          >
-                            <img
-                              src={brand.logoUrl}
-                              alt={brand.brandName}
-                              className="w-full h-full object-cover"
-                            />
-                          </button>
+                          <img
+                            src={brand.logoUrl}
+                            alt={brand.brandName}
+                            className="h-8 w-auto max-w-[80px] object-contain"
+                          />
                         ) : (
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-400">
+                          <div className="flex items-center justify-center w-8 h-8 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg">
                             <ImageIcon size={14} />
                           </div>
                         )}
@@ -634,9 +626,6 @@ export default function BrandManagementClient() {
             fetchBrands();
           }}
         />
-      )}
-      {showImage && (
-        <ImageModal src={showImage} onClose={() => setShowImage(null)} />
       )}
       {showCc && (
         <CcEmailModal ccList={showCc} onClose={() => setShowCc(null)} />
