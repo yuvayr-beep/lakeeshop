@@ -32,35 +32,58 @@ interface SidebarProps {
   mobileOpen: boolean;
   onMobileClose: () => void;
   onRequestOpen: () => void;
+  isInitialized?: boolean;
 }
 
-export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onRequestOpen }: SidebarProps) {
+export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onRequestOpen, isInitialized = false }: SidebarProps) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const [expandedModule, setExpandedModule] = useState<string | null>('DASH');
-  const [expandedScreen, setExpandedScreen] = useState<string | null>(null);
+
+  // Find active module/screen on render to prevent flickering/closing animations
+  const initialActive = React.useMemo(() => {
+    const activeModule = mockMenuData.find((module) => {
+      if (module.code === 'CLIENTS' && pathname?.startsWith('/admin/clients')) return true;
+      if (module.code === 'SUPPLIERS' && pathname?.startsWith('/admin/suppliers')) return true;
+      if (module.href && pathname?.startsWith(module.href)) return true;
+      return module.screens.some((s) => {
+        if (pathname === s.href) return true;
+        if (s.subScreens?.some((sub) => pathname === sub.href)) return true;
+        if (s.href && s.href !== '/' && pathname.startsWith(s.href.split('/').slice(0, 3).join('/'))) return true;
+        return false;
+      });
+    });
+    let activeModuleCode = 'DASH';
+    let activeScreenCode: string | null = null;
+    if (activeModule) {
+      activeModuleCode = activeModule.code;
+      const activeScreen = activeModule.screens.find((s) => {
+        if (pathname === s.href) return true;
+        if (s.subScreens?.some((sub) => pathname === sub.href)) return true;
+        if (s.href && s.href !== '/' && pathname.startsWith(s.href.split('/').slice(0, 3).join('/'))) return true;
+        return false;
+      });
+      if (activeScreen && activeScreen.subScreens) {
+        activeScreenCode = activeScreen.code;
+      }
+    }
+    return { moduleCode: activeModuleCode, screenCode: activeScreenCode };
+  }, [pathname]);
+
+  const [expandedModule, setExpandedModule] = useState<string | null>(initialActive.moduleCode);
+  const [expandedScreen, setExpandedScreen] = useState<string | null>(initialActive.screenCode);
 
   const isCollapsed = collapsed && !mobileOpen;
 
   useEffect(() => {
-    const activeModule = mockMenuData.find((module) =>
-      module.screens.some((s) => {
-        if (pathname === s.href) return true;
-        if (s.subScreens?.some((sub) => pathname === sub.href)) return true;
-        return false;
-      })
-    );
-    if (activeModule) {
-      setExpandedModule(activeModule.code);
-      const activeScreen = activeModule.screens.find((s) =>
-        pathname === s.href || s.subScreens?.some((sub) => pathname === sub.href)
-      );
-      if (activeScreen && activeScreen.subScreens) {
-        setExpandedScreen(activeScreen.code);
-      }
-    }
-  }, [pathname]);
+    setExpandedModule(initialActive.moduleCode);
+    setExpandedScreen(initialActive.screenCode);
+  }, [initialActive]);
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const toggleModule = (code: string) => {
     setExpandedModule((prev) => (prev === code ? null : code));
@@ -102,48 +125,83 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
         {mockMenuData.map((module) => {
           const IconComp = iconMap[module.icon || 'LayoutDashboard'] || LayoutDashboard;
           const isExpanded = expandedModule === module.code;
-          const hasActiveChild = module.screens.some((s) => {
-            if (pathname === s.href) return true;
-            if (s.subScreens?.some((sub) => pathname === sub.href)) return true;
-            return false;
-          });
+          const hasActiveChild = 
+            (module.code === 'CLIENTS' && pathname?.startsWith('/admin/clients')) ||
+            (module.code === 'SUPPLIERS' && pathname?.startsWith('/admin/suppliers'))
+              ? true
+              : module.href
+                ? pathname === module.href || pathname?.startsWith(module.href)
+                : module.screens.some((s) => {
+                    if (pathname === s.href) return true;
+                    if (s.subScreens?.some((sub) => pathname === sub.href)) return true;
+                    return false;
+                  });
+
+          const buttonClasses = `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-600 transition-all duration-150 ${
+            hasActiveChild
+              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-white'
+          } ${isCollapsed ? 'justify-center' : ''}`;
 
           return (
             <div key={module.code}>
               {/* Module header */}
-              <button
-                onClick={() => isCollapsed ? onRequestOpen() : toggleModule(module.code)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-600 transition-all duration-150 ${
-                  hasActiveChild
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' :'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-white'
-                } ${isCollapsed ? 'justify-center' : ''}`}
-                title={isCollapsed ? module.module : undefined}
-              >
-                <IconComp size={17} className="flex-shrink-0" />
-                <AnimatePresence>
+              {module.href ? (
+                <Link
+                  href={module.href}
+                  onClick={() => {
+                    if (isCollapsed) onRequestOpen();
+                  }}
+                  className={buttonClasses}
+                  title={isCollapsed ? module.module : undefined}
+                >
+                  <IconComp size={17} className="flex-shrink-0" />
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed && (
+                      <motion.span
+                        className="flex-1 text-left truncate"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {module.module}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </Link>
+              ) : (
+                <button
+                  onClick={() => isCollapsed ? onRequestOpen() : toggleModule(module.code)}
+                  className={buttonClasses}
+                  title={isCollapsed ? module.module : undefined}
+                >
+                  <IconComp size={17} className="flex-shrink-0" />
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed && (
+                      <motion.span
+                        className="flex-1 text-left truncate"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {module.module}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                   {!isCollapsed && (
-                    <motion.span
-                      className="flex-1 text-left truncate"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      {module.module}
-                    </motion.span>
+                    <ChevronDown
+                      size={14}
+                      className={`flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                    />
                   )}
-                </AnimatePresence>
-                {!isCollapsed && (
-                  <ChevronDown
-                    size={14}
-                    className={`flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                  />
-                )}
-              </button>
+                </button>
+              )}
 
               {/* Sub-menu */}
-              <AnimatePresence>
-                {!isCollapsed && isExpanded && (
+              <AnimatePresence initial={false}>
+                {!isCollapsed && isExpanded && module.screens.length > 0 && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
@@ -177,7 +235,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                               />
                             </button>
 
-                            <AnimatePresence>
+                            <AnimatePresence initial={false}>
                               {isScreenExpanded && (
                                 <motion.div
                                   initial={{ height: 0, opacity: 0 }}
@@ -263,7 +321,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
       <motion.aside
         className="hidden md:block flex-shrink-0 h-screen sticky top-0 z-50"
         animate={{ width: collapsed ? 64 : 240 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        transition={isInitialized ? { duration: 0.3, ease: [0.22, 1, 0.36, 1] } : { duration: 0 }}
       >
         <SidebarContent />
       </motion.aside>

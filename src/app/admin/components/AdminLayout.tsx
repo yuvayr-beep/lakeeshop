@@ -12,9 +12,10 @@ import { clearSelectedSupplier } from '@/redux/slices/supplierSlice';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
+  fullWidth?: boolean;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function AdminLayout({ children, fullWidth = true }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useAppDispatch();
@@ -30,20 +31,27 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
   }, [pathname, selectedClientId, selectedSupplierId, dispatch]);
   const themeMode = useAppSelector((s) => s.theme.mode);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     if (typeof window !== 'undefined') {
       const savedSidebar = localStorage.getItem('adminSidebarOpen');
-      if (savedSidebar === 'true') {
-        setSidebarOpen(true);
+      if (savedSidebar === 'false') {
+        setSidebarOpen(false);
       }
       const savedMobileSidebar = localStorage.getItem('adminMobileSidebarOpen');
       if (savedMobileSidebar === 'true') {
         setMobileSidebarOpen(true);
       }
     }
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 150);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleToggleSidebar = (val: boolean) => {
@@ -93,14 +101,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => handleToggleMobileSidebar(false)}
         onRequestOpen={() => handleToggleSidebar(true)}
+        isInitialized={isInitialized}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
+      <div className={`flex-1 flex flex-col min-w-0 ${isInitialized ? 'transition-all duration-300' : ''}`}>
         <AdminTopbar
           onToggleSidebar={() => handleToggleSidebar(!sidebarOpen)}
           onMobileMenu={() => handleToggleMobileSidebar(true)}
         />
-        <main className="flex-1 overflow-auto scrollbar-thin px-4 md:px-6 xl:px-8 py-6 max-w-screen-2xl mx-auto w-full">
+        <main className={`flex-1 overflow-auto scrollbar-thin px-4 md:px-6 xl:px-8 py-6 w-full ${fullWidth ? '' : 'max-w-screen-2xl mx-auto'}`}>
           {children}
         </main>
         <AdminFooter />
