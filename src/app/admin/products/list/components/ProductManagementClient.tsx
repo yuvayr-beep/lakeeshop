@@ -204,6 +204,198 @@ const parseNdjson = (raw: string): any[] => {
   }
 };
 
+const fetchProductData = async (search: string, filters: any): Promise<ApiProduct[]> => {
+  const q = search.trim();
+  if (!q) {
+    const params = new URLSearchParams();
+    if (filters.categoryCode) {
+      params.append('sku', filters.categoryCode);
+    }
+    if (filters.brand) {
+      params.append('brand', filters.brand);
+    }
+    if (filters.productType) {
+      params.append('productType', filters.productType);
+    }
+    if (filters.minMrp) {
+      params.append('minMrp', filters.minMrp);
+    }
+    if (filters.maxMrp) {
+      params.append('maxMrp', filters.maxMrp);
+    }
+    if (filters.minCostPrice) {
+      params.append('minCostPrice', filters.minCostPrice);
+    }
+    if (filters.maxCostPrice) {
+      params.append('maxCostPrice', filters.maxCostPrice);
+    }
+    if (filters.isCombo !== '') {
+      params.append('isCombo', filters.isCombo);
+    }
+    if (filters.isOffline) {
+      params.append('isOffline', filters.isOffline);
+    }
+    if (filters.isBlocked) {
+      params.append('isBlocked', filters.isBlocked);
+    }
+    if (filters.isExternal !== '') {
+      params.append('isExternal', filters.isExternal);
+    }
+
+    const queryString = params.toString();
+    const url = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
+
+    const response = await axiosInstance.get<string>(url, {
+      headers: {
+        Accept: 'application/x-ndjson',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+      responseType: 'text',
+      transformResponse: [(data) => data],
+    });
+    return parseNdjson(response.data) as ApiProduct[];
+  }
+
+  let skuParts: string[] = [];
+  let isBulkSkuSearch = false;
+
+  if (q.includes(',') || q.includes(';') || q.includes('\n') || q.includes('\r')) {
+    skuParts = q.split(/[,\n\r;]+/).map(p => p.trim()).filter(Boolean);
+    isBulkSkuSearch = skuParts.length > 0;
+  } else {
+    // Check if space-separated parts all look like SKUs
+    const spaceParts = q.split(/\s+/).map(p => p.trim()).filter(Boolean);
+    const isAllSkus = spaceParts.length > 1 && spaceParts.every(p => /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(p));
+    if (isAllSkus) {
+      skuParts = spaceParts;
+      isBulkSkuSearch = true;
+    }
+  }
+
+  let responseData = '';
+  if (isBulkSkuSearch) {
+    const response = await axiosInstance.post<string>('/prod/products/bulk', skuParts, {
+      headers: {
+        Accept: 'application/x-ndjson',
+        'Content-Type': 'application/json',
+      },
+      responseType: 'text',
+      transformResponse: [(data) => data],
+    });
+    responseData = response.data;
+  } else {
+    const params = new URLSearchParams();
+    const isSku = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(q);
+    if (isSku) {
+      params.append('sku', q);
+    } else {
+      params.append('name', q);
+    }
+
+    if (filters.categoryCode) {
+      params.append('sku', filters.categoryCode);
+    }
+    if (filters.brand) {
+      params.append('brand', filters.brand);
+    }
+    if (filters.productType) {
+      params.append('productType', filters.productType);
+    }
+    if (filters.minMrp) {
+      params.append('minMrp', filters.minMrp);
+    }
+    if (filters.maxMrp) {
+      params.append('maxMrp', filters.maxMrp);
+    }
+    if (filters.minCostPrice) {
+      params.append('minCostPrice', filters.minCostPrice);
+    }
+    if (filters.maxCostPrice) {
+      params.append('maxCostPrice', filters.maxCostPrice);
+    }
+    if (filters.isCombo !== '') {
+      params.append('isCombo', filters.isCombo);
+    }
+    if (filters.isOffline) {
+      params.append('isOffline', filters.isOffline);
+    }
+    if (filters.isBlocked) {
+      params.append('isBlocked', filters.isBlocked);
+    }
+    if (filters.isExternal !== '') {
+      params.append('isExternal', filters.isExternal);
+    }
+
+    const queryString = params.toString();
+    const url = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
+
+    const response = await axiosInstance.get<string>(url, {
+      headers: {
+        Accept: 'application/x-ndjson',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+      responseType: 'text',
+      transformResponse: [(data) => data],
+    });
+    responseData = response.data;
+  }
+
+  let rawProducts = parseNdjson(responseData) as ApiProduct[];
+
+  // Apply client-side filters for bulk SKU search
+  if (isBulkSkuSearch) {
+    if (filters.brand) {
+      rawProducts = rawProducts.filter(p => p.brandName?.toLowerCase() === filters.brand.toLowerCase());
+    }
+    if (filters.productType) {
+      rawProducts = rawProducts.filter(p => p.productTypeName?.toLowerCase() === filters.productType.toLowerCase());
+    }
+    if (filters.categoryCode) {
+      const cleanCode = filters.categoryCode.toLowerCase().replace(/-/g, ' ');
+      rawProducts = rawProducts.filter(p => {
+        const catPath = p.categoryPath?.toLowerCase() || '';
+        return catPath.includes(cleanCode);
+      });
+    }
+    if (filters.minMrp) {
+      rawProducts = rawProducts.filter(p => p.mrp !== null && p.mrp !== undefined && Number(p.mrp) >= Number(filters.minMrp));
+    }
+    if (filters.maxMrp) {
+      rawProducts = rawProducts.filter(p => p.mrp !== null && p.mrp !== undefined && Number(p.mrp) <= Number(filters.maxMrp));
+    }
+    if (filters.minCostPrice) {
+      rawProducts = rawProducts.filter(p => p.costPrice !== null && p.costPrice !== undefined && Number(p.costPrice) >= Number(filters.minCostPrice));
+    }
+    if (filters.maxCostPrice) {
+      rawProducts = rawProducts.filter(p => p.costPrice !== null && p.costPrice !== undefined && Number(p.costPrice) <= Number(filters.maxCostPrice));
+    }
+    if (filters.isCombo !== '') {
+      const comboBool = filters.isCombo === 'true';
+      rawProducts = rawProducts.filter(p => {
+        const val = p.isCombo !== undefined ? Boolean(p.isCombo) : false;
+        return val === comboBool;
+      });
+    }
+    if (filters.isOffline) {
+      rawProducts = rawProducts.filter(p => p.offlineStatusCode === filters.isOffline);
+    }
+    if (filters.isBlocked) {
+      rawProducts = rawProducts.filter(p => p.productStatusCode === filters.isBlocked);
+    }
+    if (filters.isExternal !== '') {
+      const extBool = filters.isExternal === 'true';
+      rawProducts = rawProducts.filter(p => {
+        const val = p.isExternal !== undefined ? Boolean(p.isExternal) : false;
+        return val === extBool;
+      });
+    }
+  }
+
+  return rawProducts;
+};
+
 export default function ProductManagementClient() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
@@ -321,67 +513,8 @@ export default function ProductManagementClient() {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams();
-
-      if (search.trim()) {
-        const q = search.trim();
-        // Check if query is a SKU (alphanumeric and dashes, e.g. ATM-AAC-AOT-0001)
-        const isSku = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(q);
-        if (isSku) {
-          params.append('sku', q);
-        } else {
-          params.append('name', q);
-        }
-      }
-
-      if (filters.categoryCode) {
-        params.append('sku', filters.categoryCode);
-      }
-      if (filters.brand) {
-        params.append('brand', filters.brand);
-      }
-      if (filters.productType) {
-        params.append('productType', filters.productType);
-      }
-      if (filters.minMrp) {
-        params.append('minMrp', filters.minMrp);
-      }
-      if (filters.maxMrp) {
-        params.append('maxMrp', filters.maxMrp);
-      }
-      if (filters.minCostPrice) {
-        params.append('minCostPrice', filters.minCostPrice);
-      }
-      if (filters.maxCostPrice) {
-        params.append('maxCostPrice', filters.maxCostPrice);
-      }
-      if (filters.isCombo !== '') {
-        params.append('isCombo', filters.isCombo);
-      }
-      if (filters.isOffline) {
-        params.append('isOffline', filters.isOffline);
-      }
-      if (filters.isBlocked) {
-        params.append('isBlocked', filters.isBlocked);
-      }
-      if (filters.isExternal !== '') {
-        params.append('isExternal', filters.isExternal);
-      }
-
-      const queryString = params.toString();
-      const url = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
-
-      const response = await axiosInstance.get<string>(url, {
-        headers: {
-          Accept: 'application/x-ndjson',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        },
-        responseType: 'text',
-        transformResponse: [(data) => data],
-      });
-
-      setProducts(parseProductResponse(response.data));
+      const rawProducts = await fetchProductData(search, filters);
+      setProducts(rawProducts.map(toProduct));
       setSelectedIds([]);
       setPage(1);
     } catch (err) {
@@ -518,70 +651,12 @@ export default function ProductManagementClient() {
     setExportingSearched(true);
 
     try {
-      const params = new URLSearchParams();
-
-      if (search.trim()) {
-        const q = search.trim();
-        const isSku = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(q);
-        if (isSku) {
-          params.append('sku', q);
-        } else {
-          params.append('name', q);
-        }
-      }
-
-      if (filters.categoryCode) {
-        params.append('sku', filters.categoryCode);
-      }
-      if (filters.brand) {
-        params.append('brand', filters.brand);
-      }
-      if (filters.productType) {
-        params.append('productType', filters.productType);
-      }
-      if (filters.minMrp) {
-        params.append('minMrp', filters.minMrp);
-      }
-      if (filters.maxMrp) {
-        params.append('maxMrp', filters.maxMrp);
-      }
-      if (filters.minCostPrice) {
-        params.append('minCostPrice', filters.minCostPrice);
-      }
-      if (filters.maxCostPrice) {
-        params.append('maxCostPrice', filters.maxCostPrice);
-      }
-      if (filters.isCombo !== '') {
-        params.append('isCombo', filters.isCombo);
-      }
-      if (filters.isOffline) {
-        params.append('isOffline', filters.isOffline);
-      }
-      if (filters.isBlocked) {
-        params.append('isBlocked', filters.isBlocked);
-      }
-      if (filters.isExternal !== '') {
-        params.append('isExternal', filters.isExternal);
-      }
-
-      const queryString = params.toString();
-      const url = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
-
       setExportSearchedProgress(30);
 
-      const response = await axiosInstance.get<string>(url, {
-        headers: {
-          Accept: 'application/x-ndjson',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        },
-        responseType: 'text',
-        transformResponse: [(data) => data],
-      });
+      const rawProducts = await fetchProductData(search, filters);
 
       setExportSearchedProgress(50);
 
-      const rawProducts = parseNdjson(response.data);
       if (rawProducts.length === 0) {
         toast.error('No products found to export');
         setExportingSearched(false);
@@ -1073,7 +1148,7 @@ export default function ProductManagementClient() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by SKU, name, brand, or category…"
+            placeholder="Search by SKU (comma-separated for bulk), name, brand, or category…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full h-9 pl-8 pr-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"

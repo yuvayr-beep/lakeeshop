@@ -83,5 +83,82 @@ export const mockMenuData: MenuModule[] = [
     icon: 'Truck',
     href: '/admin/suppliers/profile',
     screens: [],
+  },
+  {
+    code: 'STOCK',
+    module: 'Stock',
+    icon: 'Boxes',
+    screens: [
+      {
+        code: 'STK_PROD_REL',
+        title: 'Product Relations',
+        href: '/admin/stock/product-relations',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'STK_PO',
+        title: 'Purchase Orders',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          { code: 'STK_PO_LIST', title: 'Purchase Order', href: '/admin/stock/purchase-orders/list', actions: ['READ', 'WRITE'] },
+          { code: 'STK_PO_AUTO', title: 'Auto-PO Config & Trigger', href: '/admin/stock/purchase-orders/auto-config', actions: ['READ', 'WRITE'] },
+        ]
+      },
+      {
+        code: 'STK_REC',
+        title: 'Receive Stock',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          { code: 'STK_REC_RCV', title: 'Receive', href: '/admin/stock/receive', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REC_VER', title: 'Verify', href: '/admin/stock/receive/verify', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REC_DMG', title: 'Damaged', href: '/admin/stock/receive/damaged', actions: ['READ', 'WRITE'] },
+        ]
+      },
+      {
+        code: 'STK_TRANS',
+        title: 'Transfer',
+        href: '/admin/stock/transfer',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'STK_DMG_DEF',
+        title: 'Damaged & Defective',
+        href: '/admin/stock/damaged-defective',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'STK_TAKING',
+        title: 'Stocktaking',
+        href: '/admin/stock/stocktaking',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'STK_REPORTS',
+        title: 'Stock Reports',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          { code: 'STK_REP_CURR', title: 'Current Stock Status', href: '/admin/stock/reports/current-status', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_HIST', title: 'Historic Stock Status', href: '/admin/stock/reports/historic-status', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_LEDG', title: 'Stock Ledger', href: '/admin/stock/reports/ledger', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_MOVE', title: 'Stock Movement Audit', href: '/admin/stock/reports/movement-audit', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_STAG', title: 'Stagnant Stock Report', href: '/admin/stock/reports/stagnant', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_SLOW', title: 'Slow Moving Stock Report', href: '/admin/stock/reports/slow-moving', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_ADD', title: 'Addition Report', href: '/admin/stock/reports/additions', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_ADJ', title: 'Adjustment Report', href: '/admin/stock/reports/adjustments', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_INV', title: 'Supplier Invoice Report', href: '/admin/stock/reports/supplier-invoices', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_ADHC', title: 'Ad-hoc Report', href: '/admin/stock/reports/adhoc', actions: ['READ', 'WRITE'] },
+          { code: 'STK_REP_EXP', title: 'Export Job Status & Download Tracking', href: '/admin/stock/reports/export-jobs', actions: ['READ', 'WRITE'] },
+        ]
+      },
+      {
+        code: 'STK_MASTER',
+        title: 'Master',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          { code: 'STK_M_WH', title: 'Warehouse Setup', href: '/admin/stock/master/warehouse', actions: ['READ', 'WRITE'] },
+          { code: 'STK_M_LOC', title: 'Inventory Storage Locations', href: '/admin/stock/master/locations', actions: ['READ', 'WRITE'] },
+        ]
+      }
+    ]
   }
 ];

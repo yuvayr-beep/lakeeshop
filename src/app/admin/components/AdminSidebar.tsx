@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, ShoppingCart, Package, User, ChevronDown,
-  LogOut, BarChart3, Briefcase, KeyRound, Users, Truck, X
+  LogOut, BarChart3, Briefcase, KeyRound, Users, Truck, X, Boxes
 } from 'lucide-react';
 import { mockMenuData } from '@/constants/menuData';
 import { useAppDispatch } from '@/redux/hooks';
@@ -25,6 +25,7 @@ const iconMap: Record<string, React.ElementType> = {
   KeyRound,
   Users,
   Truck,
+  Boxes,
 };
 
 interface SidebarProps {
@@ -45,6 +46,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
     const activeModule = mockMenuData.find((module) => {
       if (module.code === 'CLIENTS' && pathname?.startsWith('/admin/clients')) return true;
       if (module.code === 'SUPPLIERS' && pathname?.startsWith('/admin/suppliers')) return true;
+      if (module.code === 'STOCK' && pathname?.startsWith('/admin/stock')) return true;
       if (module.href && pathname?.startsWith(module.href)) return true;
       return module.screens.some((s) => {
         if (pathname === s.href) return true;
@@ -127,7 +129,8 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
           const isExpanded = expandedModule === module.code;
           const hasActiveChild = 
             (module.code === 'CLIENTS' && pathname?.startsWith('/admin/clients')) ||
-            (module.code === 'SUPPLIERS' && pathname?.startsWith('/admin/suppliers'))
+            (module.code === 'SUPPLIERS' && pathname?.startsWith('/admin/suppliers')) ||
+            (module.code === 'STOCK' && pathname?.startsWith('/admin/stock'))
               ? true
               : module.href
                 ? pathname === module.href || pathname?.startsWith(module.href)
