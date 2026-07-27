@@ -8,7 +8,7 @@ import { DeleteBatchModal } from './DeleteBatchModal';
 
 interface Step1UploadFileProps {
   onBatchCreated: (batchId: number, uploadResult?: any) => void;
-  onResumeBatch: (batchId: number) => void;
+  onResumeBatch: (batchId: number, batchNo?: string) => void;
 }
 
 export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
@@ -378,7 +378,7 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => targetBatchId && onResumeBatch(targetBatchId)}
+                            onClick={() => targetBatchId && onResumeBatch(targetBatchId, batchNoStr)}
                             title="Resume Batch Wizard"
                             className="inline-flex items-center gap-1 rounded-xl bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
                           >

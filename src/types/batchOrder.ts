@@ -31,6 +31,7 @@ export interface BatchOrderItem {
 
 export interface BatchUploadResponse {
   batchId: number;
+  batchNo?: string;
   totalRows: number;
   savedRows: number;
   failedRows: number;

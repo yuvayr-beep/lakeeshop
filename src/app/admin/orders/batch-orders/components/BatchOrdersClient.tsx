@@ -11,16 +11,23 @@ import { BatchUploadResponse } from '@/types/batchOrder';
 export const BatchOrdersClient: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [activeBatchId, setActiveBatchId] = useState<number | null>(null);
+  const [activeBatchNo, setActiveBatchNo] = useState<string | null>(null);
   const [uploadData, setUploadData] = useState<BatchUploadResponse | null>(null);
 
   const handleBatchCreated = (batchId: number, data?: BatchUploadResponse) => {
     setActiveBatchId(batchId);
-    if (data) setUploadData(data);
+    if (data) {
+      setUploadData(data);
+      setActiveBatchNo(data.batchNo || `202600${batchId}`);
+    } else {
+      setActiveBatchNo(`202600${batchId}`);
+    }
     setCurrentStep(2);
   };
 
-  const handleResumeBatch = (batchId: number) => {
+  const handleResumeBatch = (batchId: number, batchNo?: string) => {
     setActiveBatchId(batchId);
+    setActiveBatchNo(batchNo || `202600${batchId}`);
     setUploadData(null);
     setCurrentStep(3);
   };
@@ -28,6 +35,7 @@ export const BatchOrdersClient: React.FC = () => {
   const handleResetToStep1 = () => {
     setCurrentStep(1);
     setActiveBatchId(null);
+    setActiveBatchNo(null);
     setUploadData(null);
   };
 
@@ -58,8 +66,8 @@ export const BatchOrdersClient: React.FC = () => {
 
         {activeBatchId && (
           <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300">
-            <span>Active Batch ID:</span>
-            <span className="font-mono font-bold">#{activeBatchId}</span>
+            <span>Active Batch Number:</span>
+            <span className="font-mono font-bold">{activeBatchNo || `202600${activeBatchId}`}</span>
           </div>
         )}
       </div>
