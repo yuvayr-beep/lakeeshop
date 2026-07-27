@@ -327,20 +327,19 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
                 <th className="px-4 py-3 font-semibold uppercase">PASS COUNT</th>
                 <th className="px-4 py-3 font-semibold uppercase">FAIL COUNT</th>
                 <th className="px-4 py-3 text-center font-semibold uppercase">ACTION</th>
-                <th className="px-4 py-3 text-center font-semibold uppercase">DELETE</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loadingBatches ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
+                  <td colSpan={7} className="py-8 text-center text-slate-500">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin text-blue-600" />
                     <span className="mt-2 block text-xs">Loading order batches...</span>
                   </td>
                 </tr>
               ) : filteredBatches.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
+                  <td colSpan={7} className="py-8 text-center text-slate-500">
                     No order batches found for date range ({filterStartDate} to {filterEndDate}).
                   </td>
                 </tr>
@@ -378,22 +377,24 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
                         {failCount}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => onResumeBatch(b.batchId)}
-                          className="inline-flex items-center gap-1 rounded-xl bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
-                        >
-                          <span>Resume</span>
-                          <ArrowRight className="h-3 w-3" />
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => handleDeleteBatch(b.batchId)}
-                          className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950 dark:text-red-400"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>Delete</span>
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => onResumeBatch(b.batchId)}
+                            title="Resume Batch Wizard"
+                            className="inline-flex items-center gap-1 rounded-xl bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
+                          >
+                            <span>Resume</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBatch(b.batchId)}
+                            title="Delete Batch"
+                            className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950 dark:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
