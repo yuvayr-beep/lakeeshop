@@ -153,8 +153,8 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
         </div>
       )}
 
-      {/* Upload Order File Form Card */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      {/* Upload Order File Form Section inside Unified Card */}
+      <div>
         <div className="flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
             <FileUp className="h-5 w-5" />
