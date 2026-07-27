@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Upload, Trash2, ArrowRight, Search, FileUp, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Upload, Trash2, ArrowRight, Search, FileUp, Loader2, RefreshCw, AlertCircle, Calendar, Filter } from 'lucide-react';
 import { batchOrderService } from '@/services/batchOrder.service';
 import { BatchOrderItem } from '@/types/batchOrder';
 
@@ -24,7 +24,18 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
   const [uploading, setUploading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Batch List State
+  // Default to 1 month date range for batch list
+  const todayStr = new Date().toISOString().split('T')[0];
+  const past30DaysDate = new Date();
+  past30DaysDate.setDate(past30DaysDate.getDate() - 30);
+  const past30DaysStr = past30DaysDate.toISOString().split('T')[0];
+
+  // Batch List Filter State
+  const [filterStartDate, setFilterStartDate] = useState<string>(past30DaysStr);
+  const [filterEndDate, setFilterEndDate] = useState<string>(todayStr);
+  const [filterClientId, setFilterClientId] = useState<string>('ALL');
+
+  // Batch List Data State
   const [batchList, setBatchList] = useState<BatchOrderItem[]>([]);
   const [loadingBatches, setLoadingBatches] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -37,10 +48,15 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
     { id: '37', name: 'ICICI BANK', buId: '6' },
   ];
 
-  const fetchBatches = async () => {
+  const fetchBatches = useCallback(async () => {
     setLoadingBatches(true);
     try {
-      const res = await batchOrderService.getBatchList();
+      const res = await batchOrderService.getBatchList({
+        startDate: filterStartDate,
+        endDate: filterEndDate,
+        clientId: filterClientId !== 'ALL' ? filterClientId : undefined,
+      });
+
       const list = res?.data || res || [];
       if (Array.isArray(list)) {
         setBatchList(list);
@@ -53,11 +69,11 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
     } finally {
       setLoadingBatches(false);
     }
-  };
+  }, [filterStartDate, filterEndDate, filterClientId]);
 
   useEffect(() => {
     fetchBatches();
-  }, []);
+  }, [fetchBatches]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -97,7 +113,6 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
       console.error('Batch Upload Error:', err);
       let msg = err.response?.data?.message || err.message || 'Error uploading order file.';
       
-      // Catch backend duplicate upload or SQL grammar error when checking file_hash
       if (
         msg.toLowerCase().includes('duplicate upload') ||
         msg.toLowerCase().includes('file_hash') ||
@@ -127,6 +142,8 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
     (b) =>
       b.batchNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.clientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.clientCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.orderFileName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       String(b.batchId).includes(searchQuery)
   );
 
@@ -238,11 +255,45 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
               Recent Order Batches
             </h3>
             <p className="text-xs text-slate-500">
-              List of order batches and parsing status
+              Fetched for date range ({filterStartDate} to {filterEndDate})
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Date & Filter Controls */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800">
+              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none text-xs"
+              />
+              <span className="text-slate-400">to</span>
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none text-xs"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800">
+              <Filter className="h-3.5 w-3.5 text-slate-400" />
+              <select
+                value={filterClientId}
+                onChange={(e) => setFilterClientId(e.target.value)}
+                className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none text-xs"
+              >
+                <option value="ALL">All Clients</option>
+                {clientOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               onClick={fetchBatches}
               className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
@@ -256,8 +307,8 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search batch or client..."
-                className="w-56 rounded-xl border border-slate-300 bg-slate-50 py-1.5 pl-8 pr-3 text-xs focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                placeholder="Search batch or file..."
+                className="w-48 rounded-xl border border-slate-300 bg-slate-50 py-1.5 pl-8 pr-3 text-xs focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
               <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
             </div>
@@ -290,53 +341,63 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
               ) : filteredBatches.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500">
-                    No order batches found. Upload an order file above to create a new batch.
+                    No order batches found for date range ({filterStartDate} to {filterEndDate}).
                   </td>
                 </tr>
               ) : (
-                filteredBatches.map((b) => (
-                  <tr
-                    key={b.batchId || b.id}
-                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
-                  >
-                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                      {b.clientName || 'XOXODAY'}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                      {b.orderDate || new Date().toISOString().split('T')[0]}
-                    </td>
-                    <td className="px-4 py-3 font-mono font-semibold text-blue-600 dark:text-blue-400">
-                      {b.batchNo || `202600${b.batchId}`}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-semibold">
-                      {b.totalRows ?? 0}
-                    </td>
-                    <td className="px-4 py-3 text-emerald-600 font-semibold dark:text-emerald-400">
-                      {b.savedRows ?? b.passRows ?? 0}
-                    </td>
-                    <td className="px-4 py-3 text-red-600 font-semibold dark:text-red-400">
-                      {b.failedRows ?? 0}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => onResumeBatch(b.batchId)}
-                        className="inline-flex items-center gap-1 rounded-xl bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
-                      >
-                        <span>Resume</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleDeleteBatch(b.batchId)}
-                        className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950 dark:text-red-400"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        <span>Delete</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                filteredBatches.map((b) => {
+                  const clientDisplayName = b.clientName || b.clientCode || 'XOXODAY';
+                  const dateStr = b.uploadedAt
+                    ? b.uploadedAt.split('T')[0]
+                    : b.orderDate || new Date().toISOString().split('T')[0];
+                  const totalCount = b.totalOrderCount ?? b.totalRows ?? 0;
+                  const passCount = b.passCount ?? b.savedRows ?? 0;
+                  const failCount = b.failCount ?? b.failedRows ?? 0;
+
+                  return (
+                    <tr
+                      key={b.batchId || b.id}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+                    >
+                      <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                        {clientDisplayName}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                        {dateStr}
+                      </td>
+                      <td className="px-4 py-3 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                        {b.batchNo || `202600${b.batchId}`}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-semibold">
+                        {totalCount}
+                      </td>
+                      <td className="px-4 py-3 text-emerald-600 font-semibold dark:text-emerald-400">
+                        {passCount}
+                      </td>
+                      <td className="px-4 py-3 text-red-600 font-semibold dark:text-red-400">
+                        {failCount}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => onResumeBatch(b.batchId)}
+                          className="inline-flex items-center gap-1 rounded-xl bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
+                        >
+                          <span>Resume</span>
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleDeleteBatch(b.batchId)}
+                          className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950 dark:text-red-400"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>Delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

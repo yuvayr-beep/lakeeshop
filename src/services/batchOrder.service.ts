@@ -32,8 +32,23 @@ export const batchOrderService = {
   },
 
   // 3. Get Batch List
-  getBatchList: async (params?: { page?: number; size?: number; search?: string }) => {
-    const response = await axiosInstance.get('/order/batch/list', { params });
+  getBatchList: async (params?: { startDate?: string; endDate?: string; clientId?: number | string }) => {
+    const today = new Date();
+    const endDateStr = today.toISOString().split('T')[0];
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 30); // Default to last 1 month
+    const startDateStr = pastDate.toISOString().split('T')[0];
+
+    const queryParams: Record<string, any> = {
+      startDate: params?.startDate || startDateStr,
+      endDate: params?.endDate || endDateStr,
+    };
+
+    if (params?.clientId && String(params.clientId) !== 'ALL') {
+      queryParams.clientId = params.clientId;
+    }
+
+    const response = await axiosInstance.get('/order/batch/list', { params: queryParams });
     return response.data;
   },
 

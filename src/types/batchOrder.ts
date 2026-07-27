@@ -1,11 +1,22 @@
 export interface BatchOrderItem {
-  id: number;
+  id?: number;
   batchId: number;
   batchNo?: string;
-  clientId: number;
+  clientId?: number;
+  clientCode?: string;
   clientName?: string;
   businessUnitId?: number;
+  businessUnitName?: string;
+  orderFileName?: string;
+  uploadedAt?: string;
+  totalOrderCount?: number;
+  passCount?: number;
+  failCount?: number;
+  sourceId?: number;
+  originalFileUrl?: string;
   batchType?: number;
+
+  // Fallback / legacy field definitions
   orderDate?: string;
   totalRows?: number;
   savedRows?: number;
