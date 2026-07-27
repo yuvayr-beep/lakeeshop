@@ -169,6 +169,12 @@ export const mockMenuData: MenuModule[] = [
     icon: 'ShoppingCart',
     screens: [
       {
+        code: 'ORD_BATCH',
+        title: 'Batch Orders',
+        href: '/admin/orders/batch-orders',
+        actions: ['READ', 'WRITE']
+      },
+      {
         code: 'ORD_MASTER_CONFIG',
         title: 'Master Configuration',
         actions: ['READ', 'WRITE'],
