@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Upload, Trash2, ArrowRight, Search, FileUp, FileSpreadsheet, Loader2, RefreshCw } from 'lucide-react';
+import { Upload, Trash2, ArrowRight, Search, FileUp, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { batchOrderService } from '@/services/batchOrder.service';
 import { BatchOrderItem } from '@/types/batchOrder';
 
@@ -62,6 +62,7 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+      setErrorMessage(null);
     }
   };
 
@@ -94,7 +95,17 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
       onBatchCreated(batchId, batchData);
     } catch (err: any) {
       console.error('Batch Upload Error:', err);
-      const msg = err.response?.data?.message || err.message || 'Error uploading order file.';
+      let msg = err.response?.data?.message || err.message || 'Error uploading order file.';
+      
+      // Catch backend duplicate upload or SQL grammar error when checking file_hash
+      if (
+        msg.toLowerCase().includes('duplicate upload') ||
+        msg.toLowerCase().includes('file_hash') ||
+        msg.toLowerCase().includes('bad sql grammar') ||
+        msg.toLowerCase().includes('executemany')
+      ) {
+        msg = 'Duplicate File Upload Detected: This exact order file has already been uploaded for this client. Please upload a new order spreadsheet or resume processing the existing batch from the table below.';
+      }
       setErrorMessage(msg);
     } finally {
       setUploading(false);
@@ -122,8 +133,9 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
   return (
     <div className="space-y-6">
       {errorMessage && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage}
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+          <div className="font-semibold">{errorMessage}</div>
         </div>
       )}
 
