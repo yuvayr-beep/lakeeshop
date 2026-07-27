@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Upload, CheckCircle2, ShieldAlert, Send, FileSpreadsheet, Layers } from 'lucide-react';
 import { Step1UploadFile } from './Step1UploadFile';
 import { Step2ReviewCount } from './Step2ReviewCount';
 import { Step3ValidationWizard } from './Step3ValidationWizard';
@@ -31,84 +32,127 @@ export const BatchOrdersClient: React.FC = () => {
   };
 
   const steps = [
-    { number: 1, label: 'Upload File' },
-    { number: 2, label: 'Review Count' },
-    { number: 3, label: 'Validate' },
-    { number: 4, label: 'Submit' },
+    { number: 1, label: 'Upload File', icon: Upload, desc: 'Excel Ingestion' },
+    { number: 2, label: 'Review Counts', icon: FileSpreadsheet, desc: 'Parsed Stats' },
+    { number: 3, label: 'Validation Wizard', icon: ShieldAlert, desc: 'Error Correction' },
+    { number: 4, label: 'Final Submission', icon: Send, desc: 'Order Conversion' },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 dark:bg-slate-950">
-      {/* Top Banner Header with gradient matching reference screenshots */}
-      <div className="mb-6 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 p-4 text-white shadow-md">
-        <h1 className="text-xl font-bold tracking-wide">Batch Order Entry</h1>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/80 pb-5 dark:border-slate-800">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+              <Layers className="h-5 w-5" />
+            </span>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Batch Orders Entry
+            </h1>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Batch order excel ingestion, validation engine, inline error correction, and order submission
+          </p>
+        </div>
+
+        {activeBatchId && (
+          <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300">
+            <span>Active Batch ID:</span>
+            <span className="font-mono font-bold">#{activeBatchId}</span>
+          </div>
+        )}
       </div>
 
-      {/* Step Wizard Nav Pill Indicators */}
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        {steps.map((s) => {
-          const isActive = currentStep === s.number;
-          const isCompleted = currentStep > s.number;
+      {/* Stepper Header Navigation */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {steps.map((s) => {
+            const Icon = s.icon;
+            const isActive = currentStep === s.number;
+            const isCompleted = currentStep > s.number;
 
-          return (
-            <button
-              key={s.number}
-              onClick={() => {
-                if (s.number === 1) handleResetToStep1();
-                else if (s.number < currentStep && activeBatchId) {
-                  setCurrentStep(s.number);
-                }
-              }}
-              disabled={s.number > currentStep && !activeBatchId}
-              className={`flex items-center gap-2 rounded-full px-5 py-1.5 text-xs font-bold transition-all shadow-sm ${
-                isActive
-                  ? 'bg-red-500 text-white shadow-md ring-2 ring-red-300 dark:ring-red-900'
-                  : isCompleted
-                  ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200'
-                  : 'bg-slate-100 text-slate-400 dark:bg-slate-900 dark:text-slate-600'
-              }`}
-            >
-              <span>{s.number}</span>
-              <span>{s.label}</span>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={s.number}
+                onClick={() => {
+                  if (s.number === 1) handleResetToStep1();
+                  else if (s.number < currentStep && activeBatchId) {
+                    setCurrentStep(s.number);
+                  }
+                }}
+                disabled={s.number > currentStep && !activeBatchId}
+                className={`flex items-center gap-3 rounded-xl p-3 text-left transition-all ${
+                  isActive
+                    ? 'border border-blue-500 bg-blue-50/80 text-blue-700 shadow-sm dark:border-blue-600 dark:bg-blue-950/60 dark:text-blue-300'
+                    : isCompleted
+                    ? 'border border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300'
+                    : 'border border-slate-100 bg-slate-50/50 text-slate-400 dark:border-slate-800/50 dark:bg-slate-800/30 dark:text-slate-600'
+                }`}
+              >
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-bold text-xs ${
+                    isActive
+                      ? 'bg-blue-600 text-white'
+                      : isCompleted
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  }`}
+                >
+                  {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                      Step {s.number}
+                    </span>
+                  </div>
+                  <div className="text-xs font-bold truncate">{s.label}</div>
+                  <div className="text-[10px] opacity-75 truncate">{s.desc}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Render Active Step */}
-      {currentStep === 1 && (
-        <Step1UploadFile
-          onBatchCreated={handleBatchCreated}
-          onResumeBatch={handleResumeBatch}
-        />
-      )}
+      {/* Render Active Step Component */}
+      <div>
+        {currentStep === 1 && (
+          <Step1UploadFile
+            onBatchCreated={handleBatchCreated}
+            onResumeBatch={handleResumeBatch}
+          />
+        )}
 
-      {currentStep === 2 && activeBatchId && (
-        <Step2ReviewCount
-          batchId={activeBatchId}
-          uploadData={uploadData}
-          onNext={() => setCurrentStep(3)}
-          onAbort={handleResetToStep1}
-        />
-      )}
+        {currentStep === 2 && activeBatchId && (
+          <Step2ReviewCount
+            batchId={activeBatchId}
+            uploadData={uploadData}
+            onNext={() => setCurrentStep(3)}
+            onAbort={handleResetToStep1}
+          />
+        )}
 
-      {currentStep === 3 && activeBatchId && (
-        <Step3ValidationWizard
-          batchId={activeBatchId}
-          onNext={() => setCurrentStep(4)}
-          onAbort={handleResetToStep1}
-          onSaveExit={handleResetToStep1}
-        />
-      )}
+        {currentStep === 3 && activeBatchId && (
+          <Step3ValidationWizard
+            batchId={activeBatchId}
+            onNext={() => setCurrentStep(4)}
+            onAbort={handleResetToStep1}
+            onSaveExit={handleResetToStep1}
+          />
+        )}
 
-      {currentStep === 4 && activeBatchId && (
-        <Step4SubmitConfirmation
-          batchId={activeBatchId}
-          onBack={() => setCurrentStep(3)}
-          onAbort={handleResetToStep1}
-          onFinishSuccess={handleResetToStep1}
-        />
-      )}
+        {currentStep === 4 && activeBatchId && (
+          <Step4SubmitConfirmation
+            batchId={activeBatchId}
+            onBack={() => setCurrentStep(3)}
+            onAbort={handleResetToStep1}
+            onFinishSuccess={handleResetToStep1}
+          />
+        )}
+      </div>
     </div>
   );
 };

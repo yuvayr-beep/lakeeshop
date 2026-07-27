@@ -1,11 +1,11 @@
 import React from 'react';
+import AdminLayout from '@/app/admin/components/AdminLayout';
 import { BatchOrdersClient } from './components/BatchOrdersClient';
 
-export const metadata = {
-  title: 'Batch Orders - LakeeShop Admin',
-  description: 'Order File Upload, Validation & Submission Wizard',
-};
-
 export default function BatchOrdersPage() {
-  return <BatchOrdersClient />;
+  return (
+    <AdminLayout fullWidth={true}>
+      <BatchOrdersClient />
+    </AdminLayout>
+  );
 }
