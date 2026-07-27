@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Trash2, ArrowRight, Search, FileUp, Loader2, RefreshCw, AlertCircle, Calendar, Filter } from 'lucide-react';
 import { batchOrderService } from '@/services/batchOrder.service';
 import { BatchOrderItem } from '@/types/batchOrder';
+import { DeleteBatchModal } from './DeleteBatchModal';
 
 interface Step1UploadFileProps {
   onBatchCreated: (batchId: number, uploadResult?: any) => void;
@@ -39,6 +40,9 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
   const [batchList, setBatchList] = useState<BatchOrderItem[]>([]);
   const [loadingBatches, setLoadingBatches] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Delete Modal State
+  const [batchToDelete, setBatchToDelete] = useState<BatchOrderItem | null>(null);
 
   const clientOptions = [
     { id: '33', name: 'AXIS BANK', buId: '6' },
@@ -127,15 +131,8 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
     }
   };
 
-  const handleDeleteBatch = async (batchId: number) => {
-    if (!window.confirm(`Are you sure you want to delete batch #${batchId}?`)) return;
-
-    try {
-      await batchOrderService.deleteBatch(batchId);
-      fetchBatches();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete batch.');
-    }
+  const handleDeleteTrigger = (batch: BatchOrderItem) => {
+    setBatchToDelete(batch);
   };
 
   const filteredBatches = batchList.filter(
@@ -144,7 +141,7 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
       b.clientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.clientCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.orderFileName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      String(b.batchId).includes(searchQuery)
+      String(b.batchId || b.id).includes(searchQuery)
   );
 
   return (
@@ -345,17 +342,19 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
                 </tr>
               ) : (
                 filteredBatches.map((b) => {
+                  const targetBatchId = b.batchId || b.id;
                   const clientDisplayName = b.clientName || b.clientCode || 'XOXODAY';
                   const dateStr = b.uploadedAt
                     ? b.uploadedAt.split('T')[0]
                     : b.orderDate || new Date().toISOString().split('T')[0];
+                  const batchNoStr = b.batchNo || (targetBatchId ? `202600${targetBatchId}` : 'N/A');
                   const totalCount = b.totalOrderCount ?? b.totalRows ?? 0;
                   const passCount = b.passCount ?? b.savedRows ?? 0;
                   const failCount = b.failCount ?? b.failedRows ?? 0;
 
                   return (
                     <tr
-                      key={b.batchId || b.id}
+                      key={targetBatchId || Math.random()}
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
                     >
                       <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
@@ -365,7 +364,7 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
                         {dateStr}
                       </td>
                       <td className="px-4 py-3 font-mono font-semibold text-blue-600 dark:text-blue-400">
-                        {b.batchNo || `202600${b.batchId}`}
+                        {batchNoStr}
                       </td>
                       <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-semibold">
                         {totalCount}
@@ -379,7 +378,7 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => onResumeBatch(b.batchId)}
+                            onClick={() => targetBatchId && onResumeBatch(targetBatchId)}
                             title="Resume Batch Wizard"
                             className="inline-flex items-center gap-1 rounded-xl bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
                           >
@@ -387,7 +386,7 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
                             <ArrowRight className="h-3 w-3" />
                           </button>
                           <button
-                            onClick={() => handleDeleteBatch(b.batchId)}
+                            onClick={() => handleDeleteTrigger(b)}
                             title="Delete Batch"
                             className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950 dark:text-red-400 transition-colors"
                           >
@@ -404,6 +403,14 @@ export const Step1UploadFile: React.FC<Step1UploadFileProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Centered Custom Delete Confirmation Modal */}
+      <DeleteBatchModal
+        isOpen={!!batchToDelete}
+        onClose={() => setBatchToDelete(null)}
+        onSuccess={fetchBatches}
+        batchToDelete={batchToDelete}
+      />
     </div>
   );
 };
