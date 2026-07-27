@@ -177,15 +177,23 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
     [summary]
   );
 
-  // Auto expand first failing category if none expanded
+  const hasAutoExpandedRef = useRef<boolean>(false);
+
+  // Reset auto expand flag when batchId changes
   useEffect(() => {
-    if (summary?.errorSummary && summary.errorSummary.length > 0) {
+    hasAutoExpandedRef.current = false;
+  }, [batchId]);
+
+  // Auto expand first failing category ONCE when initial summary loads
+  useEffect(() => {
+    if (!hasAutoExpandedRef.current && summary?.errorSummary && summary.errorSummary.length > 0) {
       const firstFailingCat = ERROR_CATEGORIES.find((cat) => getCategoryErrorCount(cat) > 0);
-      if (firstFailingCat && !expandedCategoryId) {
+      if (firstFailingCat) {
         setExpandedCategoryId(firstFailingCat.id);
+        hasAutoExpandedRef.current = true;
       }
     }
-  }, [summary, getCategoryErrorCount, expandedCategoryId]);
+  }, [summary, getCategoryErrorCount]);
 
   // Active Category & Selected Error ID
   const activeCategory = ERROR_CATEGORIES.find((c) => c.id === expandedCategoryId);
