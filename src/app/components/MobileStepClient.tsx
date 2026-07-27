@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
@@ -13,6 +13,7 @@ import { mobileSchema, type MobileFormData } from '@/lib/validators';
 export default function MobileStepClient() {
   const router = useRouter();
   const [rememberMe, setRememberMe] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const {
     handleSubmit,
@@ -24,6 +25,32 @@ export default function MobileStepClient() {
     defaultValues: { phone: '' },
   });
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        router.replace('/admin/dashboard/operations');
+        return;
+      }
+      setCheckingAuth(false);
+
+      const savedPhone = localStorage.getItem('remembered_phone');
+      const savedRemember = localStorage.getItem('remember_me') === 'true';
+      if (savedPhone) {
+        setValue('phone', savedPhone, { shouldValidate: true });
+        setRememberMe(savedRemember || true);
+      }
+
+      const handleStorage = (e: StorageEvent) => {
+        if (e.key === 'accessToken' && e.newValue) {
+          router.replace('/admin/dashboard/operations');
+        }
+      };
+      window.addEventListener('storage', handleStorage);
+      return () => window.removeEventListener('storage', handleStorage);
+    }
+  }, [router, setValue]);
+
   const phone = watch('phone');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,9 +59,20 @@ export default function MobileStepClient() {
   };
 
   const onSubmit = (data: MobileFormData) => {
+    if (rememberMe) {
+      localStorage.setItem('remembered_phone', data.phone);
+      localStorage.setItem('remember_me', 'true');
+    } else {
+      localStorage.removeItem('remembered_phone');
+      localStorage.setItem('remember_me', 'false');
+    }
     sessionStorage.setItem('auth_phone', data.phone);
     router.push('/sign-in-password-screen');
   };
+
+  if (checkingAuth) {
+    return null;
+  }
 
   return (
     <AuthCard

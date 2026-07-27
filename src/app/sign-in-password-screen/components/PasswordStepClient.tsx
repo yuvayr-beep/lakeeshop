@@ -21,13 +21,32 @@ export default function PasswordStepClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      router.replace('/admin/dashboard/operations');
+      return;
+    }
+    setCheckingAuth(false);
+
     const stored = sessionStorage.getItem('auth_phone');
     if (!stored) {
       router.replace('/');
     } else {
       setPhone(stored);
     }
+    const isRemembered = localStorage.getItem('remember_me') === 'true';
+    setRememberMe(isRemembered);
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'accessToken' && e.newValue) {
+        router.replace('/admin/dashboard/operations');
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, [router]);
 
   const {
@@ -49,6 +68,13 @@ export default function PasswordStepClient() {
       saveAuthTokens(response);
       // Save phone for profile fetch and sync Redux auth state
       localStorage.setItem('userPhone', phone);
+      if (rememberMe) {
+        localStorage.setItem('remembered_phone', phone);
+        localStorage.setItem('remember_me', 'true');
+      } else {
+        localStorage.removeItem('remembered_phone');
+        localStorage.setItem('remember_me', 'false');
+      }
       dispatch(setCredentials({ token: response.accessToken, phoneNumber: phone }));
       toast.success('Successfully Logged In', {
         description: 'Welcome back to Lakeeshop Erp',
@@ -64,6 +90,10 @@ export default function PasswordStepClient() {
       setLoading(false);
     }
   };
+
+  if (checkingAuth) {
+    return null;
+  }
 
   return (
     <AuthCard

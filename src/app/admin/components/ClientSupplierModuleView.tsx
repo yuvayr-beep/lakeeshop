@@ -7,7 +7,7 @@ import {
   Mail, History, Plus, Search, Trash2, Edit2, Eye, EyeOff, ChevronLeft, ChevronRight, 
   ArrowUpDown, ArrowUp, ArrowDown, Image as ImageIcon, ShieldCheck, CheckCircle2, 
   AlertTriangle, Globe, Phone, ExternalLink, ChevronDown, Check, X, Info, Download,
-  RefreshCw, Package, AlertCircle, Upload
+  RefreshCw, Package, AlertCircle, Upload, Loader2
 } from 'lucide-react';
 import AdminLayout from '@/app/admin/components/AdminLayout';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
@@ -18,25 +18,35 @@ import SupplierModal from '../suppliers/components/SupplierModal';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
 
 interface ViewProps {
   type: 'client' | 'supplier';
   tab: string;
 }
 
-const parseNdjson = (raw: string): any[] => {
-  const trimmed = raw.trim();
-  if (!trimmed) return [];
-  try {
-    const parsed = JSON.parse(trimmed);
-    return Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    return trimmed
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => JSON.parse(line));
+const parseNdjson = (raw: any): any[] => {
+  if (!raw) return [];
+  if (typeof raw === 'string') {
+    const items: any[] = [];
+    raw.split(/\r?\n/).forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed) {
+        try {
+          items.push(JSON.parse(trimmed));
+        } catch (e) {
+          console.error('Error parsing NDJSON line:', trimmed, e);
+        }
+      }
+    });
+    return items;
   }
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === 'object') {
+    if (Array.isArray(raw.data)) return raw.data;
+    if (raw.data && typeof raw.data === 'object') return [raw.data];
+  }
+  return [];
 };
 
 const formatDate = (dateStr?: string) => {
@@ -53,6 +63,7 @@ const formatDate = (dateStr?: string) => {
     return dateStr;
   }
 };
+
 const formatFileSize = (bytes?: number) => {
   if (!bytes) return '0 Bytes';
   const k = 1024;
@@ -60,6 +71,28 @@ const formatFileSize = (bytes?: number) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
+
+function YesNoToggle({ value, onChange }: { value: boolean; onChange: (val: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!value)}
+      className={`relative inline-flex h-8 w-20 items-center rounded-full p-1 transition-colors duration-200 focus:outline-none select-none cursor-pointer shadow-inner ${
+        value ? 'bg-emerald-600' : 'bg-slate-400 dark:bg-slate-600'
+      }`}
+    >
+      <span className="w-full flex items-center justify-between px-2 text-[11px] font-black text-white tracking-wider">
+        <span>{value ? 'YES' : ''}</span>
+        <span>{!value ? 'NO' : ''}</span>
+      </span>
+      <span
+        className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
+          value ? 'translate-x-12' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  );
+}
 
 function SortIcon({ col, sortCol, sortDir }: { col: string; sortCol: string; sortDir: 'asc' | 'desc' }) {
   if (col !== sortCol) return <ArrowUpDown size={11} className="text-black dark:text-slate-400 ml-1" />;
@@ -108,6 +141,11 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
+  // Delete confirmation modal states
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<'supplier' | 'selected-suppliers' | 'client' | 'selected-clients' | null>(null);
+  const [idToDelete, setIdToDelete] = useState<number | null>(null);
+
   // Selected Client edit form states
   const [editClientCode, setEditClientCode] = useState('');
   const [editClientName, setEditClientName] = useState('');
@@ -124,6 +162,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   const [buDeliverWithinDays, setBuDeliverWithinDays] = useState<number | ''>(7);
   const [buHasOwnProductCode, setBuHasOwnProductCode] = useState(true);
   const [buHasMultiProductOrder, setBuHasMultiProductOrder] = useState(true);
+  const [buHasProgram, setBuHasProgram] = useState(true);
   const [isLegalNameSynced, setIsLegalNameSynced] = useState(true);
   const [savingBU, setSavingBU] = useState(false);
   const [buSubTab, setBuSubTab] = useState('profile');
@@ -153,6 +192,9 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   const [addrIsPrimary, setAddrIsPrimary] = useState(false);
   const [addrIsDefault, setAddrIsDefault] = useState(false);
   const [addrStatus, setAddrStatus] = useState<number>(1);
+  const [addrGstin, setAddrGstin] = useState('');
+  const [addrStateCode, setAddrStateCode] = useState('');
+  const [addrGstType, setAddrGstType] = useState('IGST');
 
   // Address Type creation states
   const [showAddAddrTypeModal, setShowAddAddrTypeModal] = useState(false);
@@ -178,6 +220,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   const [progSepInvPrint, setProgSepInvPrint] = useState(false);
   const [progSepPicklist, setProgSepPicklist] = useState(false);
   const [progSepBatching, setProgSepBatching] = useState(false);
+  const [progHasSepExcludeCourier, setProgHasSepExcludeCourier] = useState(false);
   const [progTatHours, setProgTatHours] = useState<number | ''>(0);
   const [progPrintGroup, setProgPrintGroup] = useState('');
 
@@ -242,6 +285,14 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   const [channelType, setChannelType] = useState('');
   const [subject, setSubject] = useState('');
   const [commEnums, setCommEnums] = useState<any[]>([]);
+
+  // Business Unit Pricing Source states
+  const [pricingSourceOptions, setPricingSourceOptions] = useState<any[]>([]);
+  const [loadingPricingSourceOptions, setLoadingPricingSourceOptions] = useState(false);
+  const [pricingSourceConfigId, setPricingSourceConfigId] = useState<number | null>(null);
+  const [pricingSourceValue, setPricingSourceValue] = useState<string>('EXCEL');
+  const [loadingPricingSourceConfig, setLoadingPricingSourceConfig] = useState(false);
+  const [savingPricingSourceConfig, setSavingPricingSourceConfig] = useState(false);
 
   // Contacts states
   const [buContacts, setBuContacts] = useState<any[]>([]);
@@ -356,50 +407,47 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
     setSavingBU(true);
     const toastId = toast.loading('Saving business unit...');
 
-    const payload = {
-      ...buOriginalData,
-      clientId: selectedClient.id,
+    const buPayload = {
+      ...(buId ? { id: buId } : {}),
       unitCode: buUnitCode.trim(),
       unitName: buUnitName.trim(),
       legalName: buUnitLegalName.trim(),
       dispatchWithinDays: buDispatchWithinDays === '' ? 2 : Number(buDispatchWithinDays),
       deliverWithinDays: buDeliverWithinDays === '' ? 7 : Number(buDeliverWithinDays),
       hasOwnProductCode: !!buHasOwnProductCode,
-      hasMultiProductOrder: !!buHasMultiProductOrder
+      hasMultiProductOrder: !!buHasMultiProductOrder,
+      hasProgram: !!buHasProgram
+    };
+
+    const clientPayload = {
+      clientCode: editClientCode.trim() || selectedClient.clientCode,
+      clientName: editClientName.trim() || selectedClient.clientName,
+      legalName: editLegalName.trim() || selectedClient.legalName,
+      logoUrl: (editLogoUrl.trim() || selectedClient.logoUrl) || null,
+      remarks: (editRemarks.trim() || selectedClient.remarks) || null,
+      businessUnits: [buPayload]
     };
 
     try {
-      let updatedBU;
-      if (buId) {
-        const response = await axiosInstance.put(`/client/business-unit/${buId}`, payload);
-        updatedBU = response.data.data || response.data;
-      } else {
-        const clientPayload = {
-          clientCode: editClientCode.trim(),
-          clientName: editClientName.trim(),
-          legalName: editLegalName.trim(),
-          logoUrl: editLogoUrl.trim() || null,
-          remarks: editRemarks.trim() || null,
-          businessUnits: [payload]
-        };
-        const response = await axiosInstance.put(`/client/${selectedClient.id}`, clientPayload);
-        const updatedClient = response.data.data || response.data;
-        updatedBU = updatedClient.businessUnits?.[0] || payload;
-      }
+      const response = await axiosInstance.put(`/client/${selectedClient.id}`, clientPayload);
+      const updatedClientData = response.data.data || response.data;
+      const updatedBU = updatedClientData.businessUnits?.[0] || buPayload;
 
       setBuOriginalData(updatedBU);
       if (updatedBU.id) setBuId(updatedBU.id);
 
       const updatedClient = {
         ...selectedClient,
+        ...updatedClientData,
         businessUnits: [updatedBU]
       };
       dispatch(selectClient(updatedClient));
 
-      toast.success('Business Unit saved successfully!', { id: toastId });
+      toast.success('Business unit updated successfully!', { id: toastId });
     } catch (err: any) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Failed to save business unit.', { id: toastId });
+      console.error('Failed to save business unit:', err);
+      const errMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to save business unit.';
+      toast.error(errMsg, { id: toastId });
     } finally {
       setSavingBU(false);
     }
@@ -545,7 +593,10 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
             pincode: addrPincode.trim(),
             country: addrCountry.trim(),
             isDefault: addrIsDefault,
-            status: addrStatus
+            status: addrStatus,
+            gstin: addrGstin.trim() || null,
+            stateCode: addrStateCode.trim() || null,
+            gstType: addrGstType
           };
           await axiosInstance.put(`/vendor/supplier-addresses/${editingAddressId}`, payload);
           toast.success('Address updated successfully!', { id: toastId });
@@ -561,7 +612,10 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
             state: addrState.trim(),
             pincode: addrPincode.trim(),
             country: addrCountry.trim(),
-            isDefault: addrIsDefault
+            isDefault: addrIsDefault,
+            gstin: addrGstin.trim() || null,
+            stateCode: addrStateCode.trim() || null,
+            gstType: addrGstType
           };
           await axiosInstance.post('/vendor/supplier-addresses', payload);
           toast.success('Address added successfully!', { id: toastId });
@@ -582,6 +636,9 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
         setAddrIsPrimary(false);
         setAddrIsDefault(false);
         setAddrStatus(1);
+        setAddrGstin('');
+        setAddrStateCode('');
+        setAddrGstType('IGST');
         if (addressTypes.length > 0) {
           setAddrTypeId(addressTypes[0].id || 1);
         } else {
@@ -641,6 +698,9 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
     setAddrIsPrimary(!!addr.isPrimary);
     setAddrIsDefault(!!addr.isDefault);
     setAddrStatus(addr.status !== undefined ? addr.status : 1);
+    setAddrGstin(addr.gstin || '');
+    setAddrStateCode(addr.stateCode || '');
+    setAddrGstType(addr.gstType || 'IGST');
     setShowAddressForm(true);
   };
 
@@ -723,6 +783,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       isSeparateInvoicePrint: !!progSepInvPrint,
       isSeparatePicklist: !!progSepPicklist,
       isSeparateBatching: !!progSepBatching,
+      hasSeparateExcludeCourier: !!progHasSepExcludeCourier,
       tatHours: progTatHours === '' ? 0 : Number(progTatHours),
       printGroup: progPrintGroup.trim()
     };
@@ -749,6 +810,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       setProgSepInvPrint(false);
       setProgSepPicklist(false);
       setProgSepBatching(false);
+      setProgHasSepExcludeCourier(false);
       setProgTatHours(0);
       setProgPrintGroup('');
 
@@ -789,6 +851,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
     setProgSepInvPrint(!!prog.isSeparateInvoicePrint);
     setProgSepPicklist(!!prog.isSeparatePicklist);
     setProgSepBatching(!!prog.isSeparateBatching);
+    setProgHasSepExcludeCourier(!!prog.hasSeparateExcludeCourier);
     setProgTatHours(prog.tatHours ?? 0);
     setProgPrintGroup(prog.printGroup || '');
     setShowProgramForm(true);
@@ -1146,6 +1209,135 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
     setChannelType(item.channelType || '');
     setSubject(item.subject || '');
     setShowCommForm(true);
+  };
+
+  const fetchPricingSourceOptions = useCallback(async () => {
+    setLoadingPricingSourceOptions(true);
+    try {
+      const response = await axiosInstance.get<string>('/order/master/pricing-source', {
+        headers: { Accept: 'application/x-ndjson' },
+        responseType: 'text',
+        transformResponse: [(data) => data],
+      });
+      const parsed = parseNdjson(response.data);
+      if (parsed && parsed.length > 0) {
+        setPricingSourceOptions(parsed);
+      } else {
+        setPricingSourceOptions([
+          { code: 1, source: 'EXCEL' },
+          { code: 2, source: 'SYSTEM' },
+          { code: 3, source: 'HYBRID' }
+        ]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pricing source master options:', err);
+      setPricingSourceOptions([
+        { code: 1, source: 'EXCEL' },
+        { code: 2, source: 'SYSTEM' },
+        { code: 3, source: 'HYBRID' }
+      ]);
+    } finally {
+      setLoadingPricingSourceOptions(false);
+    }
+  }, []);
+
+  const fetchPricingSourceConfig = useCallback(async (clientId: number, businessUnitId: number) => {
+    setLoadingPricingSourceConfig(true);
+    try {
+      const response = await axiosInstance.get<string>(
+        `/client/config/${clientId}?configKey=PRICING_SOURCE&businessUnitId=${businessUnitId}`,
+        {
+          headers: { Accept: 'application/x-ndjson' },
+          responseType: 'text',
+          transformResponse: [(data) => data],
+        }
+      );
+      const parsed = parseNdjson(response.data);
+      let foundConfig = null;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        foundConfig = parsed.find((item: any) => item.configKey === 'PRICING_SOURCE') || parsed[0];
+      } else if (response.data && typeof response.data === 'object') {
+        foundConfig = response.data;
+      }
+
+      if (foundConfig && (foundConfig.id || foundConfig.configValue)) {
+        setPricingSourceConfigId(foundConfig.id || null);
+        setPricingSourceValue(foundConfig.configValue || 'EXCEL');
+      } else {
+        setPricingSourceConfigId(null);
+        setPricingSourceValue('EXCEL');
+      }
+    } catch (err) {
+      console.error('Failed to fetch pricing source config:', err);
+      setPricingSourceConfigId(null);
+      setPricingSourceValue('EXCEL');
+    } finally {
+      setLoadingPricingSourceConfig(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const currentClientId = selectedClient?.id || fetchedClientId;
+    if (currentClientId && buId && type === 'client') {
+      if (tab === 'business-unit' && buSubTab === 'pricing-source') {
+        fetchPricingSourceOptions();
+        fetchPricingSourceConfig(currentClientId, buId);
+      }
+    }
+  }, [selectedClient?.id, fetchedClientId, buId, tab, buSubTab, type, fetchPricingSourceOptions, fetchPricingSourceConfig]);
+
+  const handleSavePricingSource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const currentClientId = selectedClient?.id || fetchedClientId;
+    if (!currentClientId || !buId) {
+      toast.error('Client ID or Business Unit ID is missing.');
+      return;
+    }
+    if (!pricingSourceValue) {
+      toast.error('Please select a pricing source.');
+      return;
+    }
+
+    setSavingPricingSourceConfig(true);
+    const toastId = toast.loading(pricingSourceConfigId ? 'Updating pricing source...' : 'Creating pricing source...');
+
+    const payload = {
+      clientId: currentClientId,
+      businessUnitId: buId,
+      configKey: 'PRICING_SOURCE',
+      configValue: pricingSourceValue,
+    };
+
+    try {
+      let res;
+      if (pricingSourceConfigId) {
+        res = await axiosInstance.put(`/client/config/${pricingSourceConfigId}`, payload);
+      } else {
+        res = await axiosInstance.post('/client/config', payload);
+      }
+
+      if (res.data?.success !== false) {
+        toast.success(
+          pricingSourceConfigId
+            ? 'Pricing source configuration updated successfully!'
+            : 'Pricing source configuration created successfully!',
+          { id: toastId }
+        );
+        const configData = res.data?.data || res.data;
+        if (configData && configData.id) {
+          setPricingSourceConfigId(configData.id);
+        } else {
+          fetchPricingSourceConfig(currentClientId, buId);
+        }
+      } else {
+        toast.error(res.data?.message || 'Failed to save pricing source configuration.', { id: toastId });
+      }
+    } catch (err: any) {
+      console.error('Save pricing source error:', err);
+      toast.error(err.response?.data?.message || 'Failed to save pricing source configuration.', { id: toastId });
+    } finally {
+      setSavingPricingSourceConfig(false);
+    }
   };
 
   const fetchContactTypes = useCallback(async () => {
@@ -1864,7 +2056,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
         responseType: 'blob'
       });
       
-      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const blob = new Blob([response.data], { type: (response.headers['content-type'] as string) || 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -1989,7 +2181,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
         responseType: 'blob'
       });
 
-      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const blob = new Blob([response.data], { type: (response.headers['content-type'] as string) || 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -2318,6 +2510,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
               setBuDeliverWithinDays(buData.deliverWithinDays ?? 7);
               setBuHasOwnProductCode(buData.hasOwnProductCode ?? true);
               setBuHasMultiProductOrder(buData.hasMultiProductOrder ?? true);
+              setBuHasProgram(buData.hasProgram ?? true);
               setIsLegalNameSynced(false);
             } else {
               setBuOriginalData(null);
@@ -2329,6 +2522,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
               setBuDeliverWithinDays(7);
               setBuHasOwnProductCode(true);
               setBuHasMultiProductOrder(true);
+              setBuHasProgram(true);
               setIsLegalNameSynced(true);
             }
           }
@@ -2347,6 +2541,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
             setBuDeliverWithinDays(buData.deliverWithinDays ?? 7);
             setBuHasOwnProductCode(buData.hasOwnProductCode ?? true);
             setBuHasMultiProductOrder(buData.hasMultiProductOrder ?? true);
+            setBuHasProgram(buData.hasProgram ?? true);
             setIsLegalNameSynced(false);
           } else {
             setBuOriginalData(null);
@@ -2358,6 +2553,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
             setBuDeliverWithinDays(7);
             setBuHasOwnProductCode(true);
             setBuHasMultiProductOrder(true);
+            setBuHasProgram(true);
             setIsLegalNameSynced(true);
           }
         }
@@ -2371,8 +2567,6 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   const [editSupplierName, setEditSupplierName] = useState('');
   const [editSupplierLegalName, setEditSupplierLegalName] = useState('');
   const [editSupplierCategoryId, setEditSupplierCategoryId] = useState<number | ''>('');
-  const [editSupplierGstType, setEditSupplierGstType] = useState('CGST_SGST');
-  const [editSupplierGstin, setEditSupplierGstin] = useState('');
   const [editSupplierPan, setEditSupplierPan] = useState('');
   const [editSupplierWebsite, setEditSupplierWebsite] = useState('');
   const [editSupplierLeadDays, setEditSupplierLeadDays] = useState<number>(0);
@@ -2497,8 +2691,6 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       setEditSupplierName(selectedSupplier.name || '');
       setEditSupplierLegalName(selectedSupplier.legalName || '');
       setEditSupplierCategoryId(selectedSupplier.categoryId || '');
-      setEditSupplierGstType(selectedSupplier.gstType || 'CGST_SGST');
-      setEditSupplierGstin(selectedSupplier.gstin || '');
       setEditSupplierPan(selectedSupplier.pan || '');
       setEditSupplierWebsite(selectedSupplier.website || '');
       setEditSupplierLeadDays(selectedSupplier.leadDays || 0);
@@ -2540,15 +2732,15 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       remarks: editRemarks.trim() || null,
       businessUnits: [
         {
-          ...buOriginalData,
-          id: buId,
+          ...(buId ? { id: buId } : {}),
           unitCode: buUnitCode.trim(),
           unitName: buUnitName.trim(),
           legalName: buUnitLegalName.trim(),
           dispatchWithinDays: buDispatchWithinDays === '' ? 2 : Number(buDispatchWithinDays),
           deliverWithinDays: buDeliverWithinDays === '' ? 7 : Number(buDeliverWithinDays),
           hasOwnProductCode: !!buHasOwnProductCode,
-          hasMultiProductOrder: !!buHasMultiProductOrder
+          hasMultiProductOrder: !!buHasMultiProductOrder,
+          hasProgram: !!buHasProgram
         }
       ]
     };
@@ -2580,6 +2772,12 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       return;
     }
 
+    const trimmedPan = editSupplierPan.trim().toUpperCase();
+    if (trimmedPan && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(trimmedPan)) {
+      toast.error('Invalid PAN Number format (should be 5 letters, 4 digits, 1 letter, e.g. ABCDE1234F)');
+      return;
+    }
+
     setSavingProfile(true);
     const toastId = toast.loading('Saving changes...');
 
@@ -2587,9 +2785,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       name: editSupplierName.trim(),
       legalName: editSupplierLegalName.trim(),
       categoryId: editSupplierCategoryId || null,
-      gstType: editSupplierGstType,
-      gstin: editSupplierGstin.trim() || null,
-      pan: editSupplierPan.trim() || null,
+      pan: trimmedPan || null,
       website: editSupplierWebsite.trim() || null,
       leadDays: editSupplierLeadDays,
       defaultDiscountPercent: editSupplierDiscountPercent,
@@ -2614,118 +2810,137 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
     }
   };
 
-  // Handle client delete
-  const handleDeleteClient = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this client?')) return;
-    const toastId = toast.loading('Deleting client...');
-    try {
-      await axiosInstance.delete(`/client/${id}`);
-      toast.success('Client deleted successfully', { id: toastId });
-      fetchClients();
-      if (selectedClientId === id) {
-        dispatch(clearSelectedClient());
-      }
-    } catch (err) {
-      console.error('Failed to delete client:', err);
-      toast.error('Failed to delete client.', { id: toastId });
-    }
+  // Handle client delete (modal triggers)
+  const handleDeleteClient = (id: number) => {
+    setIdToDelete(id);
+    setDeleteType('client');
+    setDeleteConfirmOpen(true);
   };
 
-  const handleDeleteSelected = async () => {
-    if (!confirm(`Are you sure you want to delete ${selectedClientIds.length} selected clients?`)) return;
-    const toastId = toast.loading(`Deleting ${selectedClientIds.length} clients...`);
-    try {
-      await Promise.all(
-        selectedClientIds.map((id) =>
-          axiosInstance.delete(`/client/${id}`)
-        )
-      );
-      toast.success(`Deleted ${selectedClientIds.length} clients`, { id: toastId });
-      setSelectedClientIds([]);
-      fetchClients();
-    } catch (err) {
-      console.warn('Backend API delete failed:', err);
-      toast.error('Failed to delete selected clients.', { id: toastId });
-      fetchClients();
-    }
+  const handleDeleteSelected = () => {
+    setDeleteType('selected-clients');
+    setDeleteConfirmOpen(true);
   };
 
-  // Handle supplier delete (status: 0)
-  const handleDeleteSupplier = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this supplier?')) return;
-    const toastId = toast.loading('Deleting supplier...');
-    try {
-      const supp = suppliers.find(s => s.id === id);
-      if (supp) {
-        const payload = {
-          name: supp.name,
-          legalName: supp.legalName,
-          gstin: supp.gstin || null,
-          pan: supp.pan || null,
-          website: supp.website || null,
-          gstType: supp.gstType || 'CGST_SGST',
-          categoryId: supp.categoryId || null,
-          leadDays: supp.leadDays || 0,
-          defaultDiscountPercent: supp.defaultDiscountPercent || 0,
-          usesOwnProductCode: supp.usesOwnProductCode || false,
-          paymentTermsDays: supp.paymentTermsDays || 0,
-          creditLimit: supp.creditLimit || 0,
-          preferredSupplier: supp.preferredSupplier || false,
-          remarks: supp.remarks || null,
-          status: 0
-        };
-        await axiosInstance.put(`/vendor/suppliers/${id}`, payload);
-        toast.success('Supplier deleted successfully', { id: toastId });
-        fetchSuppliers();
-        if (selectedSupplierId === id) {
-          dispatch(clearSelectedSupplier());
-        }
-      } else {
-        throw new Error('Supplier not found locally');
-      }
-    } catch (err) {
-      console.error('Failed to delete supplier:', err);
-      toast.error('Failed to delete supplier.', { id: toastId });
-    }
+  // Handle supplier delete (modal triggers)
+  const handleDeleteSupplier = (id: number) => {
+    setIdToDelete(id);
+    setDeleteType('supplier');
+    setDeleteConfirmOpen(true);
   };
 
-  const handleDeleteSelectedSuppliers = async () => {
-    if (!confirm(`Are you sure you want to delete ${selectedSupplierIds.length} selected suppliers?`)) return;
-    const toastId = toast.loading(`Deleting ${selectedSupplierIds.length} suppliers...`);
-    try {
-      await Promise.all(
-        selectedSupplierIds.map(async (id) => {
-          const supp = suppliers.find(s => s.id === id);
-          if (supp) {
-            const payload = {
-              name: supp.name,
-              legalName: supp.legalName,
-              gstin: supp.gstin || null,
-              pan: supp.pan || null,
-              website: supp.website || null,
-              gstType: supp.gstType || 'CGST_SGST',
-              categoryId: supp.categoryId || null,
-              leadDays: supp.leadDays || 0,
-              defaultDiscountPercent: supp.defaultDiscountPercent || 0,
-              usesOwnProductCode: supp.usesOwnProductCode || false,
-              paymentTermsDays: supp.paymentTermsDays || 0,
-              creditLimit: supp.creditLimit || 0,
-              preferredSupplier: supp.preferredSupplier || false,
-              remarks: supp.remarks || null,
-              status: 0
-            };
-            await axiosInstance.put(`/vendor/suppliers/${id}`, payload);
+  const handleDeleteSelectedSuppliers = () => {
+    setDeleteType('selected-suppliers');
+    setDeleteConfirmOpen(true);
+  };
+
+  // Handle confirm action inside custom Delete Modal
+  const handleConfirmDelete = async () => {
+    setDeleteConfirmOpen(false);
+    if (!deleteType) return;
+
+    if (deleteType === 'supplier') {
+      if (idToDelete === null) return;
+      const id = idToDelete;
+      const toastId = toast.loading('Deleting supplier...');
+      try {
+        const supp = suppliers.find(s => s.id === id);
+        if (supp) {
+          const payload = {
+            name: supp.name,
+            legalName: supp.legalName,
+            pan: supp.pan || null,
+            website: supp.website || null,
+            categoryId: supp.categoryId || null,
+            leadDays: supp.leadDays || 0,
+            defaultDiscountPercent: supp.defaultDiscountPercent || 0,
+            usesOwnProductCode: supp.usesOwnProductCode || false,
+            paymentTermsDays: supp.paymentTermsDays || 0,
+            creditLimit: supp.creditLimit || 0,
+            preferredSupplier: supp.preferredSupplier || false,
+            remarks: supp.remarks || null,
+            status: 0
+          };
+          await axiosInstance.put(`/vendor/suppliers/${id}`, payload);
+          toast.success('Supplier deleted successfully', { id: toastId });
+          fetchSuppliers();
+          if (selectedSupplierId === id) {
+            dispatch(clearSelectedSupplier());
           }
-        })
-      );
-      toast.success(`Deleted ${selectedSupplierIds.length} suppliers`, { id: toastId });
-      setSelectedSupplierIds([]);
-      fetchSuppliers();
-    } catch (err) {
-      console.warn('Backend API delete failed:', err);
-      toast.error('Failed to delete selected suppliers.', { id: toastId });
-      fetchSuppliers();
+        }
+      } catch (err) {
+        console.error('Failed to delete supplier:', err);
+        toast.error('Failed to delete supplier.', { id: toastId });
+      }
+    } else if (deleteType === 'selected-suppliers') {
+      const toastId = toast.loading(`Deleting ${selectedSupplierIds.length} suppliers...`);
+      try {
+        await Promise.all(
+          selectedSupplierIds.map(async (id) => {
+            const supp = suppliers.find(s => s.id === id);
+            if (supp) {
+              const payload = {
+                name: supp.name,
+                legalName: supp.legalName,
+                pan: supp.pan || null,
+                website: supp.website || null,
+                categoryId: supp.categoryId || null,
+                leadDays: supp.leadDays || 0,
+                defaultDiscountPercent: supp.defaultDiscountPercent || 0,
+                usesOwnProductCode: supp.usesOwnProductCode || false,
+                paymentTermsDays: supp.paymentTermsDays || 0,
+                creditLimit: supp.creditLimit || 0,
+                preferredSupplier: supp.preferredSupplier || false,
+                remarks: supp.remarks || null,
+                status: 0
+              };
+              await axiosInstance.put(`/vendor/suppliers/${id}`, payload);
+            }
+          })
+        );
+        toast.success(`Deleted ${selectedSupplierIds.length} suppliers`, { id: toastId });
+        setSelectedSupplierIds([]);
+        fetchSuppliers();
+      } catch (err) {
+        console.warn('Backend API delete failed:', err);
+        toast.error('Failed to delete selected suppliers.', { id: toastId });
+        fetchSuppliers();
+      }
+    } else if (deleteType === 'client') {
+      if (idToDelete === null) return;
+      const id = idToDelete;
+      const toastId = toast.loading('Deleting client...');
+      try {
+        await axiosInstance.delete(`/client/${id}`);
+        toast.success('Client deleted successfully', { id: toastId });
+        fetchClients();
+        if (selectedClientId === id) {
+          dispatch(clearSelectedClient());
+        }
+      } catch (err) {
+        console.error('Failed to delete client:', err);
+        toast.error('Failed to delete client.', { id: toastId });
+      }
+    } else if (deleteType === 'selected-clients') {
+      const toastId = toast.loading(`Deleting ${selectedClientIds.length} clients...`);
+      try {
+        await Promise.all(
+          selectedClientIds.map((id) =>
+            axiosInstance.delete(`/client/${id}`)
+          )
+        );
+        toast.success(`Deleted ${selectedClientIds.length} clients`, { id: toastId });
+        setSelectedClientIds([]);
+        fetchClients();
+      } catch (err) {
+        console.warn('Backend API delete failed:', err);
+        toast.error('Failed to delete selected clients.', { id: toastId });
+        fetchClients();
+      }
     }
+
+    setDeleteType(null);
+    setIdToDelete(null);
   };
 
   // Sort & filter list
@@ -3047,28 +3262,6 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">GST Type</label>
-                  <select 
-                    value={editSupplierGstType} 
-                    onChange={e => setEditSupplierGstType(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="CGST_SGST">LOCAL (CGST_SGST)</option>
-                    <option value="IGST">IGST (Inter-State)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">GSTIN</label>
-                  <input 
-                    type="text" 
-                    value={editSupplierGstin} 
-                    onChange={e => setEditSupplierGstin(e.target.value.toUpperCase())}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                  />
-                </div>
-
-                <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">PAN No</label>
                   <input 
                     type="text" 
@@ -3177,6 +3370,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
           { code: 'payment-modes', title: 'Payment Modes' },
           { code: 'config', title: 'Config' },
           { code: 'comm-templates', title: 'Communication Template' },
+          { code: 'pricing-source', title: 'Pricing Source' },
         ];
 
         return (
@@ -3284,29 +3478,32 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Client has Own Product code</label>
-                      <select 
-                        value={buHasOwnProductCode ? 'true' : 'false'} 
-                        onChange={e => setBuHasOwnProductCode(e.target.value === 'true')}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                      >
-                        <option value="true">True</option>
-                        <option value="false">False</option>
-                      </select>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+                        Client has Own Product code
+                      </label>
+                      <div className="pt-1">
+                        <YesNoToggle value={buHasOwnProductCode} onChange={setBuHasOwnProductCode} />
+                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Multiple Product Order</label>
-                      <select 
-                        value={buHasMultiProductOrder ? 'true' : 'false'} 
-                        onChange={e => setBuHasMultiProductOrder(e.target.value === 'true')}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                      >
-                        <option value="true">True</option>
-                        <option value="false">False</option>
-                      </select>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+                        Multiple Product Order
+                      </label>
+                      <div className="pt-1">
+                        <YesNoToggle value={buHasMultiProductOrder} onChange={setBuHasMultiProductOrder} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+                        Has Program
+                      </label>
+                      <div className="pt-1">
+                        <YesNoToggle value={buHasProgram} onChange={setBuHasProgram} />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3350,196 +3547,238 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
 
                   {/* Form card when active */}
                   {showProgramForm && (
-                    <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm space-y-6">
-                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
-                        <h4 className="text-sm font-bold text-slate-800 dark:text-white">
-                          {editingProgramId ? 'Edit Program' : 'Add New Program'}
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => setShowProgramForm(false)}
-                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-350 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-
-                      <form onSubmit={handleSaveProgram} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                              Program Code <span className="text-red-500">*</span>
-                            </label>
-                            <input 
-                              type="text" 
-                              required
-                              value={progCode} 
-                              onChange={e => setProgCode(e.target.value)}
-                              placeholder="e.g. TEST001"
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            />
+                    <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg space-y-6 animate-in fade-in duration-200">
+                      
+                      {/* Header */}
+                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                            <ShieldCheck size={20} />
                           </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                              Program Name <span className="text-red-500">*</span>
-                            </label>
-                            <input 
-                              type="text" 
-                              required
-                              value={progName} 
-                              onChange={e => setProgName(e.target.value)}
-                              placeholder="e.g. Test Program 001"
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                              Program Label <span className="text-red-500">*</span>
-                            </label>
-                            <input 
-                              type="text" 
-                              required
-                              value={progLabel} 
-                              onChange={e => setProgLabel(e.target.value)}
-                              placeholder="e.g. Test Program 001"
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                              Powered By Description <span className="text-red-500">*</span>
-                            </label>
-                            <input 
-                              type="text" 
-                              required
-                              value={progPoweredBy} 
-                              onChange={e => setProgPoweredBy(e.target.value)}
-                              placeholder="e.g. Test Power"
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                              TAT Hours <span className="text-red-500">*</span>
-                            </label>
-                            <input 
-                              type="number" 
-                              required
-                              value={progTatHours} 
-                              onChange={e => setProgTatHours(e.target.value === '' ? '' : Number(e.target.value))}
-                              placeholder="e.g. 10"
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                              Print Group <span className="text-red-500">*</span>
-                            </label>
-                            <input 
-                              type="text" 
-                              required
-                              value={progPrintGroup} 
-                              onChange={e => setProgPrintGroup(e.target.value)}
-                              placeholder="e.g. TEST001"
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Allow RPI</label>
-                            <select 
-                              value={progAllowRpi ? 'true' : 'false'} 
-                              onChange={e => setProgAllowRpi(e.target.value === 'true')}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            >
-                              <option value="false">No</option>
-                              <option value="true">Yes</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Is Priority Procurement</label>
-                            <select 
-                              value={progPriorityProc ? 'true' : 'false'} 
-                              onChange={e => setProgPriorityProc(e.target.value === 'true')}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            >
-                              <option value="false">No</option>
-                              <option value="true">Yes</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Is Special Packing</label>
-                            <select 
-                              value={progSpecialPack ? 'true' : 'false'} 
-                              onChange={e => setProgSpecialPack(e.target.value === 'true')}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            >
-                              <option value="false">No</option>
-                              <option value="true">Yes</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Is Separate Invoice Print</label>
-                            <select 
-                              value={progSepInvPrint ? 'true' : 'false'} 
-                              onChange={e => setProgSepInvPrint(e.target.value === 'true')}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            >
-                              <option value="false">No</option>
-                              <option value="true">Yes</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Is Separate Picklist</label>
-                            <select 
-                              value={progSepPicklist ? 'true' : 'false'} 
-                              onChange={e => setProgSepPicklist(e.target.value === 'true')}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            >
-                              <option value="false">No</option>
-                              <option value="true">Yes</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Is Separate Batching</label>
-                            <select 
-                              value={progSepBatching ? 'true' : 'false'} 
-                              onChange={e => setProgSepBatching(e.target.value === 'true')}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                            >
-                              <option value="false">No</option>
-                              <option value="true">Yes</option>
-                            </select>
+                          <div>
+                            <h4 className="text-base font-bold text-slate-800 dark:text-white">
+                              {editingProgramId ? 'Edit Loyalty & Reward Program' : 'Add New Loyalty & Reward Program'}
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              Configure program identifiers, turnaround times, and order processing flags
+                            </p>
                           </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 pt-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowProgramForm(false)}
+                          className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleSaveProgram} className="space-y-6">
+                        
+                        {/* Section 1: General Program Info */}
+                        <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl p-5 border border-slate-200/70 dark:border-slate-800 space-y-4">
+                          <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 pb-1 border-b border-slate-200/60 dark:border-slate-800">
+                            1. Program Identifiers & Details
+                          </h5>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                Program Code <span className="text-red-500">*</span>
+                              </label>
+                              <input 
+                                type="text" 
+                                required
+                                value={progCode} 
+                                onChange={e => setProgCode(e.target.value)}
+                                placeholder="e.g. TEST001"
+                                className="w-full h-10 px-3.5 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                Program Name <span className="text-red-500">*</span>
+                              </label>
+                              <input 
+                                type="text" 
+                                required
+                                value={progName} 
+                                onChange={e => setProgName(e.target.value)}
+                                placeholder="e.g. Test Program 001"
+                                className="w-full h-10 px-3.5 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                Program Label <span className="text-red-500">*</span>
+                              </label>
+                              <input 
+                                type="text" 
+                                required
+                                value={progLabel} 
+                                onChange={e => setProgLabel(e.target.value)}
+                                placeholder="e.g. Test Program Label"
+                                className="w-full h-10 px-3.5 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                Powered By Description <span className="text-red-500">*</span>
+                              </label>
+                              <input 
+                                type="text" 
+                                required
+                                value={progPoweredBy} 
+                                onChange={e => setProgPoweredBy(e.target.value)}
+                                placeholder="e.g. Test Power"
+                                className="w-full h-10 px-3.5 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                TAT Hours <span className="text-red-500">*</span>
+                              </label>
+                              <input 
+                                type="number" 
+                                required
+                                value={progTatHours} 
+                                onChange={e => setProgTatHours(e.target.value === '' ? '' : Number(e.target.value))}
+                                placeholder="e.g. 10"
+                                min={0}
+                                className="w-full h-10 px-3.5 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                Print Group <span className="text-red-500">*</span>
+                              </label>
+                              <input 
+                                type="text" 
+                                required
+                                value={progPrintGroup} 
+                                onChange={e => setProgPrintGroup(e.target.value)}
+                                placeholder="e.g. TEST001"
+                                className="w-full h-10 px-3.5 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 2: Order Processing & Dispatch Controls (Toggles) */}
+                        <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl p-5 border border-slate-200/70 dark:border-slate-800 space-y-4">
+                          <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 pb-1 border-b border-slate-200/60 dark:border-slate-800">
+                            2. Order Processing & Courier Controls
+                          </h5>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                            
+                            {/* Toggle 1 */}
+                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                  Allow RPI
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Return pickup instruction</p>
+                              </div>
+                              <YesNoToggle value={progAllowRpi} onChange={setProgAllowRpi} />
+                            </div>
+
+                            {/* Toggle 2 */}
+                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                  Priority Procurement
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">High priority stock allocation</p>
+                              </div>
+                              <YesNoToggle value={progPriorityProc} onChange={setProgPriorityProc} />
+                            </div>
+
+                            {/* Toggle 3 */}
+                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                  Special Packing
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Custom unboxing / gift wrap</p>
+                              </div>
+                              <YesNoToggle value={progSpecialPack} onChange={setProgSpecialPack} />
+                            </div>
+
+                            {/* Toggle 4 */}
+                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                  Separate Invoice Print
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Individual invoice generation</p>
+                              </div>
+                              <YesNoToggle value={progSepInvPrint} onChange={setProgSepInvPrint} />
+                            </div>
+
+                            {/* Toggle 5 */}
+                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                  Separate Picklist
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Dedicated warehouse pick sheet</p>
+                              </div>
+                              <YesNoToggle value={progSepPicklist} onChange={setProgSepPicklist} />
+                            </div>
+
+                            {/* Toggle 6 */}
+                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                  Separate Batching
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Separate order batch run</p>
+                              </div>
+                              <YesNoToggle value={progSepBatching} onChange={setProgSepBatching} />
+                            </div>
+
+                            {/* Toggle 7 */}
+                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                  Separate Exclude Courier
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Custom courier blocklist</p>
+                              </div>
+                              <YesNoToggle value={progHasSepExcludeCourier} onChange={setProgHasSepExcludeCourier} />
+                            </div>
+
+                          </div>
+                        </div>
+
+                        {/* Footer Action Buttons */}
+                        <div className="flex justify-end gap-3 pt-2">
                           <button
                             type="button"
                             onClick={() => setShowProgramForm(false)}
-                            className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold transition-colors"
+                            className="px-5 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                           >
                             Cancel
                           </button>
                           <button
                             type="submit"
                             disabled={savingProgram}
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
+                            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
                           >
-                            <ShieldCheck size={14} />
+                            {savingProgram ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
                             {savingProgram ? 'Saving...' : editingProgramId ? 'Update Program' : 'Create Program'}
                           </button>
                         </div>
+
                       </form>
                     </div>
                   )}
@@ -4357,6 +4596,94 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                 )}
               </div>
             )}
+
+            {buSubTab === 'pricing-source' && (
+              <form onSubmit={handleSavePricingSource} className="space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-slate-50 dark:border-slate-800 gap-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                      <Tag size={18} className="text-blue-600 dark:text-blue-400" />
+                      Pricing Source Configuration
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Configure the pricing source (Excel, System, Hybrid, etc.) for this business unit.
+                    </p>
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={savingPricingSourceConfig || loadingPricingSourceConfig || !buId}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-150 flex items-center gap-1.5 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingPricingSourceConfig ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={14} />
+                        {pricingSourceConfigId ? 'Update Configuration' : 'Save Configuration'}
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {!buId ? (
+                  <div className="p-6 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-3">
+                    <AlertTriangle size={18} className="flex-shrink-0" />
+                    <span>Please save the Business Unit Profile first to configure Pricing Source.</span>
+                  </div>
+                ) : loadingPricingSourceConfig || loadingPricingSourceOptions ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-500">
+                    <RefreshCw size={24} className="animate-spin text-blue-600" />
+                    <span className="text-xs">Loading pricing source configurations...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200/70 dark:border-slate-800">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Config Key
+                      </label>
+                      <input 
+                        type="text" 
+                        disabled
+                        value="PRICING_SOURCE" 
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-sm font-semibold text-slate-700 dark:text-slate-300 font-mono cursor-not-allowed"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Config Value (Pricing Source) <span className="text-red-500">*</span>
+                      </label>
+                      <select 
+                        required
+                        value={pricingSourceValue} 
+                        onChange={e => setPricingSourceValue(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors font-medium"
+                      >
+                        {pricingSourceOptions.map((opt: any, idx: number) => {
+                          const val = opt.source || opt.value || opt.code || opt;
+                          const label = opt.source || opt.name || opt.description || val;
+                          return (
+                            <option key={opt.code || opt.id || idx} value={val}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    {pricingSourceConfigId && (
+                      <div className="md:col-span-2 pt-2 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 size={14} />
+                        <span>Active configuration found (Config ID: {pricingSourceConfigId}). Changes will update existing record.</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </form>
+            )}
           </div>
         );
       }
@@ -4683,6 +5010,9 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                       setAddrPincode('');
                       setAddrCountry('India');
                       setAddrIsDefault(false);
+                      setAddrGstin('');
+                      setAddrStateCode('');
+                      setAddrGstType('IGST');
                       if (addressTypes.length > 0) {
                         setAddrTypeId(addressTypes[0].id);
                       }
@@ -4862,6 +5192,51 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
+                      {/* GSTIN Field */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          GSTIN
+                        </label>
+                        <input 
+                          type="text" 
+                          value={addrGstin} 
+                          onChange={e => setAddrGstin(e.target.value.toUpperCase())}
+                          placeholder="e.g. 33ABCDE1234F1Z5"
+                          maxLength={15}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-805 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+
+                      {/* State Code Field */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          State Code
+                        </label>
+                        <input 
+                          type="text" 
+                          value={addrStateCode} 
+                          onChange={e => setAddrStateCode(e.target.value)}
+                          placeholder="e.g. 33"
+                          maxLength={2}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-805 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+
+                      {/* GST Type Field */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          GST Type
+                        </label>
+                        <select 
+                          value={addrGstType} 
+                          onChange={e => setAddrGstType(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                        >
+                          <option value="IGST">IGST (Inter-State)</option>
+                          <option value="CGST_SGST">LOCAL (CGST_SGST)</option>
+                        </select>
+                      </div>
+
                       {/* isDefault Radio Button Field */}
                       <div className="space-y-2 md:col-span-2">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">
@@ -4989,6 +5364,25 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                           <p className="text-slate-550 text-[10px]">
                             {addr.country}
                           </p>
+                          {(addr.gstin || addr.stateCode || addr.gstType) && (
+                            <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-slate-300 flex flex-wrap gap-x-3 gap-y-1">
+                              {addr.gstin && (
+                                <span>
+                                  <strong>GSTIN:</strong> {addr.gstin}
+                                </span>
+                              )}
+                              {addr.stateCode && (
+                                <span>
+                                  <strong>State Code:</strong> {addr.stateCode}
+                                </span>
+                              )}
+                              {addr.gstType && (
+                                <span>
+                                  <strong>GST Type:</strong> {addr.gstType}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         {/* Hover Overlay Actions matching Bank Card design */}
@@ -6614,6 +7008,79 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   // If we're on a submenu and NO client/supplier is selected, show warning
   const shouldShowEmptyDetailsPrompt = tab !== 'profile' && !activeId;
 
+  const renderDeleteConfirmModal = () => {
+    return (
+      <Modal
+        open={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setDeleteType(null);
+          setIdToDelete(null);
+        }}
+        title={
+          deleteType === 'selected-suppliers' || deleteType === 'selected-clients'
+            ? 'Delete Selected Records'
+            : deleteType === 'supplier'
+            ? 'Delete Supplier'
+            : 'Delete Client'
+        }
+        size="sm"
+        footer={
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setDeleteType(null);
+                setIdToDelete(null);
+              }}
+              className="px-4 py-2 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850 text-xs font-bold rounded-xl text-slate-650 dark:text-slate-355 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmDelete}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm hover:shadow"
+            >
+              Delete
+            </button>
+          </div>
+        }
+      >
+        <div className="flex items-start gap-3 py-1">
+          <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center text-red-600 dark:text-red-400 flex-shrink-0">
+            <AlertCircle size={18} />
+          </div>
+          <div>
+            <p className="text-xs text-slate-850 dark:text-slate-200 font-semibold">
+              {deleteType === 'supplier'
+                ? 'Are you sure you want to delete this supplier?'
+                : deleteType === 'client'
+                ? 'Are you sure you want to delete this client?'
+                : deleteType === 'selected-suppliers'
+                ? `Are you sure you want to delete the selected ${selectedSupplierIds.length} suppliers?`
+                : `Are you sure you want to delete the selected ${selectedClientIds.length} clients?`}
+            </p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-1.5 font-medium leading-relaxed">
+              {deleteType === 'supplier' && (
+                <>
+                  This will delete <span className="font-bold text-slate-800 dark:text-slate-250">{suppliers.find(s => s.id === idToDelete)?.name}</span>. This action cannot be undone.
+                </>
+              )}
+              {deleteType === 'client' && (
+                <>
+                  This will delete <span className="font-bold text-slate-800 dark:text-slate-250">{clients.find(c => c.id === idToDelete)?.clientName}</span>. This action cannot be undone.
+                </>
+              )}
+              {(deleteType === 'selected-suppliers' || deleteType === 'selected-clients') && (
+                <>This action cannot be undone and will delete all selected records.</>
+              )}
+            </p>
+          </div>
+        </div>
+      </Modal>
+    );
+  };
+
   // If we are showing the Supplier list (Supplier Profile page when no supplier is selected)
   if (type === 'supplier' && !selectedSupplierId) {
     const start = (page - 1) * perPage + 1;
@@ -6928,6 +7395,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
             onSuccess={fetchSuppliers}
             supplier={editingSupplier}
           />
+          {renderDeleteConfirmModal()}
         </div>
       </AdminLayout>
     );
@@ -7237,6 +7705,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
             onSuccess={fetchClients}
             client={editingClient}
           />
+          {renderDeleteConfirmModal()}
         </div>
       </AdminLayout>
     );
@@ -7622,6 +8091,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
           </div>
         </div>
       )}
+      {renderDeleteConfirmModal()}
     </AdminLayout>
   );
 }

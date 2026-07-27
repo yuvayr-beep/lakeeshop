@@ -8,7 +8,7 @@ import { Supplier } from '@/redux/slices/supplierSlice';
 interface SupplierModalProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (supplier?: any) => void;
   supplier?: Supplier | null; // If editing
 }
 
@@ -37,8 +37,6 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
   const [name, setName] = useState('');
   const [legalName, setLegalName] = useState('');
   const [categoryId, setCategoryId] = useState<number | ''>('');
-  const [gstType, setGstType] = useState('CGST_SGST');
-  const [gstin, setGstin] = useState('');
   const [pan, setPan] = useState('');
   const [website, setWebsite] = useState('');
   const [leadDays, setLeadDays] = useState<number>(0);
@@ -83,8 +81,6 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
         setName(supplier.name || '');
         setLegalName(supplier.legalName || '');
         setCategoryId(supplier.categoryId || '');
-        setGstType(supplier.gstType || 'CGST_SGST');
-        setGstin(supplier.gstin || '');
         setPan(supplier.pan || '');
         setWebsite(supplier.website || '');
         setLeadDays(supplier.leadDays || 0);
@@ -99,8 +95,6 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
         setName('');
         setLegalName('');
         setCategoryId('');
-        setGstType('CGST_SGST');
-        setGstin('');
         setPan('');
         setWebsite('');
         setLeadDays(0);
@@ -129,6 +123,12 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
       return;
     }
 
+    const trimmedPan = pan.trim().toUpperCase();
+    if (trimmedPan && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(trimmedPan)) {
+      toast.error('Invalid PAN Number format (should be 5 letters, 4 digits, 1 letter, e.g. ABCDE1234F)');
+      return;
+    }
+
     setSaving(true);
     const toastId = toast.loading(supplier ? 'Updating supplier...' : 'Creating supplier...');
 
@@ -137,9 +137,7 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
       name: name.trim(),
       legalName: legalName.trim(),
       categoryId: categoryId || null,
-      gstType,
-      gstin: gstin.trim() || null,
-      pan: pan.trim() || null,
+      pan: trimmedPan || null,
       website: website.trim() || null,
       leadDays,
       defaultDiscountPercent,
@@ -151,17 +149,20 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
       status: supplier ? supplier.status : 1
     };
 
+    let savedSupplier = null;
     try {
       if (supplier) {
         // Edit
-        await axiosInstance.put(`/vendor/suppliers/${supplier.id}`, payload);
+        const res = await axiosInstance.put(`/vendor/suppliers/${supplier.id}`, payload);
         toast.success('Supplier updated successfully!', { id: toastId });
+        savedSupplier = res.data?.data || { id: supplier.id, ...payload };
       } else {
         // Create
-        await axiosInstance.post('/vendor/suppliers', payload);
+        const res = await axiosInstance.post('/vendor/suppliers', payload);
         toast.success('Supplier created successfully!', { id: toastId });
+        savedSupplier = res.data?.data || res.data || payload;
       }
-      onSuccess();
+      onSuccess(savedSupplier);
       onClose();
     } catch (err: any) {
       console.error(err);
@@ -254,34 +255,6 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-355">
-                GST Type
-              </label>
-              <select
-                value={gstType}
-                onChange={(e) => setGstType(e.target.value)}
-                className="w-full h-10 px-3 text-sm bg-slate-50/50 focus:bg-white dark:bg-slate-950/20 dark:focus:bg-slate-900 border border-slate-300 hover:border-slate-400 focus:border-blue-500 dark:border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-855 dark:text-slate-200 transition-all"
-              >
-                <option value="CGST_SGST">LOCAL (CGST_SGST)</option>
-                <option value="IGST">IGST (Inter-State)</option>
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-355">
-                GSTIN
-              </label>
-              <input
-                type="text"
-                value={gstin}
-                onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                placeholder="e.g. 33ABCDE1234F1Z5"
-                maxLength={15}
-                className="w-full h-10 px-3 text-sm bg-slate-50/50 focus:bg-white dark:bg-slate-950/20 dark:focus:bg-slate-900 border border-slate-300 hover:border-slate-400 focus:border-blue-500 dark:border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-855 dark:text-slate-200 transition-all"
-              />
             </div>
 
             <div className="space-y-1">

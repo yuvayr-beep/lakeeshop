@@ -63,6 +63,20 @@ export const forgotPasswordVerify = async (
   return response.data;
 };
 
+// Backend integration: POST /auth/refresh
+export const refresh = async (refreshToken: string): Promise<SignInResponse> => {
+  const response = await axiosInstance.post<SignInResponse>(
+    '/auth/refresh',
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${refreshToken}`,
+      },
+    }
+  );
+  return response.data;
+};
+
 export const saveAuthTokens = (tokens: SignInResponse) => {
   localStorage.setItem('accessToken', tokens.accessToken);
   localStorage.setItem('refreshToken', tokens.refreshToken);
@@ -75,6 +89,7 @@ export const clearAuthTokens = () => {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('expiresIn');
   localStorage.removeItem('tokenType');
+  localStorage.removeItem('userPhone');
 };
 
 export const isAuthenticated = (): boolean => {

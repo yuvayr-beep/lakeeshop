@@ -107,12 +107,8 @@ export const mockMenuData: MenuModule[] = [
       {
         code: 'STK_REC',
         title: 'Receive Stock',
-        actions: ['READ', 'WRITE'],
-        subScreens: [
-          { code: 'STK_REC_RCV', title: 'Receive', href: '/admin/stock/receive', actions: ['READ', 'WRITE'] },
-          { code: 'STK_REC_VER', title: 'Verify', href: '/admin/stock/receive/verify', actions: ['READ', 'WRITE'] },
-          { code: 'STK_REC_DMG', title: 'Damaged', href: '/admin/stock/receive/damaged', actions: ['READ', 'WRITE'] },
-        ]
+        href: '/admin/stock/receive',
+        actions: ['READ', 'WRITE']
       },
       {
         code: 'STK_TRANS',
@@ -127,11 +123,17 @@ export const mockMenuData: MenuModule[] = [
         actions: ['READ', 'WRITE']
       },
       {
-        code: 'STK_TAKING',
-        title: 'Stocktaking',
-        href: '/admin/stock/stocktaking',
+        code: 'STK_ADJ',
+        title: 'Adjust Stock',
+        href: '/admin/stock/adjust',
         actions: ['READ', 'WRITE']
       },
+      // {
+      //   code: 'STK_TAKING',
+      //   title: 'Stocktaking',
+      //   href: '/admin/stock/stocktaking',
+      //   actions: ['READ', 'WRITE']
+      // },
       {
         code: 'STK_REPORTS',
         title: 'Stock Reports',
@@ -158,6 +160,119 @@ export const mockMenuData: MenuModule[] = [
           { code: 'STK_M_WH', title: 'Warehouse Setup', href: '/admin/stock/master/warehouse', actions: ['READ', 'WRITE'] },
           { code: 'STK_M_LOC', title: 'Inventory Storage Locations', href: '/admin/stock/master/locations', actions: ['READ', 'WRITE'] },
         ]
+      }
+    ]
+  },
+  {
+    code: 'ORDERS',
+    module: 'Orders',
+    icon: 'ShoppingCart',
+    screens: [
+      {
+        code: 'ORD_MASTER_CONFIG',
+        title: 'Master Configuration',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'ORD_COL_MAP',
+            title: 'Client Column Mapping Setup',
+            href: '/admin/orders/master-config/column-mapping',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_PINCODE_REG',
+            title: 'Pincode Registry',
+            href: '/admin/orders/master-config/pincode-registry',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_CUST_BLACKLIST',
+            title: 'Customer Blacklist Setup',
+            href: '/admin/orders/master-config/customer-blacklist',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_MASTER_LOOKUPS',
+            title: 'Master Code Lookups',
+            href: '/admin/orders/master-config/master-lookups',
+            actions: ['READ', 'WRITE']
+          }
+        ]
+      }
+    ]
+  },
+  {
+    code: 'COURIER',
+    module: 'Courier',
+    icon: 'Truck',
+    screens: [
+      {
+        code: 'COUR_PARTNER',
+        title: 'Courier Partner Management',
+        href: '/admin/courier/partners',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_EXCLUSIONS',
+        title: 'Client & Product Exclusions',
+        href: '/admin/courier/exclusions',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_AWB',
+        title: 'AWB Allocation & Pre-Allotted Pools',
+        href: '/admin/courier/awb',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_INV_REG',
+        title: 'Invoice & Label Registry',
+        href: '/admin/courier/invoice-registry',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_PRINT',
+        title: 'Customer Invoice & Label Printing',
+        href: '/admin/courier/label-printing',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_OUTSCAN',
+        title: 'Courier Outscan',
+        href: '/admin/courier/outscan',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_DISPATCH',
+        title: 'Courier Dispatches & Manifests',
+        href: '/admin/courier/manifests',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_RETURNS',
+        title: 'Logistics Returns Processing',
+        href: '/admin/courier/returns',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_MASTER',
+        title: 'Master',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          { code: 'COUR_M_PIN', title: 'Master Pincodes', href: '/admin/courier/master/pincodes', actions: ['READ', 'WRITE'] },
+          { code: 'COUR_M_RATES', title: 'Courier Rate Cards', href: '/admin/courier/master/rates', actions: ['READ', 'WRITE'] },
+          { code: 'COUR_M_ZONES', title: 'Zone Matrix Configuration', href: '/admin/courier/master/zones', actions: ['READ', 'WRITE'] },
+          { code: 'COUR_M_ACTUALS', title: 'Actual Weight Audit', href: '/admin/courier/master/actuals', actions: ['READ', 'WRITE'] },
+          { code: 'COUR_M_AVG_PRICE', title: 'Proposed Average Prices', href: '/admin/courier/master/proposed-average-prices', actions: ['READ', 'WRITE'] },
+          { code: 'COUR_M_PIN_BLOCK', title: 'Pincode Block & Unblock', href: '/admin/courier/master/pincode-block', actions: ['READ', 'WRITE'] },
+          { code: 'COUR_M_SYNC', title: 'Outbox Sync Delta', href: '/admin/courier/master/sync-delta', actions: ['READ', 'WRITE'] },
+        ]
+      },
+      {
+        code: 'COUR_WEBHOOKS',
+        title: 'Webhooks & Carrier Integrations',
+        href: '/admin/courier/webhooks',
+        actions: ['READ', 'WRITE']
       }
     ]
   }

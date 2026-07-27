@@ -4,6 +4,7 @@ import themeReducer from './slices/themeSlice';
 import userReducer from './slices/userSlice';
 import clientReducer from './slices/clientSlice';
 import supplierReducer from './slices/supplierSlice';
+import courierReducer from './slices/courierSlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     user: userReducer,
     client: clientReducer,
     supplier: supplierReducer,
+    courier: courierReducer,
   },
 });
 

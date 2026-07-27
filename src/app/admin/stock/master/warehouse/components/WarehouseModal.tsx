@@ -9,6 +9,14 @@ interface Warehouse {
   name: string;
   type: string;
   address: string;
+  shipmentType?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  addressLine3?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  pincode?: string | null;
   status: boolean;
 }
 
@@ -31,6 +39,14 @@ export default function WarehouseModal({
   const [name, setName] = useState('');
   const [type, setType] = useState('warehouse');
   const [address, setAddress] = useState('');
+  const [shipmentType, setShipmentType] = useState('SURFACE');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [addressLine3, setAddressLine3] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [country, setCountry] = useState('India');
+  const [pincode, setPincode] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Dynamic types list state
@@ -48,10 +64,26 @@ export default function WarehouseModal({
         setName(warehouse.name);
         setType(warehouse.type || 'warehouse');
         setAddress(warehouse.address || '');
+        setShipmentType(warehouse.shipmentType || 'SURFACE');
+        setAddressLine1(warehouse.addressLine1 || '');
+        setAddressLine2(warehouse.addressLine2 || '');
+        setAddressLine3(warehouse.addressLine3 || '');
+        setCity(warehouse.city || '');
+        setState(warehouse.state || '');
+        setCountry(warehouse.country || 'India');
+        setPincode(warehouse.pincode || '');
       } else {
         setName('');
         setType('warehouse');
         setAddress('');
+        setShipmentType('SURFACE');
+        setAddressLine1('');
+        setAddressLine2('');
+        setAddressLine3('');
+        setCity('');
+        setState('');
+        setCountry('India');
+        setPincode('');
       }
 
       // Fetch warehouse types dynamically
@@ -62,12 +94,24 @@ export default function WarehouseModal({
             setWarehouseTypes(res.data);
           }
         })
-        .catch((err) => {
+         .catch((err) => {
           console.error('Failed to fetch warehouse types:', err);
         })
         .finally(() => setLoadingTypes(false));
     }
   }, [open, warehouse]);
+
+  // Auto-generate full address if fields change
+  useEffect(() => {
+    if (open) {
+      const parts = [addressLine1, addressLine2, addressLine3, city, state, country, pincode]
+        .map(p => p.trim())
+        .filter(Boolean);
+      if (parts.length > 0) {
+        setAddress(parts.join(', '));
+      }
+    }
+  }, [open, addressLine1, addressLine2, addressLine3, city, state, country, pincode]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,8 +124,24 @@ export default function WarehouseModal({
       toast.error('Warehouse type is required');
       return;
     }
-    if (!address.trim()) {
-      toast.error('Address is required');
+    if (!addressLine1.trim()) {
+      toast.error('Address Line 1 is required');
+      return;
+    }
+    if (!city.trim()) {
+      toast.error('City is required');
+      return;
+    }
+    if (!state.trim()) {
+      toast.error('State is required');
+      return;
+    }
+    if (!pincode.trim()) {
+      toast.error('Pincode is required');
+      return;
+    }
+    if (!country.trim()) {
+      toast.error('Country is required');
       return;
     }
 
@@ -92,6 +152,14 @@ export default function WarehouseModal({
       name: name.trim(),
       type: type,
       address: address.trim(),
+      shipmentType: shipmentType,
+      addressLine1: addressLine1.trim(),
+      addressLine2: addressLine2.trim() || null,
+      addressLine3: addressLine3.trim() || null,
+      city: city.trim(),
+      state: state.trim(),
+      country: country.trim(),
+      pincode: pincode.trim(),
     };
 
     try {
@@ -159,59 +227,178 @@ export default function WarehouseModal({
         {/* Form Body */}
         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-4">
           
-          {/* Name */}
+          {/* Grid for Name, Type and Shipment Type */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
+                Warehouse Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Raheja Complex"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 font-medium"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-3/0 uppercase tracking-wide mb-1" style={{ visibility: 'hidden', height: 0 }}>Dummy</label>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
+                  Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  disabled={loadingTypes || saving}
+                  className="w-full h-10 px-2 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-205 font-medium cursor-pointer disabled:opacity-60"
+                >
+                  {loadingTypes && warehouseTypes.length === 0 ? (
+                    <option value="">Loading...</option>
+                  ) : (
+                    warehouseTypes.map((t) => (
+                      <option key={t.code} value={t.code}>
+                        {t.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-3/0 uppercase tracking-wide mb-1" style={{ visibility: 'hidden', height: 0 }}>Dummy</label>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
+                  Shipment Type
+                </label>
+                <select
+                  value={shipmentType}
+                  onChange={(e) => setShipmentType(e.target.value)}
+                  disabled={saving}
+                  className="w-full h-10 px-2 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-205 font-medium cursor-pointer"
+                >
+                  <option value="SURFACE">SURFACE</option>
+                  <option value="DP">DP</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Address Line 1 */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
-              Warehouse Name <span className="text-red-500">*</span>
+              Address Line 1 <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               required
-              placeholder="e.g. Raheja Complex or ATM Square"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              placeholder="Building No, Street Name"
+              value={addressLine1}
+              onChange={(e) => setAddressLine1(e.target.value)}
               className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 font-medium"
             />
           </div>
 
-          {/* Type Selection */}
-          <div>
-            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
-              Warehouse Type <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              disabled={loadingTypes || saving}
-              className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-205 font-medium cursor-pointer disabled:opacity-60"
-            >
-              {loadingTypes && warehouseTypes.length === 0 ? (
-                <option value="">Loading types...</option>
-              ) : (
-                warehouseTypes.map((t) => (
-                  <option key={t.code} value={t.code}>
-                    {t.name}
-                  </option>
-                ))
-              )}
-            </select>
+          {/* Address Line 2 & 3 in a grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
+                Address Line 2
+              </label>
+              <input
+                type="text"
+                placeholder="Locality, Area"
+                value={addressLine2}
+                onChange={(e) => setAddressLine2(e.target.value)}
+                className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
+                Address Line 3
+              </label>
+              <input
+                type="text"
+                placeholder="Landmark"
+                value={addressLine3}
+                onChange={(e) => setAddressLine3(e.target.value)}
+                className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 font-medium"
+              />
+            </div>
           </div>
 
-          {/* Address */}
+          {/* City, State, Pincode in a grid */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-355 uppercase tracking-wide mb-1">
+                City <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="City"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
+                State <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="State"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-355 uppercase tracking-wide mb-1">
+                Pincode <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Pincode"
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value)}
+                className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 font-medium"
+              />
+            </div>
+          </div>
+
+          {/* Country */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
-              Full Address <span className="text-red-500">*</span>
+              Country <span className="text-red-500">*</span>
             </label>
-            <textarea
+            <input
+              type="text"
               required
-              rows={3}
-              placeholder="Enter full physical address..."
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full p-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 font-medium resize-none leading-relaxed"
+              placeholder="Country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="w-full h-10 px-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 font-medium"
             />
           </div>
 
+          {/* Computed Full Address (read-only preview) */}
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wide mb-1">
+              Full Address Preview
+            </label>
+            <textarea
+              readOnly
+              rows={2}
+              value={address}
+              placeholder="Full address preview will generate automatically..."
+              className="w-full p-3 text-xs bg-slate-100 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-550 dark:text-slate-400 font-medium resize-none leading-relaxed select-none focus:outline-none"
+            />
+          </div>
         </form>
 
         {/* Footer Actions */}

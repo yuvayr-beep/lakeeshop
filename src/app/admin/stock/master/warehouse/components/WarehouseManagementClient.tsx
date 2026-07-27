@@ -14,6 +14,14 @@ interface Warehouse {
   name: string;
   type: string;
   address: string;
+  shipmentType?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  addressLine3?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  pincode?: string | null;
   status: boolean;
 }
 
@@ -236,11 +244,23 @@ export default function WarehouseManagementClient() {
     const toastId = toast.loading('Generating Excel file...');
     
     try {
-      const headers = ['Warehouse ID', 'Warehouse Name', 'Type', 'Address', 'Status'];
+      const headers = [
+        'Warehouse ID', 'Warehouse Name', 'Type', 'Shipment Type', 
+        'Address Line 1', 'Address Line 2', 'Address Line 3', 
+        'City', 'State', 'Country', 'Pincode', 'Full Address', 'Status'
+      ];
       const rows = warehouses.map((w) => [
         w.id,
         w.name,
         w.type,
+        w.shipmentType || 'SURFACE',
+        w.addressLine1 || '',
+        w.addressLine2 || '',
+        w.addressLine3 || '',
+        w.city || '',
+        w.state || '',
+        w.country || 'India',
+        w.pincode || '',
         w.address,
         w.status ? 'Active' : 'Inactive'
       ]);
@@ -381,7 +401,7 @@ export default function WarehouseManagementClient() {
           </div>
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-left border-collapse table-fixed min-w-[900px]">
+            <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
               <thead>
                 <tr className="border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/25">
                   <th className="w-12 py-3 px-4 text-center">
@@ -395,6 +415,7 @@ export default function WarehouseManagementClient() {
                   <th className="w-20 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">#</th>
                   <th className="w-64 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Warehouse Name</th>
                   <th className="w-40 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Type</th>
+                  <th className="w-32 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Shipment Type</th>
                   <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Address</th>
                   <th className="w-28 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center select-none">Status</th>
                   <th className="w-28 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center select-none">Actions</th>
@@ -428,6 +449,11 @@ export default function WarehouseManagementClient() {
                       <td className="py-2.5 px-4 text-xs font-medium text-slate-650 dark:text-slate-300">
                         <span className="capitalize bg-slate-100 dark:bg-slate-800 text-slate-750 dark:text-slate-300 px-2 py-0.5 rounded-md font-semibold text-[10px]">
                           {w.type.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 text-xs font-medium text-slate-650 dark:text-slate-300">
+                        <span className="capitalize bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md font-semibold text-[10px]">
+                          {w.shipmentType || 'SURFACE'}
                         </span>
                       </td>
                       <td className="py-2.5 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 truncate" title={w.address}>

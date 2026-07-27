@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Bell, Ticket, Sun, Moon, ChevronDown, User, KeyRound, LogOut,
-  Menu, AlertTriangle, Package, Truck, Clock, TrendingDown
+  Menu, AlertTriangle, Package, Truck, Clock, TrendingDown, Palette, Sliders
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { toggleTheme } from '@/redux/slices/themeSlice';
 import { logout } from '@/redux/slices/authSlice';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 import LakeeeLogoMark from '@/components/auth/LakeeeLogoMark';
+import ThemeSettingsDrawer from './ThemeSettingsDrawer';
 
 interface AdminTopbarProps {
   onToggleSidebar: () => void;
@@ -31,9 +31,9 @@ const notifications = [
 export default function AdminTopbar({ onToggleSidebar, onMobileMenu }: AdminTopbarProps) {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const themeMode = useAppSelector((s) => s.theme.mode);
   const userProfile = useAppSelector((s) => s.user.profile);
 
+  const [themeDrawerOpen, setThemeDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -113,14 +113,26 @@ export default function AdminTopbar({ onToggleSidebar, onMobileMenu }: AdminTopb
           <Ticket size={17} />
         </Link>
 
-        {/* Dark/Light toggle */}
+        {/* Theme & Appearance Settings Button (Opens Slide-over Drawer) */}
         <button
-          onClick={() => dispatch(toggleTheme())}
-          className="flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-150"
-          aria-label="Toggle theme"
+          onClick={() => {
+            setThemeDrawerOpen(true);
+            setNotifOpen(false);
+            setProfileOpen(false);
+          }}
+          className="flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-150 relative group"
+          title="Theme & Appearance Settings"
+          aria-label="Theme settings"
         >
-          {themeMode === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+          <Palette size={17} className="text-slate-600 dark:text-slate-300 group-hover:scale-110 transition-transform" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--primary)] border-2 border-white dark:border-slate-900" />
         </button>
+
+        {/* Theme Drawer */}
+        <ThemeSettingsDrawer
+          isOpen={themeDrawerOpen}
+          onClose={() => setThemeDrawerOpen(false)}
+        />
 
         {/* Notification Bell */}
         <div ref={notifRef} className="relative">

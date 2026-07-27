@@ -47,6 +47,8 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
       if (module.code === 'CLIENTS' && pathname?.startsWith('/admin/clients')) return true;
       if (module.code === 'SUPPLIERS' && pathname?.startsWith('/admin/suppliers')) return true;
       if (module.code === 'STOCK' && pathname?.startsWith('/admin/stock')) return true;
+      if (module.code === 'ORDERS' && pathname?.startsWith('/admin/orders')) return true;
+      if (module.code === 'COURIER' && pathname?.startsWith('/admin/courier')) return true;
       if (module.href && pathname?.startsWith(module.href)) return true;
       return module.screens.some((s) => {
         if (pathname === s.href) return true;
@@ -130,7 +132,9 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
           const hasActiveChild = 
             (module.code === 'CLIENTS' && pathname?.startsWith('/admin/clients')) ||
             (module.code === 'SUPPLIERS' && pathname?.startsWith('/admin/suppliers')) ||
-            (module.code === 'STOCK' && pathname?.startsWith('/admin/stock'))
+            (module.code === 'STOCK' && pathname?.startsWith('/admin/stock')) ||
+            (module.code === 'ORDERS' && pathname?.startsWith('/admin/orders')) ||
+            (module.code === 'COURIER' && pathname?.startsWith('/admin/courier'))
               ? true
               : module.href
                 ? pathname === module.href || pathname?.startsWith(module.href)
@@ -142,7 +146,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
 
           const buttonClasses = `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-600 transition-all duration-150 ${
             hasActiveChild
-              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
+              ? 'font-bold' 
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-white'
           } ${isCollapsed ? 'justify-center' : ''}`;
 
@@ -155,6 +159,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                   onClick={() => {
                     if (isCollapsed) onRequestOpen();
                   }}
+                  style={hasActiveChild ? { backgroundColor: 'var(--primary-light-bg)', color: 'var(--primary)' } : undefined}
                   className={buttonClasses}
                   title={isCollapsed ? module.module : undefined}
                 >
@@ -176,6 +181,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
               ) : (
                 <button
                   onClick={() => isCollapsed ? onRequestOpen() : toggleModule(module.code)}
+                  style={hasActiveChild ? { backgroundColor: 'var(--primary-light-bg)', color: 'var(--primary)' } : undefined}
                   className={buttonClasses}
                   title={isCollapsed ? module.module : undefined}
                 >
@@ -222,14 +228,18 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                             <button
                               type="button"
                               onClick={() => setExpandedScreen((prev) => (prev === screen.code ? null : screen.code))}
+                              style={hasActiveSubChild ? { color: 'var(--primary)' } : undefined}
                               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-600 transition-all duration-150 ${
                                 hasActiveSubChild
-                                  ? 'bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold'
+                                  ? 'bg-slate-100 dark:bg-slate-800 font-bold'
                                   : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-700 dark:hover:text-white'
                               }`}
                             >
                               <div className="flex items-center gap-2">
-                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${hasActiveSubChild ? 'bg-blue-600 dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${hasActiveSubChild ? '' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                  style={hasActiveSubChild ? { backgroundColor: 'var(--primary)' } : undefined}
+                                />
                                 <span>{screen.title}</span>
                               </div>
                               <ChevronDown
@@ -253,9 +263,10 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                                       <Link
                                         key={subScreen.code}
                                         href={subScreen.href!}
+                                        style={isSubActive ? { backgroundColor: 'var(--primary)', color: '#ffffff' } : undefined}
                                         className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150 ${
                                           isSubActive
-                                            ? 'bg-blue-600 text-white shadow-sm font-semibold'
+                                            ? 'shadow-sm font-semibold'
                                             : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-700 dark:hover:text-white'
                                         }`}
                                       >
@@ -276,9 +287,10 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                         <Link
                           key={screen.code}
                           href={screen.href!}
+                          style={isActive ? { backgroundColor: 'var(--primary)', color: '#ffffff' } : undefined}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-600 transition-all duration-150 ${
                             isActive
-                              ? 'bg-blue-600 text-white shadow-sm'
+                              ? 'shadow-sm'
                               : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-700 dark:hover:text-white'
                           }`}
                         >

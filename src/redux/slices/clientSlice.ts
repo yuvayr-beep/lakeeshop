@@ -8,6 +8,7 @@ export interface Client {
   logoUrl?: string;
   status: number;
   remarks?: string;
+  businessUnits?: any[];
   createdAt?: string;
   updatedAt?: string;
   createdBy?: number;

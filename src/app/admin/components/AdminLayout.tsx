@@ -5,10 +5,11 @@ import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
 import AdminFooter from './AdminFooter';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { setTheme } from '@/redux/slices/themeSlice';
+import { applyThemeToDom } from '@/redux/slices/themeSlice';
 import { fetchUserProfile } from '@/redux/slices/userSlice';
 import { clearSelectedClient } from '@/redux/slices/clientSlice';
 import { clearSelectedSupplier } from '@/redux/slices/supplierSlice';
+import { clearSelectedCourier } from '@/redux/slices/courierSlice';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ export default function AdminLayout({ children, fullWidth = true }: AdminLayoutP
   const dispatch = useAppDispatch();
   const selectedClientId = useAppSelector((state) => state.client.selectedClientId);
   const selectedSupplierId = useAppSelector((state) => state.supplier.selectedSupplierId);
+  const selectedCourierId = useAppSelector((state) => state.courier.selectedCourierId);
 
   useEffect(() => {
     if (selectedClientId && pathname && !pathname.startsWith('/admin/clients')) {
@@ -29,8 +31,15 @@ export default function AdminLayout({ children, fullWidth = true }: AdminLayoutP
     if (selectedSupplierId && pathname && !pathname.startsWith('/admin/suppliers')) {
       dispatch(clearSelectedSupplier());
     }
-  }, [pathname, selectedClientId, selectedSupplierId, dispatch]);
+    if (selectedCourierId && pathname && !pathname.startsWith('/admin/courier')) {
+      dispatch(clearSelectedCourier());
+    }
+  }, [pathname, selectedClientId, selectedSupplierId, selectedCourierId, dispatch]);
+
   const themeMode = useAppSelector((s) => s.theme.mode);
+  const themeColor = useAppSelector((s) => s.theme.color);
+  const customHex = useAppSelector((s) => s.theme.customHex);
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -74,25 +83,24 @@ export default function AdminLayout({ children, fullWidth = true }: AdminLayoutP
       router.replace('/');
       return;
     }
-    // Restore theme
-    const savedTheme = localStorage.getItem('themeMode') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      dispatch(setTheme(savedTheme));
-    }
-    // Fetch user profile
+    // Restore user profile
     const phone = localStorage.getItem('userPhone');
     if (phone) {
       dispatch(fetchUserProfile(phone));
     }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'accessToken' && !e.newValue) {
+        router.replace('/');
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, [router, dispatch]);
 
   useEffect(() => {
-    if (themeMode === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [themeMode]);
+    applyThemeToDom(themeMode, themeColor, customHex);
+  }, [themeMode, themeColor, customHex]);
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">

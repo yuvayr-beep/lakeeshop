@@ -154,4 +154,36 @@
     background: var(--muted);
     border-radius: 4px;
   }
+
+  /* Dynamic Theme Color Overrides for Buttons, Modals, Badges & Actions */
+  .bg-blue-600, .bg-blue-500, .btn-primary {
+    background-color: var(--primary) !important;
+  }
+  .hover\:bg-blue-700:hover, .hover\:bg-blue-600:hover {
+    background-color: var(--primary-hover) !important;
+  }
+  .text-blue-600, .text-blue-700, .text-blue-500 {
+    color: var(--primary) !important;
+  }
+  .dark .text-blue-400 {
+    color: var(--primary) !important;
+  }
+  .bg-blue-50, .bg-blue-50\/50, .bg-blue-100 {
+    background-color: var(--primary-light-bg) !important;
+  }
+  .dark .bg-blue-900\/20, .dark .bg-blue-900\/30, .dark .bg-blue-900\/40 {
+    background-color: var(--primary-light-bg) !important;
+  }
+  .border-blue-600, .border-blue-500, .border-blue-300 {
+    border-color: var(--primary) !important;
+  }
+  .focus\:ring-blue-500:focus, .focus\:ring-blue-600:focus, .focus\:border-blue-500:focus, .focus\:border-blue-600:focus {
+    --tw-ring-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+  }
+  .from-blue-600 {
+    --tw-gradient-from: var(--primary) var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: var(--primary) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-from), var(--tw-gradient-to)) !important;
+  }
 }

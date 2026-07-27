@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, Download, Upload, RefreshCw, Package, AlertCircle, Zap, ChevronDown } from 'lucide-react';
+import { Plus, Search, Filter, Download, Upload, RefreshCw, Package, AlertCircle, Zap, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import ProductTable from './ProductTable';
+import ProductGrid from './ProductGrid';
 import ProductFilters from './ProductFilters';
 import EmptyState from '@/components/ui/EmptyState';
 import { Product, ProductImage } from '../data/mockProducts';
@@ -416,6 +417,7 @@ export default function ProductManagementClient() {
   const [offlineStatuses, setOfflineStatuses] = useState<OfflineStatus[]>(DEFAULT_OFFLINE_STATUSES);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   const [brands, setBrands] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<any[]>([]);
@@ -1076,6 +1078,24 @@ export default function ProductManagementClient() {
             </span>
           </button>
           */}
+          {/* View Mode Toggle Button */}
+          <button
+            onClick={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all duration-150 text-slate-600 dark:text-slate-300"
+            title={viewMode === 'list' ? "Switch to Grid View" : "Switch to List View"}
+          >
+            {viewMode === 'list' ? (
+              <>
+                <LayoutGrid size={13} />
+                <span>Grid View</span>
+              </>
+            ) : (
+              <>
+                <List size={13} />
+                <span>List View</span>
+              </>
+            )}
+          </button>
           {/* Download Options Modal Trigger */}
           <button
             onClick={() => setExportModalOpen(true)}
@@ -1311,23 +1331,39 @@ export default function ProductManagementClient() {
         </div>
       ) : (
         <div className="space-y-4">
-          <ProductTable
-            products={paginated}
-            allProducts={filtered}
-            selectedIds={selectedIds}
-            onSelectionChange={setSelectedIds}
-            sortCol={sortCol}
-            sortDir={sortDir}
-            onSort={handleSort}
-            onEdit={handleEdit}
-            onView={handleView}
-            page={page}
-            perPage={perPage}
-            total={filtered.length}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            onPerPageChange={(n) => { setPerPage(n); setPage(1); }}
-          />
+          {viewMode === 'list' ? (
+            <ProductTable
+              products={paginated}
+              allProducts={filtered}
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+              sortCol={sortCol}
+              sortDir={sortDir}
+              onSort={handleSort}
+              onEdit={handleEdit}
+              onView={handleView}
+              page={page}
+              perPage={perPage}
+              total={filtered.length}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPerPageChange={(n) => { setPerPage(n); setPage(1); }}
+            />
+          ) : (
+            <ProductGrid
+              products={paginated}
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+              onEdit={handleEdit}
+              onView={handleView}
+              page={page}
+              perPage={perPage}
+              total={filtered.length}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPerPageChange={(n) => { setPerPage(n); setPage(1); }}
+            />
+          )}
 
           {hasSearchOrFilter && filtered.length > 0 && (
             <div className="flex justify-center pt-2">
