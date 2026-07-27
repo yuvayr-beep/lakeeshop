@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { AlertTriangle, Trash2, X, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { batchOrderService } from '@/services/batchOrder.service';
 import { BatchOrderItem } from '@/types/batchOrder';
 
@@ -35,14 +36,18 @@ export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
 
     setDeleting(true);
     setErrorMsg(null);
+    const toastId = toast.loading(`Deleting batch #${displayBatchNo}...`);
 
     try {
-      await batchOrderService.deleteBatch(targetBatchId);
+      const res = await batchOrderService.deleteBatch(targetBatchId);
+      const successMsg = res?.message || 'Batch deleted successfully';
+      toast.success(successMsg, { id: toastId });
       onSuccess();
       onClose();
     } catch (err: any) {
       console.error('Delete batch failed:', err);
       const msg = err.response?.data?.message || err.message || 'Failed to delete batch.';
+      toast.error(msg, { id: toastId });
       setErrorMsg(msg);
     } finally {
       setDeleting(false);
