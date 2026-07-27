@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, Edit3, Loader2, CheckCircle2, AlertTriangle, AlertCircle, Save } from 'lucide-react';
+import { RefreshCw, Edit3, Loader2, CheckCircle2, ChevronDown, ChevronUp, AlertCircle, AlertTriangle, Save, ShieldAlert } from 'lucide-react';
 import { batchOrderService } from '@/services/batchOrder.service';
 import { BatchSummaryData, StagingErrorOrder } from '@/types/batchOrder';
 import { EditStagingModal } from './EditStagingModal';
@@ -115,9 +115,11 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
   const [isPolling, setIsPolling] = useState<boolean>(true);
   const [revalidating, setRevalidating] = useState<boolean>(false);
 
-  // Active Category & Active Error Code State
-  const [activeCategoryId, setActiveCategoryId] = useState<string>('duplicate');
-  const [activeErrorId, setActiveErrorId] = useState<number | null>(null);
+  // Expanded Accordion ID State (allows toggling accordions)
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>('pincode');
+
+  // Selected Sub-Error ID State per Category
+  const [selectedErrorIdMap, setSelectedErrorIdMap] = useState<Record<string, number>>({});
 
   // Staging Error Orders List State
   const [errorOrders, setErrorOrders] = useState<StagingErrorOrder[]>([]);
@@ -164,39 +166,58 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
     };
   }, [fetchSummary]);
 
-  // Find active category
-  const activeCategory = ERROR_CATEGORIES.find((c) => c.id === activeCategoryId) || ERROR_CATEGORIES[0];
-
-  // Calculate count for a category from errorSummary
-  const getCategoryErrorCount = (cat: ErrorCategoryGroup): number => {
-    if (!summary?.errorSummary) return 0;
-    return summary.errorSummary
-      .filter((e) => cat.errorIds.includes(e.errorId))
-      .reduce((sum, e) => sum + e.count, 0);
-  };
-
-  // Find error items inside active category
-  const categoryErrorItems = (summary?.errorSummary || []).filter((e) =>
-    activeCategory.errorIds.includes(e.errorId)
+  // Calculate error count for a category
+  const getCategoryErrorCount = useCallback(
+    (cat: ErrorCategoryGroup): number => {
+      if (!summary?.errorSummary) return 0;
+      return summary.errorSummary
+        .filter((e) => cat.errorIds.includes(e.errorId))
+        .reduce((sum, e) => sum + e.count, 0);
+    },
+    [summary]
   );
 
-  // Auto-select first errorId in active category if none selected or invalid
+  // Auto expand first failing category if none expanded
   useEffect(() => {
-    if (categoryErrorItems.length > 0) {
-      const exists = categoryErrorItems.some((e) => e.errorId === activeErrorId);
-      if (!exists) {
-        setActiveErrorId(categoryErrorItems[0].errorId);
+    if (summary?.errorSummary && summary.errorSummary.length > 0) {
+      const firstFailingCat = ERROR_CATEGORIES.find((cat) => getCategoryErrorCount(cat) > 0);
+      if (firstFailingCat && !expandedCategoryId) {
+        setExpandedCategoryId(firstFailingCat.id);
       }
-    } else if (activeCategory.errorIds.length > 0) {
-      setActiveErrorId(activeCategory.errorIds[0]);
-    } else {
-      setActiveErrorId(null);
     }
-  }, [activeCategoryId, summary]);
+  }, [summary, getCategoryErrorCount, expandedCategoryId]);
+
+  // Active Category & Selected Error ID
+  const activeCategory = ERROR_CATEGORIES.find((c) => c.id === expandedCategoryId);
+  const activeErrorId = expandedCategoryId ? selectedErrorIdMap[expandedCategoryId] || null : null;
+
+  // Auto-select first error code chip when category opens
+  useEffect(() => {
+    if (!expandedCategoryId) return;
+    const cat = ERROR_CATEGORIES.find((c) => c.id === expandedCategoryId);
+    if (!cat) return;
+
+    const catErrorItems = (summary?.errorSummary || []).filter((e) => cat.errorIds.includes(e.errorId));
+    if (catErrorItems.length > 0) {
+      const currentVal = selectedErrorIdMap[expandedCategoryId];
+      const exists = catErrorItems.some((e) => e.errorId === currentVal);
+      if (!exists) {
+        setSelectedErrorIdMap((prev) => ({
+          ...prev,
+          [expandedCategoryId]: catErrorItems[0].errorId,
+        }));
+      }
+    } else if (cat.errorIds.length > 0) {
+      setSelectedErrorIdMap((prev) => ({
+        ...prev,
+        [expandedCategoryId]: cat.errorIds[0],
+      }));
+    }
+  }, [expandedCategoryId, summary, selectedErrorIdMap]);
 
   // Fetch error orders when activeErrorId changes
   const fetchErrorOrders = useCallback(async () => {
-    if (!activeErrorId) {
+    if (!activeErrorId || !expandedCategoryId) {
       setErrorOrders([]);
       return;
     }
@@ -210,11 +231,16 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
     } finally {
       setLoadingOrders(false);
     }
-  }, [batchId, activeErrorId]);
+  }, [batchId, activeErrorId, expandedCategoryId]);
 
   useEffect(() => {
     fetchErrorOrders();
   }, [fetchErrorOrders]);
+
+  // Toggle Accordion expansion
+  const toggleAccordion = (catId: string) => {
+    setExpandedCategoryId((prev) => (prev === catId ? null : catId));
+  };
 
   // Trigger Revalidate Batch
   const handleRevalidateBatch = async () => {
@@ -242,11 +268,9 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
   };
 
   const handleEditSuccess = (updatedOrder: StagingErrorOrder) => {
-    // Update local table list
     setErrorOrders((prev) =>
       prev.map((o) => (o.stagingId === updatedOrder.stagingId ? updatedOrder : o))
     );
-    // Refresh summary counts
     fetchSummary();
   };
 
@@ -256,13 +280,13 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
   const statusStr = summary?.status || (isPolling ? 'PROCESSING' : 'VALIDATED');
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner & Header Summary matching screenshot 3, 4, 5 */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="w-full space-y-6">
+      {/* Top Banner Header Summary */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">
-              Order Data Validation
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Order Data Validation Engine
             </h2>
             <p className="text-xs text-slate-500">
               Batch #{batchId} • Status:{' '}
@@ -286,157 +310,210 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
             <button
               onClick={handleRevalidateBatch}
               disabled={revalidating || isPolling}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-700 disabled:opacity-50 transition-all"
             >
               {revalidating || isPolling ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
+                <RefreshCw className="h-4 w-4" />
               )}
-              Revalidate
+              Revalidate Batch
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Primary Category Tabs */}
-        <div className="mt-4 flex flex-wrap gap-2 border-b border-slate-200 pb-3 dark:border-slate-800">
-          {ERROR_CATEGORIES.map((cat) => {
-            const count = getCategoryErrorCount(cat);
-            const isActive = cat.id === activeCategoryId;
-            return (
+      {/* Accordion Categories List */}
+      <div className="space-y-3">
+        {ERROR_CATEGORIES.map((cat) => {
+          const count = getCategoryErrorCount(cat);
+          const isExpanded = expandedCategoryId === cat.id;
+          const categoryErrorItems = (summary?.errorSummary || []).filter((e) =>
+            cat.errorIds.includes(e.errorId)
+          );
+          const currentSelectedErrorId = selectedErrorIdMap[cat.id];
+
+          return (
+            <div
+              key={cat.id}
+              className={`rounded-2xl border transition-all overflow-hidden ${
+                isExpanded
+                  ? 'border-blue-500 bg-white shadow-md dark:border-blue-600 dark:bg-slate-900'
+                  : 'border-slate-200 bg-white shadow-xs hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900'
+              }`}
+            >
+              {/* Accordion Header Bar */}
               <button
-                key={cat.id}
-                onClick={() => setActiveCategoryId(cat.id)}
-                className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                  isActive
-                    ? 'bg-red-500 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                type="button"
+                onClick={() => toggleAccordion(cat.id)}
+                className={`flex w-full items-center justify-between p-4 text-left transition-colors ${
+                  count > 0
+                    ? 'bg-red-50/40 hover:bg-red-50/70 dark:bg-red-950/20 dark:hover:bg-red-950/30'
+                    : 'bg-slate-50/40 hover:bg-slate-50/80 dark:bg-slate-800/20 dark:hover:bg-slate-800/40'
                 }`}
               >
-                <span>{cat.name}</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
-                  }`}
-                >
-                  ({count})
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Sub Error Code Chips inside Active Category */}
-        <div className="mt-3 flex flex-wrap gap-2">
-          {categoryErrorItems.length === 0 ? (
-            <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium py-1">
-              ✓ No active validation failures in {activeCategory.name}
-            </div>
-          ) : (
-            categoryErrorItems.map((errItem) => {
-              const isSelected = errItem.errorId === activeErrorId;
-              return (
-                <button
-                  key={errItem.errorId}
-                  onClick={() => setActiveErrorId(errItem.errorId)}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium border transition-all ${
-                    isSelected
-                      ? 'border-red-500 bg-red-50 text-red-700 font-bold dark:bg-red-950/50 dark:text-red-300'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                  }`}
-                >
-                  <span>{errItem.errorCode}</span>
-                  <span className="rounded bg-red-100 px-1.5 py-0.2 text-[10px] font-bold text-red-700 dark:bg-red-900/60 dark:text-red-300">
-                    {errItem.count}
+                <div className="flex items-center gap-3">
+                  {/* Category Type Badge */}
+                  <span
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-mono font-bold ${
+                      count > 0
+                        ? 'bg-red-600 text-white'
+                        : 'bg-emerald-600 text-white'
+                    }`}
+                  >
+                    {count > 0 ? 'FAIL' : 'PASS'}
                   </span>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
 
-      {/* Error Staging Orders Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-            Failing Staging Rows ({errorOrders.length})
-          </h3>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
-                <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
-                <th className="px-3 py-2.5 font-semibold uppercase">CUSTOMER NAME</th>
-                <th className="px-3 py-2.5 font-semibold uppercase">ADDRESS LINE 1 & 2</th>
-                <th className="px-3 py-2.5 font-semibold uppercase">CITY - PINCODE</th>
-                <th className="px-3 py-2.5 font-semibold uppercase">MOBILE NUMBER</th>
-                <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT CODE</th>
-                <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
-                <th className="px-3 py-2.5 text-center font-semibold uppercase">EDIT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {loadingOrders ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-blue-600" />
-                    <span className="mt-2 block">Loading error records...</span>
-                  </td>
-                </tr>
-              ) : errorOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
-                    No failing records found for selected error code.
-                  </td>
-                </tr>
-              ) : (
-                errorOrders.map((row) => (
-                  <tr key={row.stagingId} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
-                      {row.clientOrderNo || '-'}
-                    </td>
-                    <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white">
-                      {row.customerName || '-'}
-                    </td>
-                    <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 max-w-[200px] truncate">
-                      {[row.addressLine1, row.addressLine2].filter(Boolean).join(', ') || '-'}
-                    </td>
-                    <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
-                      {[row.city, row.pincode].filter(Boolean).join(' - ') || '-'}
-                    </td>
-                    <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
-                      {row.mobile || '-'}
-                    </td>
-                    <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400">
-                      {row.clientProductCode || '-'}
-                    </td>
-                    <td className="px-3 py-2.5 text-red-600 dark:text-red-400 font-medium max-w-[150px] truncate">
-                      {row.remarks || 'Validation failure'}
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      <button
-                        onClick={() => setEditingOrder(row)}
-                        className="inline-flex items-center gap-1 rounded bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      {cat.name}
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          count > 0
+                            ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                        }`}
                       >
-                        <Edit3 className="h-3 w-3" />
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                        {count} {count === 1 ? 'Error' : 'Errors'}
+                      </span>
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {isExpanded ? (
+                    <ChevronUp className="h-5 w-5 text-slate-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-slate-400" />
+                  )}
+                </div>
+              </button>
+
+              {/* Accordion Expanded Content Body */}
+              {isExpanded && (
+                <div className="border-t border-slate-100 p-6 dark:border-slate-800 space-y-4 animate-in fade-in duration-200">
+                  {/* Sub Error Code Chips */}
+                  <div className="flex flex-wrap gap-2 pb-2">
+                    {categoryErrorItems.length === 0 ? (
+                      <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 py-1">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>All rows passed validation for {cat.name}. Zero errors.</span>
+                      </div>
+                    ) : (
+                      categoryErrorItems.map((errItem) => {
+                        const isSelected = errItem.errorId === currentSelectedErrorId;
+                        return (
+                          <button
+                            key={errItem.errorId}
+                            onClick={() =>
+                              setSelectedErrorIdMap((prev) => ({
+                                ...prev,
+                                [cat.id]: errItem.errorId,
+                              }))
+                            }
+                            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold border transition-all ${
+                              isSelected
+                                ? 'border-red-500 bg-red-50 text-red-700 shadow-xs dark:bg-red-950 dark:text-red-300'
+                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            }`}
+                          >
+                            <span>{errItem.errorCode}</span>
+                            <span className="rounded-md bg-red-600 px-1.5 py-0.2 text-[10px] font-bold text-white">
+                              {errItem.count}
+                            </span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Error Staging Rows Table inside Expanded Accordion */}
+                  {categoryErrorItems.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                          Failing Rows ({errorOrders.length})
+                        </h4>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-400">
+                              <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                              <th className="px-3 py-2.5 font-semibold uppercase">CUSTOMER NAME</th>
+                              <th className="px-3 py-2.5 font-semibold uppercase">ADDRESS LINE 1 & 2</th>
+                              <th className="px-3 py-2.5 font-semibold uppercase">CITY - PINCODE</th>
+                              <th className="px-3 py-2.5 font-semibold uppercase">MOBILE NUMBER</th>
+                              <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT CODE</th>
+                              <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                              <th className="px-3 py-2.5 text-center font-semibold uppercase">EDIT</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200/60 bg-white dark:divide-slate-800 dark:bg-slate-900">
+                            {loadingOrders ? (
+                              <tr>
+                                <td colSpan={8} className="py-8 text-center text-slate-500">
+                                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-blue-600" />
+                                  <span className="mt-2 block text-xs">Loading failing order records...</span>
+                                </td>
+                              </tr>
+                            ) : errorOrders.length === 0 ? (
+                              <tr>
+                                <td colSpan={8} className="py-8 text-center text-slate-500">
+                                  No failing records found for selected error code.
+                                </td>
+                              </tr>
+                            ) : (
+                              errorOrders.map((row) => (
+                                <tr key={row.stagingId} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                  <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                    {row.clientOrderNo || '-'}
+                                  </td>
+                                  <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white">
+                                    {row.customerName || '-'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 max-w-[200px] truncate">
+                                    {[row.addressLine1, row.addressLine2].filter(Boolean).join(', ') || '-'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
+                                    {[row.city, row.pincode].filter(Boolean).join(' - ') || '-'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
+                                    {row.mobile || '-'}
+                                  </td>
+                                  <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                    {row.clientProductCode || '-'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-red-600 dark:text-red-400 font-medium max-w-[150px] truncate">
+                                    {row.remarks || 'Validation failure'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-center">
+                                    <button
+                                      onClick={() => setEditingOrder(row)}
+                                      className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
+                                    >
+                                      <Edit3 className="h-3 w-3" />
+                                      Edit
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Action Controls matching screenshot 3, 4, 5 */}
-      <div className="flex items-center justify-end gap-3 pt-2">
+      {/* Action Controls */}
+      <div className="flex items-center justify-end gap-3 pt-4">
         <button
           type="button"
           onClick={onSaveExit}
