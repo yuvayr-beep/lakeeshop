@@ -31,8 +31,8 @@ export const batchOrderService = {
     return response.data;
   },
 
-  // 3. Get Batch List
-  getBatchList: async (params?: { startDate?: string; endDate?: string; clientId?: number | string }) => {
+  // 3. Get Batch List (NDJSON / JSON array)
+  getBatchList: async (params?: { startDate?: string; endDate?: string; clientId?: number | string }): Promise<BatchOrderItem[]> => {
     const today = new Date();
     const endDateStr = today.toISOString().split('T')[0];
     const pastDate = new Date();
@@ -48,8 +48,67 @@ export const batchOrderService = {
       queryParams.clientId = params.clientId;
     }
 
-    const response = await axiosInstance.get('/order/batch/list', { params: queryParams });
-    return response.data;
+    const response = await axiosInstance.get('/order/batch/list', {
+      params: queryParams,
+      headers: {
+        accept: 'application/x-ndjson, application/json, */*',
+      },
+      transformResponse: [(data) => data],
+    });
+
+    const rawData = response.data;
+    if (!rawData) return [];
+
+    if (typeof rawData === 'object' && Array.isArray(rawData)) {
+      return rawData;
+    }
+
+    if (typeof rawData === 'object' && (rawData as any).data && Array.isArray((rawData as any).data)) {
+      return (rawData as any).data;
+    }
+
+    if (typeof rawData === 'string') {
+      const trimmed = rawData.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (parsed && parsed.data && Array.isArray(parsed.data)) {
+            return parsed.data;
+          }
+        } catch {
+          // Fall through
+        }
+      }
+
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          return JSON.parse(trimmed);
+        } catch {
+          // Fall through
+        }
+      }
+
+      const lines = trimmed.split('\n').filter((line) => line.trim().length > 0);
+      const records: BatchOrderItem[] = [];
+
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line.trim());
+          if (parsed && typeof parsed === 'object') {
+            // If parsed line is wrapper JSON with data array
+            if (parsed.data && Array.isArray(parsed.data)) {
+              return parsed.data;
+            }
+            records.push(parsed);
+          }
+        } catch (e) {
+          console.warn('Failed to parse NDJSON line in batch list:', line);
+        }
+      }
+      return records;
+    }
+
+    return [];
   },
 
   // 4. Combine Online API Orders into Batch
