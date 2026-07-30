@@ -4,15 +4,17 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   phoneNumber: string | null;
+  isLocked: boolean;
 }
 
 const getInitialState = (): AuthState => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('accessToken');
     const phone = localStorage.getItem('userPhone');
-    return { token, isAuthenticated: !!token, phoneNumber: phone };
+    const isLocked = localStorage.getItem('isLocked') === 'true';
+    return { token, isAuthenticated: !!token, phoneNumber: phone, isLocked: !!token && isLocked };
   }
-  return { token: null, isAuthenticated: false, phoneNumber: null };
+  return { token: null, isAuthenticated: false, phoneNumber: null, isLocked: false };
 };
 
 const authSlice = createSlice({
@@ -23,23 +25,44 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.phoneNumber = action.payload.phoneNumber;
       state.isAuthenticated = true;
+      state.isLocked = false;
       if (typeof window !== 'undefined') {
         localStorage.setItem('accessToken', action.payload.token);
         localStorage.setItem('userPhone', action.payload.phoneNumber);
+        localStorage.removeItem('isLocked');
+        localStorage.setItem('idle_last_active_time', Date.now().toString());
+      }
+    },
+    lockSession(state) {
+      if (state.isAuthenticated) {
+        state.isLocked = true;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('isLocked', 'true');
+        }
+      }
+    },
+    unlockSession(state) {
+      state.isLocked = false;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('isLocked');
+        localStorage.setItem('idle_last_active_time', Date.now().toString());
       }
     },
     logout(state) {
       state.token = null;
       state.isAuthenticated = false;
       state.phoneNumber = null;
+      state.isLocked = false;
       if (typeof window !== 'undefined') {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('userPhone');
+        localStorage.removeItem('isLocked');
+        localStorage.removeItem('idle_last_active_time');
       }
     },
   },
 });
 
-export const { setCredentials, logout } = authSlice.actions;
+export const { setCredentials, lockSession, unlockSession, logout } = authSlice.actions;
 export default authSlice.reducer;

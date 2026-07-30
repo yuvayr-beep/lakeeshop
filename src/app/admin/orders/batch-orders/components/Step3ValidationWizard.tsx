@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, Edit3, Loader2, CheckCircle2, ChevronDown, ChevronUp, AlertCircle, AlertTriangle, Save, ShieldAlert } from 'lucide-react';
+import { RefreshCw, Edit3, Loader2, CheckCircle2, ChevronDown, ChevronUp, AlertCircle, AlertTriangle, Save, ShieldAlert, Download } from 'lucide-react';
 import { batchOrderService } from '@/services/batchOrder.service';
 import { BatchSummaryData, StagingErrorOrder } from '@/types/batchOrder';
 import { EditStagingModal } from './EditStagingModal';
+import { DeleteBatchModal } from './DeleteBatchModal';
 
 interface Step3ValidationWizardProps {
   batchId: number;
@@ -104,69 +105,162 @@ const ERROR_CATEGORIES: ErrorCategoryGroup[] = [
   },
 ];
 
-export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
-  batchId,
-  onNext,
-  onAbort,
-  onSaveExit,
-}) => {
-  // Batch Summary State
+export const Step3ValidationHeader: React.FC<{
+  batchId: number;
+  summary: BatchSummaryData | null;
+  isPolling: boolean;
+  revalidating: boolean;
+  onRevalidate: () => void;
+}> = ({ batchId, summary, isPolling, revalidating, onRevalidate }) => {
+  const totalCount = summary?.totalRows ?? 0;
+  const passCount = summary?.passRows ?? 0;
+  const failCount = summary?.failRows ?? 0;
+  const statusStr = summary?.status || (isPolling ? 'PROCESSING' : 'VALIDATED');
+
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 className="text-base font-bold text-slate-900 dark:text-white">
+          Order Data Validation Engine
+        </h2>
+        <p className="text-xs text-slate-500">
+          Batch #{batchId} • Status:{' '}
+          <span className="font-semibold text-slate-800 dark:text-slate-200">
+            {statusStr}
+          </span>
+        </p>
+      </div>
+
+      <div className="flex items-center gap-6 text-xs font-semibold">
+        <div className="text-blue-600 dark:text-blue-400">
+          Total Count: <span className="text-sm font-bold">{totalCount}</span>
+        </div>
+        <div className="text-emerald-600 dark:text-emerald-400">
+          Total Pass Count: <span className="text-sm font-bold">{passCount}</span>
+        </div>
+        <div className="text-red-600 dark:text-red-400">
+          Total Fail Count: <span className="text-sm font-bold">{failCount}</span>
+        </div>
+
+        <button
+          onClick={onRevalidate}
+          disabled={revalidating || isPolling}
+          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-700 disabled:opacity-50 transition-all"
+        >
+          {revalidating || isPolling ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+          Revalidate Batch
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export const Step3ValidationAccordionsCard: React.FC<{
+  batchId: number;
+  onNext: () => void;
+  onAbort: () => void;
+  onSaveExit: () => void;
+}> = ({ batchId, onNext, onAbort, onSaveExit }) => {
   const [summary, setSummary] = useState<BatchSummaryData | null>(null);
-  const [isPolling, setIsPolling] = useState<boolean>(true);
-  const [revalidating, setRevalidating] = useState<boolean>(false);
-
-  // Expanded Accordion ID State (allows toggling accordions)
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>('pincode');
-
-  // Selected Sub-Error ID State per Category
   const [selectedErrorIdMap, setSelectedErrorIdMap] = useState<Record<string, number>>({});
-
-  // Staging Error Orders List State
   const [errorOrders, setErrorOrders] = useState<StagingErrorOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState<boolean>(false);
-
-  // Modal State
   const [editingOrder, setEditingOrder] = useState<StagingErrorOrder | null>(null);
+  const [showAbortModal, setShowAbortModal] = useState<boolean>(false);
+  const [downloadingErrorId, setDownloadingErrorId] = useState<number | null>(null);
 
-  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const handleSelectErrorTab = (
+    e: React.MouseEvent,
+    catId: string,
+    errorId: number
+  ) => {
+    e.stopPropagation();
+    if (expandedCategoryId !== catId) {
+      setExpandedCategoryId(catId);
+    }
+    setSelectedErrorIdMap((prev) => ({
+      ...prev,
+      [catId]: errorId,
+    }));
+  };
 
-  // Fetch summary function
+  const handleDownloadAccordionErrorData = async (
+    e: React.MouseEvent,
+    catId: string,
+    errorId: number,
+    errorCode: string
+  ) => {
+    e.stopPropagation();
+    if (expandedCategoryId !== catId) {
+      setExpandedCategoryId(catId);
+    }
+    setSelectedErrorIdMap((prev) => ({
+      ...prev,
+      [catId]: errorId,
+    }));
+
+    try {
+      setDownloadingErrorId(errorId);
+      const rows = await batchOrderService.getErrorOrders(batchId, errorId);
+      if (!rows || rows.length === 0) {
+        alert(`No error records found for ${errorCode}.`);
+        return;
+      }
+
+      // Extract all unique keys across returned objects, excluding stagingId and rowNo
+      const excludedKeys = ['stagingId', 'rowNo', 'staging_id', 'row_no'];
+      const keys = Array.from(new Set(rows.flatMap((item) => Object.keys(item)))).filter(
+        (k) => !excludedKeys.includes(k)
+      );
+
+      const escapeCsv = (val: any) => {
+        if (val === null || val === undefined) return '""';
+        let str = String(val).replace(/"/g, '""');
+        if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+          str = `"${str}"`;
+        }
+        return str;
+      };
+
+      const headerRow = keys.map(escapeCsv).join(',');
+      const dataRows = rows.map((row: any) => keys.map((k) => escapeCsv(row[k])).join(','));
+      const csvContent = '\uFEFF' + [headerRow, ...dataRows].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Batch_${batchId}_Error_${errorCode}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(`Failed to download error data for ${errorCode}:`, err);
+      alert(`Failed to download error data for ${errorCode}. Please try again.`);
+    } finally {
+      setDownloadingErrorId(null);
+    }
+  };
+
   const fetchSummary = useCallback(async () => {
     try {
       const data = await batchOrderService.getBatchSummary(batchId);
       setSummary(data);
-
-      const isProcessing = data?.status === 'PROCESSING' || data?.batchStatus === 1;
-      if (!isProcessing) {
-        setIsPolling(false);
-      }
-      return data;
     } catch (err) {
-      console.warn('Failed to fetch batch summary:', err);
-      setIsPolling(false);
-      return null;
+      console.warn('Failed to fetch summary:', err);
     }
   }, [batchId]);
 
-  // Polling loop
   useEffect(() => {
     fetchSummary();
-
-    pollTimerRef.current = setInterval(async () => {
-      const currentData = await fetchSummary();
-      const isProcessing = currentData?.status === 'PROCESSING' || currentData?.batchStatus === 1;
-      if (!isProcessing) {
-        if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-        setIsPolling(false);
-      }
-    }, 2000);
-
-    return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    };
   }, [fetchSummary]);
 
-  // Calculate error count for a category
   const getCategoryErrorCount = useCallback(
     (cat: ErrorCategoryGroup): number => {
       if (!summary?.errorSummary) return 0;
@@ -179,12 +273,10 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
 
   const hasAutoExpandedRef = useRef<boolean>(false);
 
-  // Reset auto expand flag when batchId changes
   useEffect(() => {
     hasAutoExpandedRef.current = false;
   }, [batchId]);
 
-  // Auto expand first failing category ONCE when initial summary loads
   useEffect(() => {
     if (!hasAutoExpandedRef.current && summary?.errorSummary && summary.errorSummary.length > 0) {
       const firstFailingCat = ERROR_CATEGORIES.find((cat) => getCategoryErrorCount(cat) > 0);
@@ -195,19 +287,17 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
     }
   }, [summary, getCategoryErrorCount]);
 
-  // Active Category & Selected Error ID
-  const activeCategory = ERROR_CATEGORIES.find((c) => c.id === expandedCategoryId);
   const activeErrorId = expandedCategoryId ? selectedErrorIdMap[expandedCategoryId] || null : null;
 
-  // Auto-select first error code chip when category opens
   useEffect(() => {
     if (!expandedCategoryId) return;
     const cat = ERROR_CATEGORIES.find((c) => c.id === expandedCategoryId);
     if (!cat) return;
 
     const catErrorItems = (summary?.errorSummary || []).filter((e) => cat.errorIds.includes(e.errorId));
+    const currentVal = selectedErrorIdMap[expandedCategoryId];
+
     if (catErrorItems.length > 0) {
-      const currentVal = selectedErrorIdMap[expandedCategoryId];
       const exists = catErrorItems.some((e) => e.errorId === currentVal);
       if (!exists) {
         setSelectedErrorIdMap((prev) => ({
@@ -216,14 +306,15 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
         }));
       }
     } else if (cat.errorIds.length > 0) {
-      setSelectedErrorIdMap((prev) => ({
-        ...prev,
-        [expandedCategoryId]: cat.errorIds[0],
-      }));
+      if (currentVal !== cat.errorIds[0]) {
+        setSelectedErrorIdMap((prev) => ({
+          ...prev,
+          [expandedCategoryId]: cat.errorIds[0],
+        }));
+      }
     }
   }, [expandedCategoryId, summary, selectedErrorIdMap]);
 
-  // Fetch error orders when activeErrorId changes
   const fetchErrorOrders = useCallback(async () => {
     if (!activeErrorId || !expandedCategoryId) {
       setErrorOrders([]);
@@ -245,26 +336,45 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
     fetchErrorOrders();
   }, [fetchErrorOrders]);
 
-  // Toggle Accordion expansion
+  useEffect(() => {
+    const handleSummaryUpdated = (e: any) => {
+      if (e.detail?.batchId === batchId && e.detail?.data) {
+        setSummary(e.detail.data);
+      }
+    };
+    const handleRevalidated = (e: any) => {
+      if (e.detail?.batchId === batchId) {
+        fetchSummary();
+        fetchErrorOrders();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('batch-summary-updated', handleSummaryUpdated);
+      window.addEventListener('batch-revalidated', handleRevalidated);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('batch-summary-updated', handleSummaryUpdated);
+        window.removeEventListener('batch-revalidated', handleRevalidated);
+      }
+    };
+  }, [batchId, fetchSummary, fetchErrorOrders]);
+
   const toggleAccordion = (catId: string) => {
     setExpandedCategoryId((prev) => (prev === catId ? null : catId));
   };
 
-  // Trigger Revalidate Batch
-  const handleRevalidateBatch = async () => {
-    setRevalidating(true);
-    try {
-      await batchOrderService.validateBatch(batchId);
-      setIsPolling(true);
-      await fetchSummary();
-    } catch (err) {
-      console.error('Revalidate failed:', err);
-    } finally {
-      setRevalidating(false);
-    }
+  const handleEditSuccess = async (updatedOrder: StagingErrorOrder) => {
+    setErrorOrders((prev) =>
+      prev.map((o) => (o.stagingId === updatedOrder.stagingId ? updatedOrder : o))
+    );
+    await fetchSummary();
+    await fetchErrorOrders();
   };
 
-  const handleAbort = async () => {
+  const handleAbortAction = async () => {
     if (window.confirm(`Are you sure you want to abort batch #${batchId}?`)) {
       try {
         await batchOrderService.deleteBatch(batchId);
@@ -275,59 +385,16 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
     }
   };
 
-  const handleEditSuccess = (updatedOrder: StagingErrorOrder) => {
-    setErrorOrders((prev) =>
-      prev.map((o) => (o.stagingId === updatedOrder.stagingId ? updatedOrder : o))
-    );
-    fetchSummary();
-  };
-
-  const totalCount = summary?.totalRows ?? 0;
-  const passCount = summary?.passRows ?? 0;
-  const failCount = summary?.failRows ?? 0;
-  const statusStr = summary?.status || (isPolling ? 'PROCESSING' : 'VALIDATED');
-
   return (
-    <div className="w-full space-y-6">
-      {/* Top Banner Header Summary */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              Order Data Validation Engine
-            </h2>
-            <p className="text-xs text-slate-500">
-              Batch #{batchId} • Status:{' '}
-              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                {statusStr}
-              </span>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-6 text-xs font-semibold">
-            <div className="text-blue-600 dark:text-blue-400">
-              Total Count: <span className="text-sm font-bold">{totalCount}</span>
-            </div>
-            <div className="text-emerald-600 dark:text-emerald-400">
-              Total Pass Count: <span className="text-sm font-bold">{passCount}</span>
-            </div>
-            <div className="text-red-600 dark:text-red-400">
-              Total Fail Count: <span className="text-sm font-bold">{failCount}</span>
-            </div>
-
-            <button
-              onClick={handleRevalidateBatch}
-              disabled={revalidating || isPolling}
-              className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-700 disabled:opacity-50 transition-all"
-            >
-              {revalidating || isPolling ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              Revalidate Batch
-            </button>
-          </div>
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-6">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            Order Data Validation Categories
+          </h3>
+          <p className="text-xs text-slate-500">
+            Expand category accordions to review and inline-edit staging row errors
+          </p>
         </div>
       </div>
 
@@ -340,13 +407,19 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
             cat.errorIds.includes(e.errorId)
           );
           const currentSelectedErrorId = selectedErrorIdMap[cat.id];
+          const activeErrItem = categoryErrorItems.find((e) => e.errorId === currentSelectedErrorId);
+          const isCurrentSelectedWarning = activeErrItem?.blocking === false;
+          const isAllWarnings = categoryErrorItems.length > 0 && categoryErrorItems.every((e) => e.blocking === false);
+          const isMissingProductSelected = cat.id === 'product' && activeErrItem?.errorCode === 'MISSING_PRODUCT';
 
           return (
             <div
               key={cat.id}
               className={`rounded-2xl border transition-all overflow-hidden ${
                 isExpanded
-                  ? 'border-blue-500 bg-white shadow-md dark:border-blue-600 dark:bg-slate-900'
+                  ? isAllWarnings
+                    ? 'border-amber-500 bg-white shadow-md dark:border-amber-600 dark:bg-slate-900'
+                    : 'border-blue-500 bg-white shadow-md dark:border-blue-600 dark:bg-slate-900'
                   : 'border-slate-200 bg-white shadow-xs hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900'
               }`}
             >
@@ -356,20 +429,23 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
                 onClick={() => toggleAccordion(cat.id)}
                 className={`flex w-full items-center justify-between p-4 text-left transition-colors ${
                   count > 0
-                    ? 'bg-red-50/40 hover:bg-red-50/70 dark:bg-red-950/20 dark:hover:bg-red-950/30'
+                    ? isAllWarnings
+                      ? 'bg-amber-50/50 hover:bg-amber-50/80 dark:bg-amber-950/20 dark:hover:bg-amber-950/30'
+                      : 'bg-red-50/40 hover:bg-red-50/70 dark:bg-red-950/20 dark:hover:bg-red-950/30'
                     : 'bg-slate-50/40 hover:bg-slate-50/80 dark:bg-slate-800/20 dark:hover:bg-slate-800/40'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  {/* Category Type Badge */}
                   <span
                     className={`rounded-lg px-2.5 py-1 text-[11px] font-mono font-bold ${
                       count > 0
-                        ? 'bg-red-600 text-white'
+                        ? isAllWarnings
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-red-600 text-white'
                         : 'bg-emerald-600 text-white'
                     }`}
                   >
-                    {count > 0 ? 'FAIL' : 'PASS'}
+                    {count > 0 ? (isAllWarnings ? 'WARN' : 'FAIL') : 'PASS'}
                   </span>
 
                   <div>
@@ -378,21 +454,101 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                           count > 0
-                            ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+                            ? isAllWarnings
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                              : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
                             : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                         }`}
                       >
-                        {count} {count === 1 ? 'Error' : 'Errors'}
+                        {count}{' '}
+                        {isAllWarnings
+                          ? count === 1
+                            ? 'Warning'
+                            : 'Warnings'
+                          : count === 1
+                          ? 'Error'
+                          : 'Errors'}
                       </span>
                     </h3>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {/* ERROR/WARNING Name Badges at the END of Accordion Header */}
+                  {categoryErrorItems.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {categoryErrorItems.map((errItem) => {
+                        const isSelected = errItem.errorId === currentSelectedErrorId;
+                        const isDownloading = downloadingErrorId === errItem.errorId;
+                        const isWarning = errItem.blocking === false;
+
+                        return (
+                          <span
+                            key={errItem.errorId}
+                            onClick={(e) =>
+                              handleSelectErrorTab(e, cat.id, errItem.errorId)
+                            }
+                            title={`Click to view ${errItem.errorCode} ${
+                              isWarning ? 'warning' : 'error'
+                            } list`}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-0.5 text-[11px] font-mono font-semibold border transition-all cursor-pointer group ${
+                              isWarning
+                                ? isSelected
+                                  ? 'border-amber-500 bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 shadow-xs font-bold ring-2 ring-amber-400/40'
+                                  : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                                : isSelected
+                                ? 'border-red-500 bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200 shadow-xs ring-2 ring-red-400/40 font-bold'
+                                : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            }`}
+                          >
+                            <span>{errItem.errorCode}</span>
+                            <span
+                              className={`rounded-md px-1 py-0.2 text-[10px] font-bold text-white ${
+                                isWarning ? 'bg-amber-600' : 'bg-red-600'
+                              }`}
+                            >
+                              {errItem.count}
+                            </span>
+                            {isWarning && (
+                              <span className="rounded bg-amber-200 px-1 py-0.2 text-[9px] font-extrabold uppercase text-amber-900 dark:bg-amber-900 dark:text-amber-200">
+                                Warning
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) =>
+                                handleDownloadAccordionErrorData(e, cat.id, errItem.errorId, errItem.errorCode)
+                              }
+                              title={`Download ${errItem.errorCode} CSV data`}
+                              disabled={isDownloading}
+                              className="ml-0.5 rounded p-0.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                            >
+                              {isDownloading ? (
+                                <Loader2
+                                  className={`h-3 w-3 animate-spin ${
+                                    isWarning ? 'text-amber-600' : 'text-red-600'
+                                  }`}
+                                />
+                              ) : (
+                                <Download
+                                  className={`h-3 w-3 opacity-70 hover:opacity-100 transition-opacity ${
+                                    isWarning
+                                      ? 'text-amber-800 dark:text-amber-300'
+                                      : 'text-red-800 dark:text-red-300'
+                                  }`}
+                                />
+                              )}
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {isExpanded ? (
-                    <ChevronUp className="h-5 w-5 text-slate-500" />
+                    <ChevronUp className="h-5 w-5 text-slate-500 shrink-0" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-slate-400" />
+                    <ChevronDown className="h-5 w-5 text-slate-400 shrink-0" />
                   )}
                 </div>
               </button>
@@ -400,113 +556,463 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
               {/* Accordion Expanded Content Body */}
               {isExpanded && (
                 <div className="border-t border-slate-100 p-6 dark:border-slate-800 space-y-4 animate-in fade-in duration-200">
-                  {/* Sub Error Code Chips */}
-                  <div className="flex flex-wrap gap-2 pb-2">
-                    {categoryErrorItems.length === 0 ? (
-                      <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 py-1">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>All rows passed validation for {cat.name}. Zero errors.</span>
-                      </div>
-                    ) : (
-                      categoryErrorItems.map((errItem) => {
-                        const isSelected = errItem.errorId === currentSelectedErrorId;
-                        return (
-                          <button
-                            key={errItem.errorId}
-                            onClick={() =>
-                              setSelectedErrorIdMap((prev) => ({
-                                ...prev,
-                                [cat.id]: errItem.errorId,
-                              }))
-                            }
-                            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold border transition-all ${
-                              isSelected
-                                ? 'border-red-500 bg-red-50 text-red-700 shadow-xs dark:bg-red-950 dark:text-red-300'
-                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                            }`}
-                          >
-                            <span>{errItem.errorCode}</span>
-                            <span className="rounded-md bg-red-600 px-1.5 py-0.2 text-[10px] font-bold text-white">
-                              {errItem.count}
-                            </span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  {/* Error Staging Rows Table inside Expanded Accordion */}
-                  {categoryErrorItems.length > 0 && (
+                  {categoryErrorItems.length === 0 ? (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 py-1">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>All rows passed validation for {cat.name}. Zero errors.</span>
+                    </div>
+                  ) : (
+                    /* Error Staging Rows Table inside Expanded Accordion */
                     <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
-                      <div className="mb-3 flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                          Failing Rows ({errorOrders.length})
-                        </h4>
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                            {isCurrentSelectedWarning ? 'Warning Records' : 'Failing Rows'} ({errorOrders.length})
+                          </h4>
+                          {activeErrItem && (
+                            <span
+                              className={`rounded-md px-2 py-0.5 text-[11px] font-mono font-bold ${
+                                isCurrentSelectedWarning
+                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/50'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 border border-red-300/50'
+                              }`}
+                            >
+                              {activeErrItem.errorCode}
+                            </span>
+                          )}
+                        </div>
+
+                        {activeErrItem && (
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleDownloadAccordionErrorData(
+                                e,
+                                cat.id,
+                                activeErrItem.errorId,
+                                activeErrItem.errorCode
+                              )
+                            }
+                            disabled={downloadingErrorId === activeErrItem.errorId}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 transition-colors"
+                            title={`Download ${activeErrItem.errorCode} CSV`}
+                          >
+                            {downloadingErrorId === activeErrItem.errorId ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                            ) : (
+                              <Download className="h-3.5 w-3.5 text-slate-500" />
+                            )}
+                            <span>Download {activeErrItem.errorCode} CSV</span>
+                          </button>
+                        )}
                       </div>
 
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead>
                             <tr className="border-b border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-400">
-                              <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
-                              <th className="px-3 py-2.5 font-semibold uppercase">CUSTOMER NAME</th>
-                              <th className="px-3 py-2.5 font-semibold uppercase">ADDRESS LINE 1 & 2</th>
-                              <th className="px-3 py-2.5 font-semibold uppercase">CITY - PINCODE</th>
-                              <th className="px-3 py-2.5 font-semibold uppercase">MOBILE NUMBER</th>
-                              <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT CODE</th>
-                              <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
-                              <th className="px-3 py-2.5 text-center font-semibold uppercase">EDIT</th>
+                              {cat.id === 'product' ? (
+                                isMissingProductSelected ? (
+                                  <>
+                                    <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                    <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT NAME</th>
+                                    <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT CODE</th>
+                                    <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                    <th className="px-3 py-2.5 text-center font-semibold uppercase">EDIT</th>
+                                  </>
+                                ) : (
+                                  <>
+                                    <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                    <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT NAME</th>
+                                    <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT CODE</th>
+                                    <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                  </>
+                                )
+                              ) : cat.id === 'mobile' ? (
+                                <>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">MOBILE NUMBER</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                  <th className="px-3 py-2.5 text-center font-semibold uppercase">EDIT</th>
+                                </>
+                              ) : cat.id === 'customer' ? (
+                                <>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CUSTOMER NAME</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">MOBILE NUMBER</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                </>
+                              ) : cat.id === 'courier' ? (
+                                <>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CITY - PINCODE</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT CODE</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT NAME</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                </>
+                              ) : cat.id === 'price' ? (
+                                <>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT CODE</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT NAME</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                </>
+                              ) : cat.id === 'pincode' ? (
+                                <>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">ADDRESS LINE 1 & 2</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CITY - PINCODE</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                  <th className="px-3 py-2.5 text-center font-semibold uppercase">EDIT</th>
+                                </>
+                              ) : cat.id === 'address' ? (
+                                <>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CUSTOMER NAME</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">ADDRESS LINE 1 & 2</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CITY - PINCODE</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                  <th className="px-3 py-2.5 text-center font-semibold uppercase">EDIT</th>
+                                </>
+                              ) : cat.id === 'duplicate' ? (
+                                <>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CUSTOMER NAME</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">MOBILE NUMBER</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT CODE</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                </>
+                              ) : (
+                                <>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CLIENT ORDER NO</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CUSTOMER NAME</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">ADDRESS LINE 1 & 2</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">CITY - PINCODE</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">MOBILE NUMBER</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">PRODUCT CODE</th>
+                                  <th className="px-3 py-2.5 font-semibold uppercase">REASON</th>
+                                  <th className="px-3 py-2.5 text-center font-semibold uppercase">EDIT</th>
+                                </>
+                              )}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200/60 bg-white dark:divide-slate-800 dark:bg-slate-900">
                             {loadingOrders ? (
                               <tr>
-                                <td colSpan={8} className="py-8 text-center text-slate-500">
+                                <td colSpan={(cat.id === 'product' && isMissingProductSelected) || ['address', 'pincode'].includes(cat.id) ? 6 : ['courier', 'duplicate'].includes(cat.id) ? 5 : ['product', 'mobile', 'customer', 'price'].includes(cat.id) ? 4 : 8} className="py-8 text-center text-slate-500">
                                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-blue-600" />
-                                  <span className="mt-2 block text-xs">Loading failing order records...</span>
+                                  <span className="mt-2 block text-xs">Loading order records...</span>
                                 </td>
                               </tr>
                             ) : errorOrders.length === 0 ? (
                               <tr>
-                                <td colSpan={8} className="py-8 text-center text-slate-500">
-                                  No failing records found for selected error code.
+                                <td colSpan={(cat.id === 'product' && isMissingProductSelected) || ['address', 'pincode'].includes(cat.id) ? 6 : ['courier', 'duplicate'].includes(cat.id) ? 5 : ['product', 'mobile', 'customer', 'price'].includes(cat.id) ? 4 : 8} className="py-8 text-center text-slate-500">
+                                  No records found for selected error code.
                                 </td>
                               </tr>
                             ) : (
-                              errorOrders.map((row) => (
-                                <tr key={row.stagingId} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                                  <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
-                                    {row.clientOrderNo || '-'}
-                                  </td>
-                                  <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white">
-                                    {row.customerName || '-'}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 max-w-[200px] truncate">
-                                    {[row.addressLine1, row.addressLine2].filter(Boolean).join(', ') || '-'}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
-                                    {[row.city, row.pincode].filter(Boolean).join(' - ') || '-'}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
-                                    {row.mobile || '-'}
-                                  </td>
-                                  <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400">
-                                    {row.clientProductCode || '-'}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-red-600 dark:text-red-400 font-medium max-w-[150px] truncate">
-                                    {row.remarks || 'Validation failure'}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-center">
-                                    <button
-                                      onClick={() => setEditingOrder(row)}
-                                      className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
-                                    >
-                                      <Edit3 className="h-3 w-3" />
-                                      Edit
-                                    </button>
-                                  </td>
+                              errorOrders.map((row) => {
+                                const isRowWarning = row.blocking === false || isCurrentSelectedWarning;
+
+                                return (
+                                  <tr key={row.stagingId} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                    {cat.id === 'product' ? (
+                                      isMissingProductSelected ? (
+                                        <>
+                                          <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                            {row.clientOrderNo || '-'}
+                                          </td>
+                                          <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white max-w-[250px] truncate">
+                                            {row.productName || row.clientProductName || (row as any).productTitle || '-'}
+                                          </td>
+                                          <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                            {row.clientProductCode || '-'}
+                                          </td>
+                                          <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">
+                                            {isRowWarning ? (
+                                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300/50">
+                                                <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                                                <span className="truncate">{row.remarks || row.errorMessage || 'Warning'}</span>
+                                              </span>
+                                            ) : (
+                                              <span className="text-red-600 dark:text-red-400 font-medium">
+                                                {row.remarks || row.errorMessage || 'Validation failure'}
+                                              </span>
+                                            )}
+                                          </td>
+                                          <td className="px-3 py-2.5 text-center">
+                                            <button
+                                              onClick={() => setEditingOrder(row)}
+                                              className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
+                                            >
+                                              <Edit3 className="h-3 w-3" />
+                                              Edit
+                                            </button>
+                                          </td>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                            {row.clientOrderNo || '-'}
+                                          </td>
+                                          <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white max-w-[250px] truncate">
+                                            {row.productName || row.clientProductName || (row as any).productTitle || '-'}
+                                          </td>
+                                          <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                            {row.clientProductCode || '-'}
+                                          </td>
+                                          <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">
+                                            {isRowWarning ? (
+                                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300/50">
+                                                <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                                                <span className="truncate">{row.remarks || row.errorMessage || 'Warning'}</span>
+                                              </span>
+                                            ) : (
+                                              <span className="text-red-600 dark:text-red-400 font-medium">
+                                                {row.remarks || row.errorMessage || 'Validation failure'}
+                                              </span>
+                                            )}
+                                          </td>
+                                        </>
+                                      )
+                                    ) : cat.id === 'mobile' ? (
+                                      <>
+                                        <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                          {row.clientOrderNo || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-mono text-slate-700 dark:text-slate-300">
+                                          {row.mobile || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">
+                                          {isRowWarning ? (
+                                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300/50">
+                                              <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                                              <span className="truncate">{row.remarks || row.errorMessage || 'Warning'}</span>
+                                            </span>
+                                          ) : (
+                                            <span className="text-red-600 dark:text-red-400 font-medium">
+                                              {row.remarks || row.errorMessage || 'Validation failure'}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-center">
+                                          <button
+                                            onClick={() => setEditingOrder(row)}
+                                            className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
+                                          >
+                                            <Edit3 className="h-3 w-3" />
+                                            Edit
+                                          </button>
+                                        </td>
+                                      </>
+                                    ) : cat.id === 'customer' ? (
+                                      <>
+                                        <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                          {row.clientOrderNo || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white">
+                                          {row.customerName || [row.customerFirstName, row.customerLastName].filter(Boolean).join(' ') || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
+                                          {row.mobile || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">
+                                          {isRowWarning ? (
+                                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300/50">
+                                              <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                                              <span className="truncate">{row.remarks || row.errorMessage || 'Warning'}</span>
+                                            </span>
+                                          ) : (
+                                            <span className="text-red-600 dark:text-red-400 font-medium">
+                                              {row.remarks || row.errorMessage || 'Validation failure'}
+                                            </span>
+                                          )}
+                                        </td>
+                                      </>
+                                    ) : cat.id === 'courier' ? (
+                                      <>
+                                        <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                          {row.clientOrderNo || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
+                                          {[row.city, row.pincode].filter(Boolean).join(' - ') || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                          {row.clientProductCode || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white max-w-[250px] truncate">
+                                          {row.productName || row.clientProductName || (row as any).productTitle || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">
+                                          {isRowWarning ? (
+                                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300/50">
+                                              <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                                              <span className="truncate">{row.remarks || row.errorMessage || 'Warning'}</span>
+                                            </span>
+                                          ) : (
+                                            <span className="text-red-600 dark:text-red-400 font-medium">
+                                              {row.remarks || row.errorMessage || 'Validation failure'}
+                                            </span>
+                                          )}
+                                        </td>
+                                      </>
+                                    ) : cat.id === 'price' ? (
+                                      <>
+                                        <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                          {row.clientOrderNo || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                          {row.clientProductCode || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white max-w-[250px] truncate">
+                                          {row.productName || row.clientProductName || (row as any).productTitle || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">
+                                          {isRowWarning ? (
+                                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300/50">
+                                              <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                                              <span className="truncate">{row.remarks || row.errorMessage || 'Warning'}</span>
+                                            </span>
+                                          ) : (
+                                            <span className="text-red-600 dark:text-red-400 font-medium">
+                                              {row.remarks || row.errorMessage || 'Validation failure'}
+                                            </span>
+                                          )}
+                                        </td>
+                                      </>
+                                    ) : cat.id === 'pincode' ? (
+                                      <>
+                                        <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                          {row.clientOrderNo || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 max-w-[200px] truncate">
+                                          {[row.addressLine1, row.addressLine2].filter(Boolean).join(', ') || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono font-semibold">
+                                          {[row.city, row.pincode].filter(Boolean).join(' - ') || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">
+                                          {isRowWarning ? (
+                                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300/50">
+                                              <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                                              <span className="truncate">{row.remarks || row.errorMessage || 'Warning'}</span>
+                                            </span>
+                                          ) : (
+                                            <span className="text-red-600 dark:text-red-400 font-medium">
+                                              {row.remarks || row.errorMessage || 'Validation failure'}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-center">
+                                          <button
+                                            onClick={() => setEditingOrder(row)}
+                                            className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
+                                          >
+                                            <Edit3 className="h-3 w-3" />
+                                            Edit
+                                          </button>
+                                        </td>
+                                      </>
+                                    ) : cat.id === 'address' ? (
+                                       <>
+                                         <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                           {row.clientOrderNo || '-'}
+                                         </td>
+                                         <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white">
+                                           {row.customerName || [row.customerFirstName, row.customerLastName].filter(Boolean).join(' ') || '-'}
+                                         </td>
+                                         <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 max-w-[200px] truncate">
+                                           {[row.addressLine1, row.addressLine2].filter(Boolean).join(', ') || '-'}
+                                         </td>
+                                         <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
+                                           {[row.city, row.pincode].filter(Boolean).join(' - ') || '-'}
+                                         </td>
+                                         <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">
+                                           {isRowWarning ? (
+                                             <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300/50">
+                                               <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                                               <span className="truncate">{row.remarks || row.errorMessage || 'Warning'}</span>
+                                             </span>
+                                           ) : (
+                                             <span className="text-red-600 dark:text-red-400 font-medium">
+                                               {row.remarks || row.errorMessage || 'Validation failure'}
+                                             </span>
+                                           )}
+                                         </td>
+                                         <td className="px-3 py-2.5 text-center">
+                                           <button
+                                             onClick={() => setEditingOrder(row)}
+                                             className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
+                                           >
+                                             <Edit3 className="h-3 w-3" />
+                                             Edit
+                                           </button>
+                                         </td>
+                                       </>
+                                     ) : cat.id === 'duplicate' ? (
+                                      <>
+                                        <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                          {row.clientOrderNo || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white">
+                                          {row.customerName || [row.customerFirstName, row.customerLastName].filter(Boolean).join(' ') || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
+                                          {row.mobile || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                          {row.clientProductCode || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">
+                                          {isRowWarning ? (
+                                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300/50">
+                                              <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                                              <span className="truncate">{row.remarks || row.errorMessage || 'Warning'}</span>
+                                            </span>
+                                          ) : (
+                                            <span className="text-red-600 dark:text-red-400 font-medium">
+                                              {row.remarks || row.errorMessage || 'Validation failure'}
+                                            </span>
+                                          )}
+                                        </td>
+                                      </>
+                                  ) : (
+                                    <>
+                                      <td className="px-3 py-2.5 font-mono text-slate-800 dark:text-slate-200">
+                                        {row.clientOrderNo || '-'}
+                                      </td>
+                                      <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white">
+                                        {row.customerName || '-'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 max-w-[200px] truncate">
+                                        {[row.addressLine1, row.addressLine2].filter(Boolean).join(', ') || '-'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
+                                        {[row.city, row.pincode].filter(Boolean).join(' - ') || '-'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 font-mono">
+                                        {row.mobile || '-'}
+                                      </td>
+                                      <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                        {row.clientProductCode || '-'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-red-600 dark:text-red-400 font-medium max-w-[150px] truncate">
+                                        {row.remarks || 'Validation failure'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-center">
+                                        <button
+                                          onClick={() => setEditingOrder(row)}
+                                          className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
+                                        >
+                                          <Edit3 className="h-3 w-3" />
+                                          Edit
+                                        </button>
+                                      </td>
+                                    </>
+                                  )}
                                 </tr>
-                              ))
+                               );
+                              })
                             )}
                           </tbody>
                         </table>
@@ -521,7 +1027,7 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
       </div>
 
       {/* Action Controls */}
-      <div className="flex items-center justify-end gap-3 pt-4">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
         <button
           type="button"
           onClick={onSaveExit}
@@ -531,7 +1037,7 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
         </button>
         <button
           type="button"
-          onClick={handleAbort}
+          onClick={() => setShowAbortModal(true)}
           className="rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition-all"
         >
           Abort
@@ -551,7 +1057,165 @@ export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
         onClose={() => setEditingOrder(null)}
         stagingOrder={editingOrder}
         onSuccess={handleEditSuccess}
+        categoryId={expandedCategoryId || undefined}
+      />
+
+      {/* Centered Abort Confirmation Modal */}
+      <DeleteBatchModal
+        isOpen={showAbortModal}
+        onClose={() => setShowAbortModal(false)}
+        onSuccess={onAbort}
+        batchId={batchId}
+        title={`Abort Batch #${summary?.batchNo || `202600${batchId}`}?`}
+        actionLabel="Abort Batch"
       />
     </div>
+  );
+};
+
+export const Step3ValidationWizard: React.FC<Step3ValidationWizardProps> = ({
+  batchId,
+  onNext,
+  onAbort,
+  onSaveExit,
+}) => {
+  const [summary, setSummary] = useState<BatchSummaryData | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState<boolean>(false);
+  const [revalidating, setRevalidating] = useState<boolean>(false);
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    setIsPolling(false);
+  }, []);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      setSummaryError(null);
+      const data = await batchOrderService.getBatchSummary(batchId);
+      setSummary(data);
+
+      if (typeof window !== 'undefined' && data) {
+        window.dispatchEvent(new CustomEvent('batch-summary-updated', { detail: { batchId, data } }));
+      }
+
+      const isProcessing = data?.status === 'PROCESSING' || data?.batchStatus === 1;
+      if (!isProcessing) {
+        stopPolling();
+      } else {
+        setIsPolling(true);
+      }
+      return data;
+    } catch (err: any) {
+      console.warn('Failed to fetch batch summary:', err);
+      stopPolling();
+      const status = err.response?.status;
+      const msg = err.response?.data?.message || err.message;
+      if (status === 401) {
+        setSummaryError('Authentication session expired (401 Unauthorized). Please refresh or log in again.');
+      } else if (status === 400) {
+        setSummaryError(`Batch #${batchId} summary request failed (400 Bad Request). ${msg || 'Invalid or deleted batch.'}`);
+      } else {
+        setSummaryError(msg || 'Failed to load batch validation summary.');
+      }
+      return null;
+    }
+  }, [batchId, stopPolling]);
+
+  const startPolling = useCallback(() => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    setIsPolling(true);
+
+    pollTimerRef.current = setInterval(async () => {
+      const currentData = await fetchSummary();
+      const isProcessing = currentData?.status === 'PROCESSING' || currentData?.batchStatus === 1;
+      if (!isProcessing || currentData?.status === 'COMPLETED') {
+        stopPolling();
+      }
+    }, 5000); // Poll every 5 seconds until COMPLETED or non-PROCESSING status
+  }, [fetchSummary, stopPolling]);
+
+  useEffect(() => {
+    fetchSummary().then((data) => {
+      const isProcessing = data?.status === 'PROCESSING' || data?.batchStatus === 1;
+      if (isProcessing) {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    });
+
+    return () => {
+      stopPolling();
+    };
+  }, [fetchSummary, startPolling, stopPolling]);
+
+  const handleRevalidateBatch = async () => {
+    setRevalidating(true);
+    try {
+      await batchOrderService.validateBatch(batchId);
+      const updatedData = await fetchSummary();
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('batch-revalidated', { detail: { batchId } }));
+      }
+
+      const isProcessing = updatedData?.status === 'PROCESSING' || updatedData?.batchStatus === 1;
+      if (isProcessing) {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    } catch (err) {
+      console.error('Revalidate failed:', err);
+      stopPolling();
+    } finally {
+      setRevalidating(false);
+    }
+  };
+
+  if (summaryError) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 dark:border-red-900/50 dark:bg-red-950/40 text-center space-y-4">
+        <div className="flex justify-center text-red-600 dark:text-red-400">
+          <AlertCircle className="h-10 w-10" />
+        </div>
+        <h3 className="text-base font-bold text-red-900 dark:text-red-200">
+          Validation Summary Unavailable (Batch #{batchId})
+        </h3>
+        <p className="text-xs text-red-700 dark:text-red-300 max-w-md mx-auto">
+          {summaryError}
+        </p>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            onClick={() => fetchSummary()}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Retry Request
+          </button>
+          <button
+            onClick={onAbort}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-colors"
+          >
+            Back to Step 1
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Step3ValidationHeader
+      batchId={batchId}
+      summary={summary}
+      isPolling={isPolling}
+      revalidating={revalidating}
+      onRevalidate={handleRevalidateBatch}
+    />
   );
 };

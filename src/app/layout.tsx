@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
 import { Toaster } from 'sonner';
 import ReduxProvider from '@/components/providers/ReduxProvider';
+import IdleLockProvider from '@/components/providers/IdleLockProvider';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -51,7 +52,9 @@ export default function RootLayout({
       </head>
       <body className={plusJakartaSans.className}>
         <ReduxProvider>
-          {children}
+          <IdleLockProvider timeoutMinutes={10}>
+            {children}
+          </IdleLockProvider>
         </ReduxProvider>
         <Toaster
           position="top-right"

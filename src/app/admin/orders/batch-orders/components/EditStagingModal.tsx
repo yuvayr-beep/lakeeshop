@@ -10,6 +10,7 @@ interface EditStagingModalProps {
   onClose: () => void;
   stagingOrder: StagingErrorOrder | null;
   onSuccess: (updatedOrder: StagingErrorOrder) => void;
+  categoryId?: string;
 }
 
 export const EditStagingModal: React.FC<EditStagingModalProps> = ({
@@ -17,6 +18,7 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
   onClose,
   stagingOrder,
   onSuccess,
+  categoryId,
 }) => {
   const [formData, setFormData] = useState<Partial<StagingErrorOrder>>({});
   const [loading, setLoading] = useState(false);
@@ -24,21 +26,34 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
 
   useEffect(() => {
     if (stagingOrder) {
+      const rawCustomerName = (stagingOrder.customerName || '').trim();
+      const nameParts = rawCustomerName ? rawCustomerName.split(/\s+/) : [];
+      const initFirstName = stagingOrder.customerFirstName || nameParts[0] || '';
+      const initLastName = stagingOrder.customerLastName || nameParts.slice(1).join(' ') || '';
+
       setFormData({
+        ...stagingOrder,
         stagingId: stagingOrder.stagingId,
         clientOrderNo: stagingOrder.clientOrderNo || '',
-        customerName: stagingOrder.customerName || '',
+        customerName: rawCustomerName || [initFirstName, initLastName].filter(Boolean).join(' ') || '',
+        customerFirstName: initFirstName,
+        customerLastName: initLastName,
         mobile: stagingOrder.mobile || '',
         alternateMobile: stagingOrder.alternateMobile || '',
+        email: stagingOrder.email || '',
         clientProductCode: stagingOrder.clientProductCode || '',
+        clientProductName: stagingOrder.clientProductName || stagingOrder.productName || (stagingOrder as any).productTitle || '',
+        quantity: stagingOrder.quantity ?? stagingOrder.orderQuantity ?? 1,
         addressLine1: stagingOrder.addressLine1 || '',
         addressLine2: stagingOrder.addressLine2 || '',
+        addressLine3: stagingOrder.addressLine3 || '',
+        addressLine4: stagingOrder.addressLine4 || '',
         landmark: stagingOrder.landmark || '',
         city: stagingOrder.city || '',
         pincode: stagingOrder.pincode || '',
         state: stagingOrder.state || '',
-        orderQuantity: stagingOrder.orderQuantity || 1,
-        price: stagingOrder.price || 0,
+        clientUnitPrice: stagingOrder.clientUnitPrice ?? stagingOrder.price ?? 0,
+        totalPrice: stagingOrder.totalPrice ?? 0,
         remarks: stagingOrder.remarks || '',
       });
       setErrorMsg(null);
@@ -60,17 +75,77 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
     setLoading(true);
     setErrorMsg(null);
 
+    let firstName = formData.customerFirstName || stagingOrder.customerFirstName || '';
+    let lastName = formData.customerLastName || stagingOrder.customerLastName || '';
+
+    if (formData.customerName) {
+      const parts = formData.customerName.trim().split(/\s+/);
+      firstName = parts[0] || '';
+      lastName = parts.slice(1).join(' ') || '';
+    }
+
+    // Build complete payload matching exact PUT /order/staging/{stagingId} schema
+    const updatePayload = {
+      clientOrderNo: formData.clientOrderNo || stagingOrder.clientOrderNo || '',
+      clientOrderLineNo: formData.clientOrderLineNo || stagingOrder.clientOrderLineNo || '',
+      clientProductCode: formData.clientProductCode || stagingOrder.clientProductCode || '',
+      clientProductName: formData.clientProductName || stagingOrder.clientProductName || stagingOrder.productName || '',
+      quantity: Number(formData.quantity ?? stagingOrder.quantity ?? formData.orderQuantity ?? stagingOrder.orderQuantity ?? 1),
+      customerFirstName: firstName,
+      customerLastName: lastName,
+      mobile: formData.mobile || stagingOrder.mobile || '',
+      alternateMobile: formData.alternateMobile || stagingOrder.alternateMobile || '',
+      email: formData.email || stagingOrder.email || '',
+      addressLine1: formData.addressLine1 || stagingOrder.addressLine1 || '',
+      addressLine2: formData.addressLine2 || stagingOrder.addressLine2 || '',
+      addressLine3: formData.addressLine3 || stagingOrder.addressLine3 || '',
+      addressLine4: formData.addressLine4 || stagingOrder.addressLine4 || '',
+      landmark: formData.landmark || stagingOrder.landmark || '',
+      city: formData.city || stagingOrder.city || '',
+      state: formData.state || stagingOrder.state || '',
+      pincode: formData.pincode || stagingOrder.pincode || '',
+      clientUnitPrice: Number(formData.clientUnitPrice ?? stagingOrder.clientUnitPrice ?? formData.price ?? stagingOrder.price ?? 0),
+      totalPrice: Number(formData.totalPrice ?? stagingOrder.totalPrice ?? 0),
+      remarks: formData.remarks || stagingOrder.remarks || '',
+    };
+
+    console.log('🚀 ========================================================');
+    console.log('🚀 [UPDATE STAGING ROW - API PAYLOAD & DETAILS]');
+    console.log('📍 Endpoint: PUT /order/staging/' + stagingOrder.stagingId);
+    console.log('📦 Staging ID:', stagingOrder.stagingId);
+    console.log('🏷️ Category:', categoryId);
+    console.log('📄 RAW JSON Payload String (Copyable for Swagger):');
+    console.log(JSON.stringify(updatePayload, null, 2));
+    console.log('📊 Parsed Payload Object:', updatePayload);
+    console.log('🚀 ========================================================');
+
     try {
-      // 1. Save inline updates to staging row
-      await batchOrderService.updateStagingRow(stagingOrder.stagingId, formData);
+      // 1. Save inline updates to staging row with complete API schema
+      const updateRes = await batchOrderService.updateStagingRow(stagingOrder.stagingId, updatePayload as any);
+      console.log('✅ [UPDATE STAGING ROW SUCCESS]:', updateRes);
 
-      // 2. Revalidate staging row immediately (synchronous)
-      const revalidateRes = await batchOrderService.revalidateStagingRow(stagingOrder.stagingId);
+      // 2. Revalidate staging row immediately (try single-row revalidate, fallback gracefully if backend returns 409)
+      let revalidateRes: any = null;
+      try {
+        console.log('🔄 [TRIGGERING REVALIDATION] POST /order/staging/revalidate/' + stagingOrder.stagingId);
+        revalidateRes = await batchOrderService.revalidateStagingRow(stagingOrder.stagingId);
+        console.log('✅ [REVALIDATE STAGING ROW SUCCESS]:', revalidateRes);
+      } catch (revalidateErr: any) {
+        console.warn('⚠️ Single-row revalidation endpoint returned warning/error (falling back to local update & summary refresh):', revalidateErr?.response?.data || revalidateErr.message);
+      }
 
-      onSuccess(revalidateRes?.data || { ...stagingOrder, ...formData });
+      onSuccess(revalidateRes?.data || { ...stagingOrder, ...updatePayload });
       onClose();
     } catch (err: any) {
-      console.error('Failed to update staging row:', err);
+      console.error('❌ ========================================================');
+      console.error('❌ [STAGING ROW EDIT FAILED]');
+      console.error('📍 Failed Staging ID:', stagingOrder.stagingId);
+      console.error('⚠️ HTTP Status Code:', err.response?.status);
+      console.error('⚠️ Server Error Message:', err.response?.data?.message || err.message);
+      console.error('⚠️ Full Server Error Response Data:', err.response?.data);
+      console.error('📄 Payload that caused error:');
+      console.log(JSON.stringify(updatePayload, null, 2));
+      console.error('❌ ========================================================');
       setErrorMsg(err.response?.data?.message || err.message || 'Failed to update staging row.');
     } finally {
       setLoading(false);
@@ -79,7 +154,7 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
         <div className="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -104,159 +179,311 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
         )}
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Client Order No
-              </label>
-              <input
-                type="text"
-                name="clientOrderNo"
-                value={formData.clientOrderNo || ''}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
+          {categoryId === 'mobile' ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Client Order No
+                </label>
+                <input
+                  type="text"
+                  name="clientOrderNo"
+                  value={formData.clientOrderNo || ''}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Mobile Number
+                </label>
+                <input
+                  type="text"
+                  name="mobile"
+                  value={formData.mobile || ''}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Customer Name
-              </label>
-              <input
-                type="text"
-                name="customerName"
-                value={formData.customerName || ''}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
+          ) : categoryId === 'pincode' ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Client Order No
+                </label>
+                <input
+                  type="text"
+                  name="clientOrderNo"
+                  value={formData.clientOrderNo || ''}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Pincode
+                </label>
+                <input
+                  type="text"
+                  name="pincode"
+                  value={formData.pincode || ''}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Mobile Number
-              </label>
-              <input
-                type="text"
-                name="mobile"
-                value={formData.mobile || ''}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
+          ) : categoryId === 'product' ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Client Order No
+                  </label>
+                  <input
+                    type="text"
+                    name="clientOrderNo"
+                    value={formData.clientOrderNo || ''}
+                    readOnly
+                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-mono text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Product Code
+                  </label>
+                  <input
+                    type="text"
+                    name="clientProductCode"
+                    value={formData.clientProductCode || ''}
+                    onChange={handleChange}
+                    placeholder="Enter Product Code"
+                    className="w-full rounded-lg border border-blue-400 bg-white px-3 py-2 text-xs font-mono font-bold text-blue-700 focus:border-blue-600 focus:outline-none dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Product Name
+                </label>
+                <div className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-800 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
+                  {stagingOrder.clientProductName || stagingOrder.productName || (stagingOrder as any).productTitle || 'N/A'}
+                </div>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Alternate Mobile
-              </label>
-              <input
-                type="text"
-                name="alternateMobile"
-                value={formData.alternateMobile || ''}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
+          ) : categoryId === 'address' ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Client Order No
+                  </label>
+                  <input
+                    type="text"
+                    name="clientOrderNo"
+                    value={formData.clientOrderNo || ''}
+                    readOnly
+                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-mono text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Customer Name
+                  </label>
+                  <input
+                    type="text"
+                    name="customerName"
+                    value={formData.customerName || [formData.customerFirstName, formData.customerLastName].filter(Boolean).join(' ') || ''}
+                    onChange={handleChange}
+                    placeholder="Enter Customer Name"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Address Line 1
+                </label>
+                <input
+                  type="text"
+                  name="addressLine1"
+                  value={formData.addressLine1 || ''}
+                  onChange={handleChange}
+                  placeholder="Enter Address Line 1"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Address Line 2
+                </label>
+                <input
+                  type="text"
+                  name="addressLine2"
+                  value={formData.addressLine2 || ''}
+                  onChange={handleChange}
+                  placeholder="Enter Address Line 2"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Client Order No
+                  </label>
+                  <input
+                    type="text"
+                    name="clientOrderNo"
+                    value={formData.clientOrderNo || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Client Product Code
-              </label>
-              <input
-                type="text"
-                name="clientProductCode"
-                value={formData.clientProductCode || ''}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Customer Name
+                  </label>
+                  <input
+                    type="text"
+                    name="customerName"
+                    value={formData.customerName || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Pincode
-              </label>
-              <input
-                type="text"
-                name="pincode"
-                value={formData.pincode || ''}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Mobile Number
+                  </label>
+                  <input
+                    type="text"
+                    name="mobile"
+                    value={formData.mobile || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                City
-              </label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city || ''}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Alternate Mobile
+                  </label>
+                  <input
+                    type="text"
+                    name="alternateMobile"
+                    value={formData.alternateMobile || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                State
-              </label>
-              <input
-                type="text"
-                name="state"
-                value={formData.state || ''}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Client Product Code
+                  </label>
+                  <input
+                    type="text"
+                    name="clientProductCode"
+                    value={formData.clientProductCode || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Order Quantity
-              </label>
-              <input
-                type="number"
-                name="orderQuantity"
-                value={formData.orderQuantity || 1}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Pincode
+                  </label>
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={formData.pincode || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Price
-              </label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price || 0}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
-          </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Address Line 1 & 2
-            </label>
-            <input
-              type="text"
-              name="addressLine1"
-              value={formData.addressLine1 || ''}
-              onChange={handleChange}
-              placeholder="Address Line 1"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white mb-2"
-            />
-            <input
-              type="text"
-              name="addressLine2"
-              value={formData.addressLine2 || ''}
-              onChange={handleChange}
-              placeholder="Address Line 2"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-            />
-          </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Order Quantity
+                  </label>
+                  <input
+                    type="number"
+                    name="orderQuantity"
+                    value={formData.orderQuantity || 1}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Price
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price || 0}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Address Line 1 & 2
+                </label>
+                <input
+                  type="text"
+                  name="addressLine1"
+                  value={formData.addressLine1 || ''}
+                  onChange={handleChange}
+                  placeholder="Address Line 1"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white mb-2"
+                />
+                <input
+                  type="text"
+                  name="addressLine2"
+                  value={formData.addressLine2 || ''}
+                  onChange={handleChange}
+                  placeholder="Address Line 2"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+            </>
+          )}
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
             <button

@@ -11,6 +11,7 @@ export interface BatchOrderItem {
   uploadedAt?: string;
   totalOrderCount?: number;
   passCount?: number;
+  warningCount?: number;
   failCount?: number;
   sourceId?: number;
   originalFileUrl?: string;
@@ -48,6 +49,7 @@ export interface BatchErrorSummaryItem {
 
 export interface BatchSummaryData {
   batchId: number;
+  batchNo?: string;
   totalRows: number;
   passRows: number;
   warningRows: number;
@@ -61,20 +63,35 @@ export interface BatchSummaryData {
 export interface StagingErrorOrder {
   stagingId: number;
   clientOrderNo?: string | null;
+  clientOrderLineNo?: string | null;
+  clientProductCode?: string | null;
+  clientProductName?: string | null;
+  productName?: string | null;
+  quantity?: number | null;
+  orderQuantity?: number | null;
+  customerFirstName?: string | null;
+  customerLastName?: string | null;
   customerName?: string | null;
   mobile?: string | null;
   alternateMobile?: string | null;
-  clientProductCode?: string | null;
-  remarks?: string | null;
+  email?: string | null;
   addressLine1?: string | null;
   addressLine2?: string | null;
+  addressLine3?: string | null;
+  addressLine4?: string | null;
   landmark?: string | null;
   city?: string | null;
-  pincode?: string | null;
   state?: string | null;
-  orderQuantity?: number | null;
+  pincode?: string | null;
+  clientUnitPrice?: number | null;
+  totalPrice?: number | null;
   price?: number | null;
   orderDate?: string | null;
+  remarks?: string | null;
+  blocking?: boolean;
+  errorId?: number;
+  errorCode?: string;
+  errorMessage?: string;
 }
 
 export interface MasterValidationError {

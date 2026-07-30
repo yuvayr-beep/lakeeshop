@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { Upload, CheckCircle2, ShieldAlert, Send, FileSpreadsheet, Layers } from 'lucide-react';
-import { Step1UploadFile } from './Step1UploadFile';
+import { Step1UploadForm, RecentOrderBatchesCard } from './Step1UploadFile';
 import { Step2ReviewCount } from './Step2ReviewCount';
-import { Step3ValidationWizard } from './Step3ValidationWizard';
+import { Step3ValidationWizard, Step3ValidationAccordionsCard } from './Step3ValidationWizard';
 import { Step4SubmitConfirmation } from './Step4SubmitConfirmation';
 import { BatchUploadResponse } from '@/types/batchOrder';
 
@@ -72,7 +72,7 @@ export const BatchOrdersClient: React.FC = () => {
         )}
       </div>
 
-      {/* SINGLE UNIFIED CARD: Combining Stepper Header + Active Step Content */}
+      {/* CARD 1: SINGLE UNIFIED WIZARD CARD (Stepper Navigation + Step Header/Form) */}
       <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
         {/* Stepper Header Navigation */}
         <div className="p-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
@@ -127,13 +127,10 @@ export const BatchOrdersClient: React.FC = () => {
           </div>
         </div>
 
-        {/* Step Body Content inside the SAME Unified Card */}
+        {/* Step Body Content inside CARD 1 */}
         <div className="p-6">
           {currentStep === 1 && (
-            <Step1UploadFile
-              onBatchCreated={handleBatchCreated}
-              onResumeBatch={handleResumeBatch}
-            />
+            <Step1UploadForm onBatchCreated={handleBatchCreated} />
           )}
 
           {currentStep === 2 && activeBatchId && (
@@ -164,6 +161,21 @@ export const BatchOrdersClient: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* CARD 2 (STEP 1): RECENT ORDER BATCHES TABLE */}
+      {currentStep === 1 && (
+        <RecentOrderBatchesCard onResumeBatch={handleResumeBatch} />
+      )}
+
+      {/* CARD 2 (STEP 3): ORDER DATA VALIDATION ACCORDIONS LIST */}
+      {currentStep === 3 && activeBatchId && (
+        <Step3ValidationAccordionsCard
+          batchId={activeBatchId}
+          onNext={() => setCurrentStep(4)}
+          onAbort={handleResetToStep1}
+          onSaveExit={handleResetToStep1}
+        />
+      )}
     </div>
   );
 };

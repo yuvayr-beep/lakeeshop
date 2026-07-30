@@ -175,15 +175,40 @@ export const batchOrderService = {
     return [];
   },
 
+  // 6. Revalidate Batch (Triggers async re-validation engine)
+  revalidateBatch: async (batchId: number) => {
+    console.log('=== [API CALL] REVALIDATE BATCH ===');
+    console.log(`POST /order/staging/validate/${batchId}`);
+    console.log('===================================');
+    const response = await axiosInstance.post(`/order/staging/validate/${batchId}`, {});
+    console.log('=== [API RESPONSE] REVALIDATE BATCH ===', response.data);
+    return response.data;
+  },
+
+  // 7. Get Batch Validation Summary
+  getValidationSummary: async (batchId: number): Promise<BatchSummaryData> => {
+    const response = await axiosInstance.get(`/order/staging/summary/${batchId}`);
+    return response.data;
+  },
+
   // 8. Revalidate Single Staging Row (Synchronous)
   revalidateStagingRow: async (stagingId: number) => {
+    console.log('=== [API CALL] REVALIDATE STAGING ROW ===');
+    console.log(`POST /order/staging/revalidate/${stagingId}`);
+    console.log('=========================================');
     const response = await axiosInstance.post(`/order/staging/revalidate/${stagingId}`, {});
+    console.log('=== [API RESPONSE] REVALIDATE STAGING ROW ===', response.data);
     return response.data;
   },
 
   // 9. Update Incorrect Staging Row Data
   updateStagingRow: async (stagingId: number, data: Partial<StagingErrorOrder>) => {
+    console.log('=== [API CALL] UPDATE STAGING ROW ===');
+    console.log(`PUT /order/staging/${stagingId}`);
+    console.log('Payload Data:', JSON.stringify(data, null, 2));
+    console.log('======================================');
     const response = await axiosInstance.put(`/order/staging/${stagingId}`, data);
+    console.log('=== [API RESPONSE] UPDATE STAGING ROW ===', response.data);
     return response.data;
   },
 
@@ -235,5 +260,45 @@ export const batchOrderService = {
     }
 
     return [];
+  },
+
+  // 12. Download Batch Orders File by Count Type (ALL, PASS, WARN, FAIL)
+  downloadBatchOrders: async (batchId: number, type: 'ALL' | 'PASS' | 'WARN' | 'FAIL', batchNo?: string) => {
+    const response = await axiosInstance.post(
+      '/order/batch/download',
+      {
+        batchIds: [batchId],
+        type,
+      },
+      {
+        responseType: 'blob',
+        headers: {
+          'Content-Type': 'application/json',
+          accept: '*/*',
+        },
+      }
+    );
+
+    let fileName = `${batchNo || `batch_${batchId}`}_${type.toLowerCase()}.xlsx`;
+    const contentDisposition = response.headers?.['content-disposition'] ? String(response.headers['content-disposition']) : '';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+      if (filenameMatch && filenameMatch[1]) {
+        fileName = filenameMatch[1];
+      }
+    }
+
+    const contentType = response.headers?.['content-type'] ? String(response.headers['content-type']) : 'application/octet-stream';
+    const blob = new Blob([response.data], {
+      type: contentType,
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   },
 };

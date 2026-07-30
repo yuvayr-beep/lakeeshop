@@ -10,7 +10,11 @@ interface DeleteBatchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  batchToDelete: BatchOrderItem | null;
+  batchToDelete?: BatchOrderItem | null;
+  batchId?: number | null;
+  batchNo?: string | null;
+  title?: string;
+  actionLabel?: string;
 }
 
 export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
@@ -18,22 +22,31 @@ export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
   onClose,
   onSuccess,
   batchToDelete,
+  batchId,
+  batchNo,
+  title,
+  actionLabel,
 }) => {
   const [deleting, setDeleting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  if (!isOpen || !batchToDelete) return null;
+  if (!isOpen) return null;
 
-  const targetBatchId = batchToDelete.batchId || batchToDelete.id;
-  const displayBatchNo = batchToDelete.batchNo || (targetBatchId ? `202600${targetBatchId}` : 'N/A');
-  const clientName = batchToDelete.clientName || batchToDelete.clientCode || 'Client';
+  const targetBatchId = batchToDelete?.batchId || batchToDelete?.id || batchId;
+  if (!targetBatchId) return null;
+
+  const displayBatchNo =
+    batchToDelete?.batchNo ||
+    batchNo ||
+    (targetBatchId ? `202600${targetBatchId}` : 'N/A');
+
+  const clientName =
+    batchToDelete?.clientName || batchToDelete?.clientCode || 'Client';
+
+  const modalTitle = title || `Delete Batch #${displayBatchNo}?`;
+  const confirmBtnText = actionLabel || 'Delete Batch';
 
   const handleConfirmDelete = async () => {
-    if (!targetBatchId) {
-      setErrorMsg('Invalid batch identifier.');
-      return;
-    }
-
     setDeleting(true);
     setErrorMsg(null);
     const toastId = toast.loading(`Deleting batch #${displayBatchNo}...`);
@@ -70,15 +83,18 @@ export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
         </div>
 
         <h3 className="text-base font-bold text-slate-900 dark:text-white">
-          Delete Batch #{displayBatchNo}?
+          {modalTitle}
         </h3>
 
         <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-          Are you sure you want to delete order batch{' '}
+          Are you sure you want to abort / delete order batch{' '}
           <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
             #{displayBatchNo}
-          </span>{' '}
-          for <strong className="text-slate-800 dark:text-slate-200">{clientName}</strong>? This action will permanently remove all staging records and parsed orders associated with this batch.
+          </span>
+          {batchToDelete?.clientName && (
+            <> for <strong className="text-slate-800 dark:text-slate-200">{clientName}</strong></>
+          )}
+          ? This action will permanently remove all staging records and parsed orders associated with this batch.
         </p>
 
         {errorMsg && (
@@ -104,7 +120,7 @@ export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
             className="flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-red-700 disabled:opacity-50 transition-all"
           >
             {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            {deleting ? 'Deleting...' : 'Delete Batch'}
+            {deleting ? 'Processing...' : confirmBtnText}
           </button>
         </div>
       </div>
