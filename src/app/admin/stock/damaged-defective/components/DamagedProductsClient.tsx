@@ -287,7 +287,7 @@ export default function DamagedProductsClient() {
   if (loadingInitial) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400" size={32} />
+        <Loader2 className="animate-spin text-[var(--primary)]" size={32} />
         <span className="text-sm text-slate-500 font-bold">Loading damage manager...</span>
       </div>
     );
@@ -311,8 +311,8 @@ export default function DamagedProductsClient() {
             onClick={() => setShowUploadArea(!showUploadArea)}
             className={`flex items-center justify-center gap-2 h-10 px-4 text-xs font-bold rounded-xl shadow-sm transition-all border ${
               showUploadArea
-                ? 'bg-[#4f46e5] text-white hover:bg-[#4338ca] border-[#4f46e5]'
-                : 'bg-indigo-50 hover:bg-indigo-105 dark:bg-indigo-950/20 dark:hover:bg-indigo-900/30 text-indigo-650 dark:text-indigo-405 border-indigo-200 dark:border-indigo-900/50'
+                ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] border-[var(--primary)]'
+                : 'bg-[var(--primary-light-bg)] text-[var(--primary)] border border-[var(--primary)]/30'
             }`}
           >
             <Upload size={14} /> Upload
@@ -552,7 +552,7 @@ export default function DamagedProductsClient() {
           {productDetails && !loadingDetails && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
               <div className="bg-slate-50 dark:bg-slate-955 px-5 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                <Info size={14} className="text-indigo-500" />
+                <Info size={14} className="text-[var(--primary)]" />
                 <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Product Specifications
                 </h6>
@@ -592,8 +592,8 @@ export default function DamagedProductsClient() {
 
                 <div>
                   <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Category Hierarchy</span>
-                  <div className="flex items-center gap-1 mt-1 text-xs font-bold text-indigo-650 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 p-2 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
-                    <Layers size={13} className="text-indigo-500" />
+                  <div className="flex items-center gap-1 mt-1 text-xs font-bold text-[var(--primary)] bg-[var(--primary-light-bg)] p-2 rounded-xl border border-[var(--primary)]/30">
+                    <Layers size={13} className="text-[var(--primary)]" />
                     <span>{productDetails.categoryPath}</span>
                   </div>
                 </div>

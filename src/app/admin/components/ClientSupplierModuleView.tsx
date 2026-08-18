@@ -408,7 +408,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
     const toastId = toast.loading('Saving business unit...');
 
     const buPayload = {
-      ...(buId ? { id: buId } : {}),
+      clientId: selectedClient.id,
       unitCode: buUnitCode.trim(),
       unitName: buUnitName.trim(),
       legalName: buUnitLegalName.trim(),
@@ -419,29 +419,37 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       hasProgram: !!buHasProgram
     };
 
-    const clientPayload = {
-      clientCode: editClientCode.trim() || selectedClient.clientCode,
-      clientName: editClientName.trim() || selectedClient.clientName,
-      legalName: editLegalName.trim() || selectedClient.legalName,
-      logoUrl: (editLogoUrl.trim() || selectedClient.logoUrl) || null,
-      remarks: (editRemarks.trim() || selectedClient.remarks) || null,
-      businessUnits: [buPayload]
-    };
+    console.log(buId ? `[PUT /client/business-unit/${buId}] Payload:` : '[POST /client/business-unit] Payload:', buPayload);
 
     try {
-      const response = await axiosInstance.put(`/client/${selectedClient.id}`, clientPayload);
-      const updatedClientData = response.data.data || response.data;
-      const updatedBU = updatedClientData.businessUnits?.[0] || buPayload;
+      let response;
+      if (buId) {
+        response = await axiosInstance.put(`/client/business-unit/${buId}`, buPayload);
+      } else {
+        response = await axiosInstance.post('/client/business-unit', buPayload);
+      }
 
-      setBuOriginalData(updatedBU);
-      if (updatedBU.id) setBuId(updatedBU.id);
+      console.log('Business Unit Save Response:', response.data);
+      const updatedBU = response.data.data || response.data;
 
-      const updatedClient = {
-        ...selectedClient,
-        ...updatedClientData,
-        businessUnits: [updatedBU]
-      };
-      dispatch(selectClient(updatedClient));
+      if (updatedBU) {
+        setBuOriginalData(updatedBU);
+        if (updatedBU.id) setBuId(updatedBU.id);
+        setBuUnitCode(updatedBU.unitCode || buUnitCode.trim());
+        setBuUnitName(updatedBU.unitName || buUnitName.trim());
+        setBuUnitLegalName(updatedBU.legalName || buUnitLegalName.trim());
+        setBuDispatchWithinDays(updatedBU.dispatchWithinDays ?? buDispatchWithinDays);
+        setBuDeliverWithinDays(updatedBU.deliverWithinDays ?? buDeliverWithinDays);
+        setBuHasOwnProductCode(updatedBU.hasOwnProductCode ?? buHasOwnProductCode);
+        setBuHasMultiProductOrder(updatedBU.hasMultiProductOrder ?? buHasMultiProductOrder);
+        setBuHasProgram(updatedBU.hasProgram ?? buHasProgram);
+
+        const updatedClient = {
+          ...selectedClient,
+          businessUnits: [updatedBU]
+        };
+        dispatch(selectClient(updatedClient));
+      }
 
       toast.success('Business unit updated successfully!', { id: toastId });
     } catch (err: any) {
@@ -744,6 +752,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
         transformResponse: [(data) => data],
       });
       const parsed = parseNdjson(response.data);
+      console.log(`[GET /client/program/${businessUnitId}] Fetched Programs:`, parsed);
       setClientPrograms(parsed);
     } catch (err) {
       console.error('Failed to fetch client programs:', err);
@@ -788,12 +797,16 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       printGroup: progPrintGroup.trim()
     };
 
+    console.log(editingProgramId ? `[PUT /client/program/${editingProgramId}] Payload:` : '[POST /client/program] Payload:', payload);
+
     try {
       if (editingProgramId) {
-        await axiosInstance.put(`/client/program/${editingProgramId}`, payload);
+        const response = await axiosInstance.put(`/client/program/${editingProgramId}`, payload);
+        console.log(`[PUT /client/program/${editingProgramId}] Response:`, response.data);
         toast.success('Program updated successfully!', { id: toastId });
       } else {
-        await axiosInstance.post('/client/program', payload);
+        const response = await axiosInstance.post('/client/program', payload);
+        console.log('[POST /client/program] Response:', response.data);
         toast.success('Program created successfully!', { id: toastId });
       }
 

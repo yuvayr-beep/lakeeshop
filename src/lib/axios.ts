@@ -48,15 +48,22 @@ axiosInstance?.interceptors?.response?.use(
         return Promise.reject(error);
       }
 
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        // No refresh token available, logout user
+      const handleSessionExpired = () => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('expiresIn');
         localStorage.removeItem('tokenType');
         localStorage.removeItem('userPhone');
+        localStorage.removeItem('idle_is_locked');
+        localStorage.removeItem('isLocked');
+        localStorage.removeItem('idle_last_active_time');
         window.location.href = '/';
+      };
+
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        // No refresh token available, logout user
+        handleSessionExpired();
         return Promise.reject(error);
       }
 
@@ -97,6 +104,9 @@ axiosInstance?.interceptors?.response?.use(
         localStorage.setItem('refreshToken', newRefreshToken);
         localStorage.setItem('expiresIn', String(expiresIn));
         localStorage.setItem('tokenType', tokenType || 'Bearer');
+        localStorage.removeItem('idle_is_locked');
+        localStorage.removeItem('isLocked');
+        localStorage.setItem('idle_last_active_time', Date.now().toString());
 
         isRefreshing = false;
         processQueue(null, accessToken);
@@ -109,12 +119,7 @@ axiosInstance?.interceptors?.response?.use(
         processQueue(refreshError, null);
 
         // If refresh fails, log out the user
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('expiresIn');
-        localStorage.removeItem('tokenType');
-        localStorage.removeItem('userPhone');
-        window.location.href = '/';
+        handleSessionExpired();
 
         return Promise.reject(refreshError);
       }

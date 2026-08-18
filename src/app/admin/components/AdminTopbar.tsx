@@ -3,11 +3,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Bell, Ticket, Sun, Moon, ChevronDown, User, KeyRound, LogOut,
+  Bell, Ticket, Sun, Moon, ChevronDown, User, KeyRound, LogOut, Lock,
   Menu, AlertTriangle, Package, Truck, Clock, TrendingDown, Palette, Sliders
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { logout } from '@/redux/slices/authSlice';
+import { logout, lockSession } from '@/redux/slices/authSlice';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 import LakeeeLogoMark from '@/components/auth/LakeeeLogoMark';
@@ -16,6 +16,9 @@ import ThemeSettingsDrawer from './ThemeSettingsDrawer';
 interface AdminTopbarProps {
   onToggleSidebar: () => void;
   onMobileMenu: () => void;
+  pageTitle?: string;
+  pageSubtitle?: string;
+  pageIcon?: React.ReactNode;
 }
 
 const notifications = [
@@ -28,7 +31,13 @@ const notifications = [
   { id: 7, label: 'Pending Delivery', count: 31, icon: Truck, color: 'text-emerald-500', bg: 'bg-emerald-50' },
 ];
 
-export default function AdminTopbar({ onToggleSidebar, onMobileMenu }: AdminTopbarProps) {
+export default function AdminTopbar({
+  onToggleSidebar,
+  onMobileMenu,
+  pageTitle,
+  pageSubtitle,
+  pageIcon,
+}: AdminTopbarProps) {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const userProfile = useAppSelector((s) => s.user.profile);
@@ -98,6 +107,27 @@ export default function AdminTopbar({ onToggleSidebar, onMobileMenu }: AdminTopb
         <LakeeeLogoMark size={28} />
         <span className="text-sm font-700 text-slate-800">LAKEE<span className="text-blue-600">E</span></span>
       </div>
+
+      {/* Dynamic Page Header Title & Subtitle */}
+      {pageTitle && (
+        <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-slate-200 dark:border-slate-800">
+          {pageIcon && (
+            <div className="shrink-0 flex items-center justify-center">
+              {pageIcon}
+            </div>
+          )}
+          <div className="flex flex-col justify-center min-w-0">
+            <h1 className="text-sm font-bold text-slate-800 dark:text-white truncate leading-tight">
+              {pageTitle}
+            </h1>
+            {pageSubtitle && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-md lg:max-w-xl font-medium">
+                {pageSubtitle}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1" />
 
@@ -211,6 +241,22 @@ export default function AdminTopbar({ onToggleSidebar, onMobileMenu }: AdminTopb
                   <KeyRound size={15} className="text-slate-400" />
                   Change Password
                 </Link>
+                <button
+                  onClick={() => {
+                    setProfileOpen(false);
+                    dispatch(lockSession());
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Lock size={15} />
+                    <span>Lock Screen</span>
+                  </div>
+                  <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-amber-100 dark:bg-amber-950 rounded text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+                    Alt+L
+                  </kbd>
+                </button>
+
                 <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
                   <button
                     onClick={handleLogout}

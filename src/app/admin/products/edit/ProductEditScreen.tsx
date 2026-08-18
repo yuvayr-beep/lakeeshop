@@ -29,7 +29,7 @@ const stripHtml = (html: string) => {
 function SectionHeader({ index, title }: { index: string; title: string }) {
   return (
     <div className="flex items-center gap-3 mb-3">
-      <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{index}</span>
+      <span className="text-xs font-semibold text-[var(--primary)]">{index}</span>
       <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
       <h2 className="text-sm text-slate-500 dark:text-slate-400">{title}</h2>
     </div>
@@ -345,7 +345,7 @@ export default function ProductEditScreen({ productId }: ProductEditScreenProps)
   if (loadingProduct) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center gap-3">
-        <Loader2 size={32} className="animate-spin text-indigo-600 dark:text-indigo-400" />
+        <Loader2 size={32} className="animate-spin text-[var(--primary)]" />
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading product details...</p>
       </div>
     );
@@ -393,7 +393,7 @@ export default function ProductEditScreen({ productId }: ProductEditScreenProps)
               type="button"
               onClick={handleSave}
               disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-lg active:scale-95 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               {loading ? 'Saving…' : 'Save Changes'}
@@ -416,7 +416,7 @@ export default function ProductEditScreen({ productId }: ProductEditScreenProps)
                   onClick={() => scrollTo(s.id)}
                   className={`w-full text-left px-3 py-2.5 rounded-xl transition-all ${
                     activeSection === s.id
-                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400' :'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white'
+                      ? 'bg-[var(--primary-light-bg)] text-[var(--primary)]' :'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white'
                   }`}
                 >
                   <div className="text-sm font-medium">{s.label}</div>
@@ -442,9 +442,9 @@ export default function ProductEditScreen({ productId }: ProductEditScreenProps)
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Enter a clear, descriptive product name…"
-                    className="w-full bg-transparent border-none outline-none text-2xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 font-medium caret-indigo-600"
+                    className="w-full bg-transparent border-none outline-none text-2xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 font-medium caret-[var(--primary)]"
                   />
-                  <div className="h-px bg-gradient-to-r from-indigo-500/60 via-indigo-300/20 to-transparent mt-2" />
+                  <div className="h-px bg-gradient-to-r from-[var(--primary)]/60 via-[var(--primary)]/20 to-transparent mt-2" />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">Permalink</label>
@@ -452,7 +452,7 @@ export default function ProductEditScreen({ productId }: ProductEditScreenProps)
                     <span className="px-3 py-2.5 text-sm text-slate-500 border-r border-slate-200 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-800 whitespace-nowrap">
                       yourstore.com/product/
                     </span>
-                    <span className="flex-1 px-3 py-2.5 text-sm text-indigo-600 dark:text-indigo-400 font-mono truncate">
+                    <span className="flex-1 px-3 py-2.5 text-sm text-[var(--primary)] font-mono truncate">
                       {toSlug(title) || 'product-slug'}
                     </span>
                   </div>

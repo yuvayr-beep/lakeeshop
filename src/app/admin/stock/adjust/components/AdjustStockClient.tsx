@@ -259,7 +259,7 @@ export default function AdjustStockClient() {
   if (loadingInitial) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400" size={32} />
+        <Loader2 className="animate-spin text-[var(--primary)]" size={32} />
         <span className="text-sm text-slate-500 font-bold">Loading stock adjuster...</span>
       </div>
     );
@@ -270,7 +270,7 @@ export default function AdjustStockClient() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Sliders size={22} className="text-indigo-650 dark:text-indigo-400" />
+          <Sliders size={22} className="text-[var(--primary)]" />
           Adjust Stock
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -285,7 +285,7 @@ export default function AdjustStockClient() {
             onClick={() => { setMode('catalog'); handleReset(); }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 ${
               mode === 'catalog'
-                ? 'bg-white dark:bg-slate-900 text-indigo-605 dark:text-indigo-400 shadow-md scale-100'
+                ? 'bg-white dark:bg-slate-900 text-[var(--primary)] shadow-md scale-100'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/40 dark:hover:bg-slate-800'
             }`}
           >
@@ -296,7 +296,7 @@ export default function AdjustStockClient() {
             onClick={() => { setMode('barcode'); handleReset(); }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 ${
               mode === 'barcode'
-                ? 'bg-white dark:bg-slate-900 text-indigo-605 dark:text-indigo-400 shadow-md scale-100'
+                ? 'bg-white dark:bg-slate-900 text-[var(--primary)] shadow-md scale-100'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/40 dark:hover:bg-slate-800'
             }`}
           >
@@ -315,13 +315,13 @@ export default function AdjustStockClient() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
               <div className="bg-slate-50 dark:bg-slate-955 px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between rounded-t-2xl">
                 <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                  <Search size={14} className="text-indigo-500" />
+                  <Search size={14} className="text-[var(--primary)]" />
                   Product Search
                 </h6>
                 {(selectedCatalogItem || catalogSearch) && (
                   <button
                     onClick={handleReset}
-                    className="text-[10px] text-slate-500 hover:text-indigo-600 font-bold flex items-center gap-1 transition-all"
+                    className="text-[10px] text-slate-500 hover:text-[var(--primary)] font-bold flex items-center gap-1 transition-all"
                   >
                     <RotateCcw size={10} />
                     Reset
@@ -348,7 +348,7 @@ export default function AdjustStockClient() {
                         }
                       }}
                       placeholder="Type product name, code or SKU..."
-                      className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
+                      className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
                     />
                     {selectedCatalogItem && (
                       <span className="absolute right-3 top-3 text-emerald-500">
@@ -380,13 +380,13 @@ export default function AdjustStockClient() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
               <div className="bg-slate-50 dark:bg-slate-955 px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between rounded-t-2xl">
                 <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                  <Barcode size={14} className="text-indigo-500" />
+                  <Barcode size={14} className="text-[var(--primary)]" />
                   Scan barcode
                 </h6>
                 {(scannedUnit || barcodeSearch) && (
                   <button
                     onClick={handleReset}
-                    className="text-[10px] text-slate-500 hover:text-indigo-600 font-bold flex items-center gap-1 transition-all"
+                    className="text-[10px] text-slate-500 hover:text-[var(--primary)] font-bold flex items-center gap-1 transition-all"
                   >
                     <RotateCcw size={10} />
                     Reset
@@ -404,7 +404,7 @@ export default function AdjustStockClient() {
                       value={barcodeSearch}
                       onChange={(e) => setBarcodeSearch(e.target.value)}
                       placeholder="Scan/input unique barcode ID..."
-                      className="flex-1 h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-mono"
+                      className="flex-1 h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-mono"
                     />
                     <button
                       type="submit"
@@ -421,7 +421,7 @@ export default function AdjustStockClient() {
           {/* LOADING details */}
           {loadingDetails && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center gap-2">
-              <Loader2 className="animate-spin text-indigo-500" size={24} />
+              <Loader2 className="animate-spin text-[var(--primary)]" size={24} />
               <span className="text-xs text-slate-400 font-bold">Fetching product specifications...</span>
             </div>
           )}
@@ -430,7 +430,7 @@ export default function AdjustStockClient() {
           {productDetails && !loadingDetails && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
               <div className="bg-slate-50 dark:bg-slate-955 px-5 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                <Info size={14} className="text-indigo-500" />
+                <Info size={14} className="text-[var(--primary)]" />
                 <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Product Details
                 </h6>
@@ -470,8 +470,8 @@ export default function AdjustStockClient() {
 
                 <div>
                   <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Category Hierarchy</span>
-                  <div className="flex items-center gap-1 mt-1 text-xs font-bold text-indigo-650 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 p-2 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
-                    <Layers size={13} className="text-indigo-500" />
+                  <div className="flex items-center gap-1 mt-1 text-xs font-bold text-[var(--primary)] bg-[var(--primary-light-bg)] p-2 rounded-xl border border-[var(--primary)]/30">
+                    <Layers size={13} className="text-[var(--primary)]" />
                     <span>{productDetails.categoryPath}</span>
                   </div>
                 </div>
@@ -483,7 +483,7 @@ export default function AdjustStockClient() {
           {mode === 'barcode' && scannedUnit && !loadingDetails && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
               <div className="bg-slate-50 dark:bg-slate-955 px-5 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                <QrCode size={14} className="text-indigo-500" />
+                <QrCode size={14} className="text-[var(--primary)]" />
                 <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Scanned Unit Profile
                 </h6>
@@ -528,7 +528,7 @@ export default function AdjustStockClient() {
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
             <div className="bg-slate-50 dark:bg-slate-955 px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 rounded-t-2xl">
-              <ShieldAlert size={15} className="text-indigo-500" />
+              <ShieldAlert size={15} className="text-[var(--primary)]" />
               <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Submit Stock Adjustment
               </h6>
@@ -560,7 +560,7 @@ export default function AdjustStockClient() {
                   disabled={!productDetails || mode === 'barcode'} // Barcode scans are always exactly 1 unit
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                   placeholder="1"
-                  className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-bold disabled:opacity-50"
+                  className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-bold disabled:opacity-50"
                 />
                 {mode === 'barcode' && (
                   <span className="text-[10px] text-slate-400 block mt-1 italic">
@@ -578,7 +578,7 @@ export default function AdjustStockClient() {
                   value={newStatus}
                   disabled={!productDetails}
                   onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold disabled:opacity-50"
+                  className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold disabled:opacity-50"
                 >
                   {adjustmentTypes.map((type) => (
                     <option key={`adj-type-${type.code}`} value={type.code}>
@@ -599,7 +599,7 @@ export default function AdjustStockClient() {
                   onChange={(e) => setRemarks(e.target.value)}
                   placeholder="Provide adjustment reason details..."
                   rows={4}
-                  className="w-full p-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 disabled:opacity-50"
+                  className="w-full p-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 disabled:opacity-50"
                 />
               </div>
 
@@ -607,7 +607,7 @@ export default function AdjustStockClient() {
                 <button
                   type="submit"
                   disabled={isSubmitting || !productDetails}
-                  className="w-full h-11 bg-[#4f46e5] hover:bg-[#4338ca] text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full h-11 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <Loader2 size={15} className="animate-spin" />

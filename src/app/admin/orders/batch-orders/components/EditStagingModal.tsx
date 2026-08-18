@@ -31,6 +31,8 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
       const initFirstName = stagingOrder.customerFirstName || nameParts[0] || '';
       const initLastName = stagingOrder.customerLastName || nameParts.slice(1).join(' ') || '';
 
+      const apiQty = stagingOrder.quantity ?? stagingOrder.orderQuantity ?? (stagingOrder as any).qty ?? 0;
+
       setFormData({
         ...stagingOrder,
         stagingId: stagingOrder.stagingId,
@@ -43,7 +45,8 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
         email: stagingOrder.email || '',
         clientProductCode: stagingOrder.clientProductCode || '',
         clientProductName: stagingOrder.clientProductName || stagingOrder.productName || (stagingOrder as any).productTitle || '',
-        quantity: stagingOrder.quantity ?? stagingOrder.orderQuantity ?? 1,
+        quantity: apiQty,
+        orderQuantity: apiQty,
         addressLine1: stagingOrder.addressLine1 || '',
         addressLine2: stagingOrder.addressLine2 || '',
         addressLine3: stagingOrder.addressLine3 || '',
@@ -64,10 +67,19 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    if (name === 'quantity' || name === 'orderQuantity') {
+      const numVal = value === '' ? 0 : parseInt(value, 10);
+      setFormData((prev) => ({
+        ...prev,
+        quantity: isNaN(numVal) ? 0 : numVal,
+        orderQuantity: isNaN(numVal) ? 0 : numVal,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,13 +96,16 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
       lastName = parts.slice(1).join(' ') || '';
     }
 
+    const rawQtyVal = Number(formData.quantity ?? formData.orderQuantity ?? stagingOrder.quantity ?? stagingOrder.orderQuantity ?? 0);
+    const finalQty = isNaN(rawQtyVal) ? 0 : rawQtyVal;
+
     // Build complete payload matching exact PUT /order/staging/{stagingId} schema
     const updatePayload = {
       clientOrderNo: formData.clientOrderNo || stagingOrder.clientOrderNo || '',
       clientOrderLineNo: formData.clientOrderLineNo || stagingOrder.clientOrderLineNo || '',
       clientProductCode: formData.clientProductCode || stagingOrder.clientProductCode || '',
       clientProductName: formData.clientProductName || stagingOrder.clientProductName || stagingOrder.productName || '',
-      quantity: Number(formData.quantity ?? stagingOrder.quantity ?? formData.orderQuantity ?? stagingOrder.orderQuantity ?? 1),
+      quantity: finalQty,
       customerFirstName: firstName,
       customerLastName: lastName,
       mobile: formData.mobile || stagingOrder.mobile || '',
@@ -161,7 +176,7 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
               Edit Staging Record #{stagingOrder.stagingId}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {stagingOrder.remarks ? `Error Remark: ${stagingOrder.remarks}` : 'Correct row details inline'}
+              {stagingOrder.remarks ? `Error Remark: ${typeof stagingOrder.remarks === 'object' && stagingOrder.remarks !== null ? ((stagingOrder.remarks as any).reason || (stagingOrder.remarks as any).message || JSON.stringify(stagingOrder.remarks)) : stagingOrder.remarks}` : 'Correct row details inline'}
             </p>
           </div>
           <button
@@ -180,57 +195,173 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           {categoryId === 'mobile' ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Client Order No
-                </label>
-                <input
-                  type="text"
-                  name="clientOrderNo"
-                  value={formData.clientOrderNo || ''}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Client Order No
+                  </label>
+                  <input
+                    type="text"
+                    name="clientOrderNo"
+                    value={formData.clientOrderNo || ''}
+                    readOnly
+                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-mono text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Order Quantity
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    min={0}
+                    value={formData.quantity ?? formData.orderQuantity ?? 0}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-blue-400 bg-white px-3 py-2 text-xs font-mono font-bold text-blue-700 focus:border-blue-600 focus:outline-none dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Mobile Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="mobile"
+                    value={formData.mobile || ''}
+                    onChange={handleChange}
+                    placeholder="Enter 10-digit mobile number"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Alternate Mobile
+                  </label>
+                  <input
+                    type="text"
+                    name="alternateMobile"
+                    value={formData.alternateMobile || ''}
+                    onChange={handleChange}
+                    placeholder="Optional alternate mobile"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : categoryId === 'customer' ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Client Order No
+                  </label>
+                  <input
+                    type="text"
+                    name="clientOrderNo"
+                    value={formData.clientOrderNo || ''}
+                    readOnly
+                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-mono text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Order Quantity
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    min={0}
+                    value={formData.quantity ?? formData.orderQuantity ?? 0}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-blue-400 bg-white px-3 py-2 text-xs font-mono font-bold text-blue-700 focus:border-blue-600 focus:outline-none dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Mobile Number
+                  Customer Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  name="mobile"
-                  value={formData.mobile || ''}
+                  name="customerName"
+                  value={formData.customerName || [formData.customerFirstName, formData.customerLastName].filter(Boolean).join(' ') || ''}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  placeholder="Enter Full Customer Name"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
             </div>
           ) : categoryId === 'pincode' ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Client Order No
-                </label>
-                <input
-                  type="text"
-                  name="clientOrderNo"
-                  value={formData.clientOrderNo || ''}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Client Order No
+                  </label>
+                  <input
+                    type="text"
+                    name="clientOrderNo"
+                    value={formData.clientOrderNo || ''}
+                    readOnly
+                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-mono text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Pincode <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={formData.pincode || ''}
+                    onChange={handleChange}
+                    placeholder="6-digit Pincode"
+                    className="w-full rounded-lg border border-blue-400 bg-white px-3 py-2 text-xs font-mono font-bold text-blue-700 focus:border-blue-600 focus:outline-none dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Pincode
-                </label>
-                <input
-                  type="text"
-                  name="pincode"
-                  value={formData.pincode || ''}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state || ''}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Order Quantity
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    min={0}
+                    value={formData.quantity ?? formData.orderQuantity ?? 0}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
               </div>
             </div>
           ) : categoryId === 'product' ? (
@@ -250,21 +381,34 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Product Code
+                    Order Quantity
                   </label>
                   <input
-                    type="text"
-                    name="clientProductCode"
-                    value={formData.clientProductCode || ''}
+                    type="number"
+                    name="quantity"
+                    min={0}
+                    value={formData.quantity ?? formData.orderQuantity ?? 0}
                     onChange={handleChange}
-                    placeholder="Enter Product Code"
                     className="w-full rounded-lg border border-blue-400 bg-white px-3 py-2 text-xs font-mono font-bold text-blue-700 focus:border-blue-600 focus:outline-none dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Product Name
+                  Client Product Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="clientProductCode"
+                  value={formData.clientProductCode || ''}
+                  onChange={handleChange}
+                  placeholder="Enter Product Code"
+                  className="w-full rounded-lg border border-blue-400 bg-white px-3 py-2 text-xs font-mono font-bold text-blue-700 focus:border-blue-600 focus:outline-none dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Product Name Reference
                 </label>
                 <div className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-800 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
                   {stagingOrder.clientProductName || stagingOrder.productName || (stagingOrder as any).productTitle || 'N/A'}
@@ -288,21 +432,34 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Customer Name
+                    Order Quantity
                   </label>
                   <input
-                    type="text"
-                    name="customerName"
-                    value={formData.customerName || [formData.customerFirstName, formData.customerLastName].filter(Boolean).join(' ') || ''}
+                    type="number"
+                    name="quantity"
+                    min={0}
+                    value={formData.quantity ?? formData.orderQuantity ?? 0}
                     onChange={handleChange}
-                    placeholder="Enter Customer Name"
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Address Line 1
+                  Customer Name
+                </label>
+                <input
+                  type="text"
+                  name="customerName"
+                  value={formData.customerName || [formData.customerFirstName, formData.customerLastName].filter(Boolean).join(' ') || ''}
+                  onChange={handleChange}
+                  placeholder="Enter Customer Name"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Address Line 1 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -328,7 +485,8 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
               </div>
             </div>
           ) : (
-            <>
+            /* DEFAULT / GENERAL EDIT FORM */
+            <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -338,11 +496,25 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
                     type="text"
                     name="clientOrderNo"
                     value={formData.clientOrderNo || ''}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    readOnly
+                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-mono text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   />
                 </div>
-
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Order Quantity <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    min={0}
+                    value={formData.quantity ?? formData.orderQuantity ?? 0}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-blue-400 bg-white px-3 py-2 text-xs font-mono font-bold text-blue-700 focus:border-blue-600 focus:outline-none dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Customer Name
@@ -350,38 +522,12 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
                   <input
                     type="text"
                     name="customerName"
-                    value={formData.customerName || ''}
+                    value={formData.customerName || [formData.customerFirstName, formData.customerLastName].filter(Boolean).join(' ') || ''}
                     onChange={handleChange}
+                    placeholder="Enter Customer Name"
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Mobile Number
-                  </label>
-                  <input
-                    type="text"
-                    name="mobile"
-                    value={formData.mobile || ''}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Alternate Mobile
-                  </label>
-                  <input
-                    type="text"
-                    name="alternateMobile"
-                    value={formData.alternateMobile || ''}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Client Product Code
@@ -391,98 +537,12 @@ export const EditStagingModal: React.FC<EditStagingModalProps> = ({
                     name="clientProductCode"
                     value={formData.clientProductCode || ''}
                     onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Pincode
-                  </label>
-                  <input
-                    type="text"
-                    name="pincode"
-                    value={formData.pincode || ''}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city || ''}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    State
-                  </label>
-                  <input
-                    type="text"
-                    name="state"
-                    value={formData.state || ''}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Order Quantity
-                  </label>
-                  <input
-                    type="number"
-                    name="orderQuantity"
-                    value={formData.orderQuantity || 1}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Price
-                  </label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price || 0}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    placeholder="Enter Product Code"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Address Line 1 & 2
-                </label>
-                <input
-                  type="text"
-                  name="addressLine1"
-                  value={formData.addressLine1 || ''}
-                  onChange={handleChange}
-                  placeholder="Address Line 1"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white mb-2"
-                />
-                <input
-                  type="text"
-                  name="addressLine2"
-                  value={formData.addressLine2 || ''}
-                  onChange={handleChange}
-                  placeholder="Address Line 2"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-              </div>
-            </>
+            </div>
           )}
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">

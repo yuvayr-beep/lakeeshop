@@ -411,8 +411,8 @@ export default function POManagementClient() {
             onClick={() => setShowUploadArea(!showUploadArea)}
             className={`flex items-center justify-center gap-2 h-10 px-4 text-xs font-bold rounded-xl shadow-sm transition-all border ${
               showUploadArea
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600'
-                : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/50'
+                ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] border-[var(--primary)]'
+                : 'bg-[var(--primary-light-bg)] text-[var(--primary)] border border-[var(--primary)]/30'
             }`}
           >
             <Upload size={14} /> Upload
@@ -452,17 +452,17 @@ export default function POManagementClient() {
 
           <div className="flex flex-col items-center justify-center p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
             <label
-              className="flex flex-col items-center justify-center w-full max-w-lg h-36 border-2 border-dashed border-slate-350 hover:border-blue-500 dark:border-slate-750 dark:hover:border-blue-400 bg-slate-50/50 hover:bg-slate-100/50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 rounded-xl cursor-pointer transition-all p-4 text-center"
+              className="flex flex-col items-center justify-center w-full max-w-lg h-36 border-2 border-dashed border-slate-350 hover:border-[var(--primary)] dark:border-slate-750 dark:hover:border-[var(--primary)] bg-slate-50/50 hover:bg-slate-100/50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 rounded-xl cursor-pointer transition-all p-4 text-center"
             >
               <div className="flex flex-col items-center justify-center space-y-2 pointer-events-none">
-                <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl shadow-sm">
+                <div className="p-2.5 bg-[var(--primary-light-bg)] text-[var(--primary)] rounded-xl shadow-sm">
                   <FileText size={20} />
                 </div>
                 <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   {selectedFile ? (
-                    <span className="text-blue-650 font-bold">{selectedFile.name}</span>
+                    <span className="text-[var(--primary)] font-bold">{selectedFile.name}</span>
                   ) : (
-                    <span>Drag your file here or <span className="text-blue-600 hover:underline">Browse</span></span>
+                    <span>Drag your file here or <span className="text-[var(--primary)] hover:underline">Browse</span></span>
                   )}
                 </p>
                 <p className="text-[10px] text-slate-450">File format: .xls & .xlsx</p>
@@ -492,7 +492,7 @@ export default function POManagementClient() {
                 <button
                   onClick={handleUploadExcel}
                   disabled={uploading}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all"
+                  className="flex items-center gap-1.5 px-5 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all"
                 >
                   {uploading ? (
                     <Loader2 size={12} className="animate-spin" />

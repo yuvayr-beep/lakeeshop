@@ -407,6 +407,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
 
     // 2. Fetch alternates
     async function loadAlternates() {
+      if (!product?.id) return;
       setAlternatesLoading(true);
       try {
         const res = await axiosInstance.get<any>(`/prod/alternate/product/${product.id}`);
@@ -467,9 +468,9 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-8">
         <div className="relative">
-          <div className="w-16 h-16 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin" />
+          <div className="w-16 h-16 rounded-full border-4 border-[var(--primary-light-bg)] border-t-[var(--primary)] animate-spin" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <ShoppingBag className="text-indigo-600 animate-pulse" size={20} />
+            <ShoppingBag className="text-[var(--primary)] animate-pulse" size={20} />
           </div>
         </div>
         <p className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-200">Retrieving Product Details...</p>
@@ -598,7 +599,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
         <div className="space-y-1">
           <button
             onClick={() => router.push('/admin/products/list')}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium mb-1"
+            className="flex items-center gap-1 text-xs text-slate-500 hover:text-[var(--primary)] transition-colors font-medium mb-1"
           >
             <ArrowLeft size={13} /> Back to Products
           </button>
@@ -640,7 +641,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
               className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
             />
             {product.isCombo && (
-              <span className="absolute top-4 left-4 bg-indigo-600 text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
+              <span className="absolute top-4 left-4 bg-[var(--primary)] text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
                 COMBO PACK
               </span>
             )}
@@ -681,8 +682,8 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                 <button
                   key={`thumb-${idx}`}
                   onClick={() => setActiveImageIdx(idx)}
-                  className={`aspect-square rounded-xl p-2 bg-white dark:bg-slate-900 border overflow-hidden transition-all flex items-center justify-center hover:border-indigo-400 ${idx === activeImageIdx
-                    ? 'border-indigo-600 ring-2 ring-indigo-600/10'
+                  className={`aspect-square rounded-xl p-2 bg-white dark:bg-slate-900 border overflow-hidden transition-all flex items-center justify-center hover:border-[var(--primary)] ${idx === activeImageIdx
+                    ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/10'
                     : 'border-slate-200 dark:border-slate-800'
                     }`}
                 >
@@ -699,7 +700,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 lg:p-8 shadow-sm space-y-6">
             {/* Header info */}
             <div>
-              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-wider mb-1">
+              <div className="flex items-center gap-2 text-[var(--primary)] font-bold text-xs uppercase tracking-wider mb-1">
                 {product.brandName}
               </div>
               <h1 className="text-xl lg:text-2xl font-bold text-slate-800 dark:text-white leading-snug">
@@ -728,13 +729,6 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                     ₹{product.defaultCourierPrice ?? 0}
                   </span>
                 </div>
-                {/* {product.costPrice > 0 && product.costPrice < product.mrp && (
-                  <div className="mt-2 sm:mt-0">
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1 rounded-lg">
-                      {discountPercent}% OFF (₹{discountAmount} Saved)
-                    </span>
-                  </div>
-                )} */}
               </div>
 
               {/* Codes box */}
@@ -743,7 +737,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                   <span className="text-slate-400">SKU:</span>
                   <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-white">
                     {product.defaultSku}
-                    <button onClick={copySku} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                    <button onClick={copySku} className="text-slate-400 hover:text-[var(--primary)] transition-colors">
                       {copied ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
                     </button>
                   </div>
@@ -766,7 +760,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
             {/* Short Description */}
             {product.shortDescription && (
               <div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
-                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block mb-1.5">
+                <span className="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wider block mb-1.5">
                   Short Description
                 </span>
                 <p className="leading-relaxed font-medium text-slate-700 dark:text-slate-300">
@@ -938,7 +932,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <div className="flex items-center gap-2">
-              <Layers className="text-indigo-600 dark:text-indigo-400" size={18} />
+              <Layers className="text-[var(--primary)]" size={18} />
               <h2 className="text-base font-bold text-slate-800 dark:text-white">Combo Products</h2>
             </div>
             <Badge variant="success" size="sm">
@@ -962,7 +956,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                 return (
                   <div
                     key={comp.id || idx}
-                    className="group border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 dark:hover:border-indigo-400/50 rounded-xl p-4 flex gap-4 bg-slate-50/50 dark:bg-slate-950/20 hover:bg-white dark:hover:bg-slate-900 transition-all shadow-sm hover:shadow-md"
+                    className="group border border-slate-200 dark:border-slate-800 hover:border-[var(--primary)]/50 rounded-xl p-4 flex gap-4 bg-slate-50/50 dark:bg-slate-950/20 hover:bg-white dark:hover:bg-slate-900 transition-all shadow-sm hover:shadow-md"
                   >
                     <div className="w-16 h-16 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center p-1.5 flex-shrink-0">
                       <img src={imgUrl} alt={comp.baseProductName} className="max-h-full max-w-full object-contain rounded" />
@@ -970,10 +964,10 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                     <div className="min-w-0 flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex items-start justify-between gap-1">
-                          <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate group-hover:text-[var(--primary)] transition-colors">
                             {comp.baseProductName}
                           </h4>
-                          <span className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.5 rounded flex-shrink-0">
+                          <span className="text-[10px] font-bold bg-[var(--primary-light-bg)] text-[var(--primary)] px-1.5 py-0.5 rounded flex-shrink-0">
                             Qty: {item.quantity}
                           </span>
                         </div>
@@ -995,7 +989,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
       {/* Row 2: Alternate Products Grid */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
         <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <Grid className="text-indigo-600 dark:text-indigo-400" size={18} />
+          <Grid className="text-[var(--primary)]" size={18} />
           <h2 className="text-base font-bold text-slate-800 dark:text-white">Alternate Products</h2>
         </div>
 
@@ -1015,10 +1009,10 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                 <div
                   key={alt.id || idx}
                   onClick={() => router.push(`/admin/products/view?sku=${alt.defaultSku}`)}
-                  className="group border border-slate-100 dark:border-slate-800 hover:border-indigo-500/50 dark:hover:border-indigo-400/50 rounded-xl p-4 bg-slate-50/20 dark:bg-slate-900/10 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer shadow-sm hover:shadow-md"
+                  className="group border border-slate-100 dark:border-slate-800 hover:border-[var(--primary)]/50 rounded-xl p-4 bg-slate-50/20 dark:bg-slate-900/10 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer shadow-sm hover:shadow-md"
                 >
                   {/* Image box */}
-                  <div className="aspect-square w-full rounded-lg bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 flex items-center justify-center p-4 mb-3 overflow-hidden relative">
+                  <div className="aspect-square w-full rounded-lg bg-white dark:bg-slate-955 border border-slate-100 dark:border-slate-800 flex items-center justify-center p-4 mb-3 overflow-hidden relative">
                     <img
                       src={imgUrl}
                       alt={alt.baseProductName}
@@ -1027,7 +1021,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                   </div>
                   {/* Details */}
                   <div className="space-y-1">
-                    <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 leading-relaxed min-h-[32px] group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 leading-relaxed min-h-[32px] group-hover:text-[var(--primary)] transition-colors">
                       {alt.baseProductName}
                     </h4>
                     <p className="text-[10px] text-slate-400 font-mono">{alt.defaultSku}</p>
@@ -1047,7 +1041,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
         {/* Left Box: Client Shared Table */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-            <Users className="text-indigo-600 dark:text-indigo-400" size={18} />
+            <Users className="text-[var(--primary)]" size={18} />
             <h2 className="text-base font-bold text-slate-800 dark:text-white">Client Shared Matrix</h2>
           </div>
 
@@ -1068,7 +1062,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                       <UserCheck size={13} className="text-slate-400" /> {row.client}
                     </td>
                     <td className="py-3 px-3 text-slate-500">{row.date}</td>
-                    <td className="py-3 px-3 font-mono text-indigo-600 dark:text-indigo-400">{row.margin}</td>
+                    <td className="py-3 px-3 font-mono text-[var(--primary)]">{row.margin}</td>
                     <td className="py-3 px-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold ${row.status === 'Active'
                         ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400'
@@ -1089,7 +1083,7 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
         {/* Right Box: Suppliers List Table */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-            <Warehouse className="text-indigo-600 dark:text-indigo-400" size={18} />
+            <Warehouse className="text-[var(--primary)]" size={18} />
             <h2 className="text-base font-bold text-slate-800 dark:text-white">Verified Suppliers</h2>
           </div>
 

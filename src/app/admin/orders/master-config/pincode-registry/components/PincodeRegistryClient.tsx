@@ -7,7 +7,6 @@ import {
   CheckCircle2, AlertTriangle, Filter, ChevronLeft, ChevronRight, 
   Loader2, FileSpreadsheet, Building2, X, Check, ShieldAlert, ArrowLeft
 } from 'lucide-react';
-import AdminLayout from '@/app/admin/components/AdminLayout';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 
@@ -444,84 +443,65 @@ export default function PincodeRegistryClient() {
   };
 
   return (
-    <AdminLayout>
-      <div className="p-4 md:p-6 space-y-6 w-full">
-
-        {/* Header Banner */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-              <MapPin size={14} />
-              <span>Orders / Master Configuration</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-850 dark:text-white tracking-tight flex items-center gap-2.5">
-              <MapPin className="text-blue-600 dark:text-blue-400" size={26} />
-              Pincode Registry Master
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
-              Master repository for order serviceability pincodes across India. Search by Pincode, State, or City, add entries manually, or bulk import via Excel.
-            </p>
+    <div className="space-y-6 pb-12 w-full">
+      {/* Filter Bar */}
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+            <Filter size={15} className="text-blue-600 dark:text-blue-400" />
+            <span>Filter & Search Registry</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 ml-auto">
+            {(pincodeFilter || stateFilter || cityFilter) && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 mr-2 cursor-pointer"
+              >
+                <X size={14} />
+                <span>Clear Filters</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={fetchPincodes}
               disabled={loadingPincodes}
-              className="p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-2xs"
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer"
               title="Refresh Data"
             >
-              <RefreshCw size={16} className={loadingPincodes ? 'animate-spin text-blue-600' : ''} />
+              <RefreshCw size={15} className={loadingPincodes ? 'animate-spin text-blue-600' : ''} />
             </button>
 
             <button
               type="button"
               onClick={handleDownloadRegistry}
-              className="px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold transition-colors flex items-center gap-2"
+              className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-2xs"
             >
-              <Download size={15} className="text-blue-600 dark:text-blue-400" />
+              <Download size={14} className="text-blue-600 dark:text-blue-400" />
               <span>Download Registry</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsUploadModalOpen(true)}
-              className="px-3.5 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 text-xs font-semibold transition-colors flex items-center gap-2"
+              className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer border border-emerald-200 dark:border-emerald-900/60 shadow-2xs"
             >
-              <UploadCloud size={15} />
+              <UploadCloud size={14} />
               <span>Bulk Excel Upload</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-semibold shadow-md transition-all duration-150 flex items-center gap-2 hover:scale-[1.02]"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-150 flex items-center gap-2 hover:scale-[1.02] cursor-pointer"
             >
-              <Plus size={16} />
+              <Plus size={15} />
               <span>Add Pincode</span>
             </button>
           </div>
         </div>
-
-        {/* Filter Bar */}
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-              <Filter size={15} className="text-blue-600 dark:text-blue-400" />
-              <span>Filter & Search Registry</span>
-            </div>
-
-            {(pincodeFilter || stateFilter || cityFilter) && (
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1"
-              >
-                <X size={14} />
-                <span>Clear Filters</span>
-              </button>
-            )}
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 text-xs">
             {/* Pincode Input Filter */}
@@ -772,8 +752,6 @@ export default function PincodeRegistryClient() {
             </div>
           </div>
         </div>
-
-      </div>
 
       {/* CREATE SINGLE PINCODE MODAL */}
       {isCreateModalOpen && (
@@ -1062,7 +1040,6 @@ export default function PincodeRegistryClient() {
           </div>
         </div>
       )}
-
-    </AdminLayout>
+    </div>
   );
 }

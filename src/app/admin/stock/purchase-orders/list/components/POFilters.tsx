@@ -165,27 +165,27 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
         <div>
           <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
-            <Calendar size={13} className="text-blue-500" />
+            <Calendar size={13} className="text-[var(--primary)]" />
             Start Date
           </label>
           <input
             type="date"
             value={filters.startDate}
             onChange={(e) => handleFieldChange('startDate', e.target.value)}
-            className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 dark:text-slate-200 font-medium"
+            className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200 font-medium"
           />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
-            <Calendar size={13} className="text-blue-500" />
+            <Calendar size={13} className="text-[var(--primary)]" />
             End Date
           </label>
           <input
             type="date"
             value={filters.endDate}
             onChange={(e) => handleFieldChange('endDate', e.target.value)}
-            className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 dark:text-slate-200 font-medium"
+            className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200 font-medium"
           />
         </div>
 
@@ -194,7 +194,7 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
           <select
             value={filters.supplierId}
             onChange={(e) => handleFieldChange('supplierId', e.target.value)}
-            className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 dark:text-slate-200 font-medium"
+            className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200 font-medium"
           >
             <option value="">All Suppliers</option>
             {suppliers.map((sup, idx) => (
@@ -210,7 +210,7 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
             onClick={() => setIsOpen(!isOpen)}
             className={`flex-1 h-10 px-4 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
               isOpen
-                ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
+                ? 'bg-[var(--primary-light-bg)] border-[var(--primary)]/40 text-[var(--primary)]'
                 : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
@@ -235,7 +235,7 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
             <select
               value={filters.status}
               onChange={(e) => handleFieldChange('status', e.target.value)}
-              className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 dark:text-slate-200"
+              className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200"
             >
               <option value="">All Statuses</option>
               {statusOptions.map((opt) => (
@@ -251,7 +251,7 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
             <select
               value={filters.isAuto}
               onChange={(e) => handleFieldChange('isAuto', e.target.value)}
-              className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 dark:text-slate-200"
+              className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200"
             >
               <option value="">All Origins</option>
               {originOptions.map((opt) => (
@@ -281,7 +281,7 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
                   }
                 }}
                 placeholder="Search product..."
-                className="w-full h-10 pl-3 pr-8 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 dark:text-slate-200"
+                className="w-full h-10 pl-3 pr-8 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200"
               />
               {filters.productid && (
                 <button
@@ -337,7 +337,7 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
                   }
                 }}
                 placeholder="Search brand..."
-                className="w-full h-10 pl-3 pr-8 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 dark:text-slate-200"
+                className="w-full h-10 pl-3 pr-8 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200"
               />
               {filters.brand && (
                 <button

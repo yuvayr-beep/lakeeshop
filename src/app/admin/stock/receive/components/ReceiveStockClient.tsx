@@ -1024,7 +1024,7 @@ export default function ReceiveStockClient() {
       {/* Header title */}
       <div>
         <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Layers size={22} className="text-indigo-650 dark:text-indigo-400" />
+          <Layers size={22} className="text-[var(--primary)]" />
           Receive Stock
         </h1>
         <p className="text-xs text-slate-700 dark:text-slate-400 mt-1">
@@ -1036,7 +1036,7 @@ export default function ReceiveStockClient() {
       {!showFullForm ? (
         <div className="flex items-center justify-center py-10">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
-            <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4 text-white">
+            <div className="bg-[var(--primary)] px-6 py-4 text-white">
               <span className="text-sm font-semibold tracking-wide flex items-center gap-2">
                 <FileText size={16} />
                 Verify Supplier & Invoice
@@ -1064,7 +1064,7 @@ export default function ReceiveStockClient() {
                         }
                       }}
                       placeholder="Search supplier..."
-                      className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-medium transition-all"
+                      className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-medium transition-all"
                     />
                     {supplierId && (
                       <button
@@ -1105,7 +1105,7 @@ export default function ReceiveStockClient() {
                   <button
                     type="button"
                     onClick={() => setIsSupplierModalOpen(true)}
-                    className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow"
+                    className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[var(--primary-light-bg)] text-[var(--primary)] border border-[var(--primary)]/30 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow"
                     title="Add New Supplier"
                   >
                     <Plus size={16} />
@@ -1122,7 +1122,7 @@ export default function ReceiveStockClient() {
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
                   placeholder="Enter invoice number..."
-                  className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-medium transition-all"
+                  className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-medium transition-all"
                 />
               </div>
 
@@ -1141,7 +1141,7 @@ export default function ReceiveStockClient() {
               <button
                 type="submit"
                 disabled={checkingDuplicate || loadingSuppliers}
-                className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-bold transition-all shadow hover:shadow-md flex items-center justify-center gap-2"
+                className="w-full h-10 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-all shadow hover:shadow-md flex items-center justify-center gap-2"
               >
                 {checkingDuplicate ? (
                   <>
@@ -1260,7 +1260,7 @@ export default function ReceiveStockClient() {
                     }}
                     className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
                       selectionMode === 'direct' 
-                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm' 
+                        ? 'bg-white dark:bg-slate-900 text-[var(--primary)] shadow-sm' 
                         : 'text-slate-700 dark:text-slate-400 hover:text-slate-850'
                     }`}
                   >
@@ -1274,7 +1274,7 @@ export default function ReceiveStockClient() {
                     }}
                     className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
                       selectionMode === 'po' 
-                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm' 
+                        ? 'bg-white dark:bg-slate-900 text-[var(--primary)] shadow-sm' 
                         : 'text-slate-700 dark:text-slate-400 hover:text-slate-850'
                     }`}
                   >
@@ -1304,7 +1304,7 @@ export default function ReceiveStockClient() {
                           }
                         }}
                         placeholder="Search approved supplier products..."
-                        className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-semibold transition-all"
+                        className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-semibold transition-all"
                       />
                       {selectedProductId && (
                         <button
@@ -1327,7 +1327,7 @@ export default function ReceiveStockClient() {
                               key={`direct-p-${item.id || idx}`}
                               type="button"
                               onMouseDown={() => handleSelectDirectProduct(item)}
-                              className="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-200 border-b border-slate-100 dark:border-slate-750 last:border-b-0 transition-colors"
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-755 dark:text-slate-200 border-b border-slate-100 dark:border-slate-750 last:border-b-0 transition-colors"
                             >
                               <div className="font-semibold truncate">{details.baseProductName || 'Unnamed Product'}</div>
                               <div className="flex gap-2 text-[10px] text-slate-400 mt-1 font-mono">
@@ -1362,7 +1362,7 @@ export default function ReceiveStockClient() {
                             }
                           }}
                           placeholder="Search PO by number..."
-                          className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-semibold transition-all"
+                          className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-semibold transition-all"
                         />
                         {selectedPoId && (
                           <button
@@ -1388,12 +1388,12 @@ export default function ReceiveStockClient() {
                               onMouseDown={() => handleSelectPO(po)}
                               className="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-755 dark:text-slate-200 border-b border-slate-100 dark:border-slate-750 last:border-b-0 transition-colors"
                             >
-                              <div className="font-semibold truncate text-blue-600 dark:text-blue-400 font-mono">{po.poNumber}</div>
+                              <div className="font-semibold truncate text-[var(--primary)] font-mono">{po.poNumber}</div>
                               <div className="flex gap-2 text-[10px] text-slate-400 mt-0.5">
                                 <span>Date: {po.poDate}</span>
                                 <span>• Items: {po.totalSkus}</span>
                                 <span className={`px-1.5 py-0.2 rounded font-bold ${
-                                  po.status === 'OPEN' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'
+                                  po.status === 'OPEN' ? 'bg-[var(--primary-light-bg)] text-[var(--primary)]' : 'bg-orange-50 text-orange-600'
                                 }`}>{po.status}</span>
                               </div>
                             </button>
@@ -1420,7 +1420,7 @@ export default function ReceiveStockClient() {
                             }
                           }
                         }}
-                        className="w-full h-10 px-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-300 font-semibold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                        className="w-full h-10 px-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-300 font-semibold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                       >
                         <option value="">{selectedPoId ? 'Select Product' : 'Select PO First'}</option>
                         {poProducts
@@ -1454,7 +1454,7 @@ export default function ReceiveStockClient() {
                         value={itemPrice}
                         onChange={(e) => handlePriceChange(e.target.value)}
                         placeholder="0.00"
-                        className="w-full h-9 pl-6 pr-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
+                        className="w-full h-9 pl-6 pr-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
                       />
                     </div>
                     {/* Price History validate message */}
@@ -1485,7 +1485,7 @@ export default function ReceiveStockClient() {
                         value={itemMrp}
                         onChange={(e) => setItemMrp(e.target.value ? parseFloat(e.target.value) : '')}
                         placeholder="0.00"
-                        className="w-full h-9 pl-6 pr-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
+                        className="w-full h-9 pl-6 pr-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
                       />
                     </div>
                     {selectedProductId && lastMRP !== null && (
@@ -1537,7 +1537,7 @@ export default function ReceiveStockClient() {
                       value={invoiceQty}
                       onChange={(e) => setInvoiceQty(e.target.value ? parseInt(e.target.value) : '')}
                       placeholder="0"
-                      className="w-full h-9 px-3 text-xs bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
+                      className="w-full h-9 px-3 text-xs bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
                     />
                   </div>
 
@@ -1550,7 +1550,7 @@ export default function ReceiveStockClient() {
                       value={qtyReceived}
                       onChange={(e) => setQtyReceived(e.target.value ? parseInt(e.target.value) : '')}
                       placeholder="0"
-                      className="w-full h-9 px-3 text-xs bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
+                      className="w-full h-9 px-3 text-xs bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
                     />
                   </div>
 
@@ -1561,7 +1561,7 @@ export default function ReceiveStockClient() {
                       disabled={!selectedProductId}
                       value={itemDiscountType}
                       onChange={(e) => setItemDiscountType(e.target.value as 'PERCENTAGE' | 'FIXED')}
-                      className="w-full h-9 px-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-700 dark:text-slate-350 font-semibold cursor-pointer"
+                      className="w-full h-9 px-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-700 dark:text-slate-350 font-semibold cursor-pointer"
                     >
                       <option value="PERCENTAGE">PERCENTAGE</option>
                       <option value="FIXED">FIXED</option>
@@ -1577,7 +1577,7 @@ export default function ReceiveStockClient() {
                       value={itemDiscountAmount}
                       onChange={(e) => setItemDiscountAmount(e.target.value ? parseFloat(e.target.value) : '')}
                       placeholder="0.00"
-                      className="w-full h-9 px-3 text-xs bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
+                      className="w-full h-9 px-3 text-xs bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-205 font-bold transition-all disabled:opacity-60"
                     />
                   </div>
 
@@ -1590,7 +1590,7 @@ export default function ReceiveStockClient() {
                           disabled={!selectedProductId || poLookupOptions.length === 0}
                           value={selectedPoLookupId}
                           onChange={(e) => setSelectedPoLookupId(e.target.value ? Number(e.target.value) : '')}
-                          className="w-full h-9 px-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-700 dark:text-slate-350 font-semibold disabled:opacity-60 cursor-pointer"
+                          className="w-full h-9 px-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-700 dark:text-slate-350 font-semibold disabled:opacity-60 cursor-pointer"
                         >
                           <option value="">Select PO Item</option>
                           {poLookupOptions.map((po) => (
@@ -1615,7 +1615,7 @@ export default function ReceiveStockClient() {
 
                   {/* Calculation Preview */}
                   {previewCalculation && (
-                    <div className="col-span-12 bg-indigo-55/40 dark:bg-slate-850/40 border border-indigo-100/60 dark:border-slate-800/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs transition-all">
+                    <div className="col-span-12 bg-[var(--primary-light-bg)] border border-[var(--primary)]/20 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs transition-all">
                       <div className="flex items-center gap-1.5">
                         <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wide">Gross Amount:</span>
                         <span className="text-slate-805 dark:text-slate-200 font-bold font-mono">₹{previewCalculation.rawGross}</span>
@@ -1633,8 +1633,8 @@ export default function ReceiveStockClient() {
                         <span className="text-slate-505 dark:text-slate-400 font-bold font-mono">₹{previewCalculation.taxAmt}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-indigo-650 dark:text-indigo-400 font-bold uppercase text-[9px] tracking-wide">Total Value:</span>
-                        <span className="text-indigo-650 dark:text-indigo-400 font-extrabold font-mono">₹{previewCalculation.total}</span>
+                        <span className="text-[var(--primary)] font-bold uppercase text-[9px] tracking-wide">Total Value:</span>
+                        <span className="text-[var(--primary)] font-extrabold font-mono">₹{previewCalculation.total}</span>
                       </div>
                     </div>
                   )}
@@ -1645,7 +1645,7 @@ export default function ReceiveStockClient() {
                       type="button"
                       disabled={!selectedProductId}
                       onClick={handleAddItem}
-                      className="w-full lg:w-48 h-9 bg-indigo-700 hover:bg-indigo-800 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white rounded-xl text-xs font-bold transition-all shadow hover:shadow-md flex items-center justify-center gap-2"
+                      className="w-full lg:w-48 h-9 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white rounded-xl text-xs font-bold transition-all shadow hover:shadow-md flex items-center justify-center gap-2"
                     >
                       <Plus size={14} />
                       Add Item
@@ -1672,7 +1672,7 @@ export default function ReceiveStockClient() {
 
               {loadingPreorders ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-400 text-xs">
-                  <Loader2 size={16} className="animate-spin text-indigo-650" />
+                  <Loader2 size={16} className="animate-spin text-[var(--primary)]" />
                   Loading Preorders...
                 </div>
               ) : preorders.length === 0 ? (
@@ -1715,17 +1715,17 @@ export default function ReceiveStockClient() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
               <div className="bg-slate-50 dark:bg-slate-955 px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                  <Warehouse size={14} className="text-indigo-605" />
+                  <Warehouse size={14} className="text-[var(--primary)]" />
                   Stock Information
                 </span>
-                <span className="bg-indigo-50 text-indigo-650 dark:bg-indigo-950/20 dark:text-indigo-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-[var(--primary-light-bg)] text-[var(--primary)] text-[10px] font-bold px-2 py-0.5 rounded-full">
                   Total Avail: {totalAvailableStock}
                 </span>
               </div>
 
               {loadingStockBreakdown ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-400 text-xs">
-                  <Loader2 size={16} className="animate-spin text-indigo-650" />
+                  <Loader2 size={16} className="animate-spin text-[var(--primary)]" />
                   Loading Stock Details...
                 </div>
               ) : stockBreakdown.length === 0 ? (
@@ -1831,7 +1831,7 @@ export default function ReceiveStockClient() {
                                 type="number"
                                 value={editPrice}
                                 onChange={(e) => setEditPrice(e.target.value ? parseFloat(e.target.value) : '')}
-                                className="w-full h-7 px-1 text-xs text-right border border-indigo-500 rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
+                                className="w-full h-7 px-1 text-xs text-right border border-[var(--primary)] rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
                               />
                             ) : (
                               <div className="flex flex-col items-end">
@@ -1857,7 +1857,7 @@ export default function ReceiveStockClient() {
                                 type="number"
                                 value={editInvoiceQty}
                                 onChange={(e) => setEditInvoiceQty(e.target.value ? parseInt(e.target.value) : '')}
-                                className="w-full h-7 px-1 text-xs text-center border border-indigo-500 rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
+                                className="w-full h-7 px-1 text-xs text-center border border-[var(--primary)] rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
                               />
                             ) : (
                               <span>{item.invoiceQty}</span>
@@ -1871,7 +1871,7 @@ export default function ReceiveStockClient() {
                                 type="number"
                                 value={editReceivedQty}
                                 onChange={(e) => setEditReceivedQty(e.target.value ? parseInt(e.target.value) : '')}
-                                className="w-full h-7 px-1 text-xs text-center border border-indigo-500 rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
+                                className="w-full h-7 px-1 text-xs text-center border border-[var(--primary)] rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
                               />
                             ) : (
                               <span>{item.receivedQty}</span>
@@ -1885,7 +1885,7 @@ export default function ReceiveStockClient() {
                                 type="number"
                                 value={editMrp}
                                 onChange={(e) => setEditMrp(e.target.value ? parseFloat(e.target.value) : '')}
-                                className="w-full h-7 px-1 text-xs text-right border border-indigo-500 rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
+                                className="w-full h-7 px-1 text-xs text-right border border-[var(--primary)] rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
                               />
                             ) : (
                               <span className="font-bold">₹{item.mrp.toFixed(2)}</span>
@@ -1899,7 +1899,7 @@ export default function ReceiveStockClient() {
                                 type="number"
                                 value={editTaxRate}
                                 onChange={(e) => setEditTaxRate(e.target.value ? parseFloat(e.target.value) : '')}
-                                className="w-full h-7 px-1 text-xs text-center border border-indigo-500 rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
+                                className="w-full h-7 px-1 text-xs text-center border border-[var(--primary)] rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
                               />
                             ) : (
                               <span>{item.taxRate}%</span>
@@ -1912,7 +1912,7 @@ export default function ReceiveStockClient() {
                               <select
                                 value={editDiscountType}
                                 onChange={(e) => setEditDiscountType(e.target.value as 'PERCENTAGE' | 'FIXED')}
-                                className="w-full h-7 px-1 text-xs border border-indigo-500 rounded bg-white dark:bg-slate-955 focus:outline-none font-bold cursor-pointer"
+                                className="w-full h-7 px-1 text-xs border border-[var(--primary)] rounded bg-white dark:bg-slate-955 focus:outline-none font-bold cursor-pointer"
                               >
                                 <option value="PERCENTAGE">PERCENTAGE</option>
                                 <option value="FIXED">FIXED</option>
@@ -1929,7 +1929,7 @@ export default function ReceiveStockClient() {
                                 type="number"
                                 value={editDiscountAmount}
                                 onChange={(e) => setEditDiscountAmount(e.target.value ? parseFloat(e.target.value) : '')}
-                                className="w-full h-7 px-1 text-xs text-right border border-indigo-500 rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
+                                className="w-full h-7 px-1 text-xs text-right border border-[var(--primary)] rounded bg-white dark:bg-slate-955 focus:outline-none font-bold"
                               />
                             ) : (
                               <span className="font-bold text-amber-600 dark:text-amber-500">
@@ -1947,7 +1947,7 @@ export default function ReceiveStockClient() {
                           <td className="py-3 px-3 text-right font-mono font-bold text-slate-500">₹{item.taxAmount.toFixed(2)}</td>
                           
                           {/* Total Amount */}
-                          <td className="py-3 px-3 text-right font-mono font-bold text-indigo-650 dark:text-indigo-400">₹{item.totalAmount.toFixed(2)}</td>
+                          <td className="py-3 px-3 text-right font-mono font-bold text-[var(--primary)]">₹{item.totalAmount.toFixed(2)}</td>
                           
                           {/* Actions */}
                           <td className="py-3 px-3 text-center">
@@ -1976,7 +1976,7 @@ export default function ReceiveStockClient() {
                                   type="button"
                                   disabled={editingIndex !== null}
                                   onClick={() => handleStartEdit(idx)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-650 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 disabled:opacity-50 transition-all"
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-[var(--primary)] hover:bg-[var(--primary-light-bg)] disabled:opacity-50 transition-all"
                                   title="Edit Row"
                                 >
                                   <Edit3 size={13} />
@@ -2023,7 +2023,7 @@ export default function ReceiveStockClient() {
                       <td colSpan={3} className="py-4 px-3 text-right uppercase tracking-wider text-slate-700">Totals:</td>
                       <td className="py-4 px-3 text-right font-mono">₹{totals.gross}</td>
                       <td className="py-4 px-3 text-right font-mono text-slate-700">₹{totals.tax}</td>
-                      <td className="py-4 px-3 text-right font-mono text-indigo-650 dark:text-indigo-400">₹{totals.total}</td>
+                      <td className="py-4 px-3 text-right font-mono text-[var(--primary)]">₹{totals.total}</td>
                       <td colSpan={1}></td>
                     </tr>
                   </tfoot>
@@ -2041,7 +2041,7 @@ export default function ReceiveStockClient() {
                     value={grnRemarks}
                     onChange={(e) => setGrnRemarks(e.target.value)}
                     placeholder="Enter optional GRN remarks here..."
-                    className="w-full p-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 rounded-xl focus:outline-none text-slate-850 dark:text-slate-200 resize-none transition-all"
+                    className="w-full p-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]/20 rounded-xl focus:outline-none text-slate-850 dark:text-slate-200 resize-none transition-all"
                   />
                 </div>
 
@@ -2050,7 +2050,7 @@ export default function ReceiveStockClient() {
                     type="button"
                     disabled={submittingGrn || editingIndex !== null}
                     onClick={handleSubmitGrn}
-                    className="px-10 h-11 bg-indigo-700 hover:bg-indigo-800 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                    className="px-10 h-11 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                   >
                     {submittingGrn ? (
                       <>

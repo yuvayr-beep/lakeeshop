@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Trash2, ArrowRight, Search, FileUp, Loader2, RefreshCw, AlertCircle, Calendar, Filter, Download } from 'lucide-react';
+import { Upload, Trash2, ArrowRight, Search, FileUp, Loader2, RefreshCw, AlertCircle, Calendar, Filter, Download, Tag, FileText, Plus, Merge } from 'lucide-react';
 import { batchOrderService } from '@/services/batchOrder.service';
 import { BatchOrderItem } from '@/types/batchOrder';
 import { DeleteBatchModal } from './DeleteBatchModal';
+import { CreateSingleOrderModal } from './CreateSingleOrderModal';
+import { CombineOrdersModal } from './CombineOrdersModal';
 
 interface Step1UploadFormProps {
   onBatchCreated: (batchId: number, uploadResult?: any) => void;
@@ -19,6 +21,8 @@ export const Step1UploadForm: React.FC<Step1UploadFormProps> = ({ onBatchCreated
   );
   const [uploading, setUploading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSingleOrderModal, setShowSingleOrderModal] = useState<boolean>(false);
+  const [showCombineModal, setShowCombineModal] = useState<boolean>(false);
 
   const clientOptions = [
     { id: '33', name: 'AXIS BANK', buId: '6' },
@@ -89,19 +93,64 @@ export const Step1UploadForm: React.FC<Step1UploadFormProps> = ({ onBatchCreated
         </div>
       )}
 
-      <div className="flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
-          <FileUp className="h-5 w-5" />
+      {/* Header Row: Heading + Combine API Orders Button + Create Order Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 gap-3 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+            <FileUp className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Batch Order Excel Upload
+            </h2>
+            <p className="text-xs text-slate-500">
+              Select client details and upload batch order spreadsheet (.xlsx, .csv)
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">
-            Batch Order Excel Upload
-          </h2>
-          <p className="text-xs text-slate-500">
-            Select client details and upload batch order spreadsheet (.xlsx, .csv)
-          </p>
+
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowCombineModal(true)}
+            className="flex items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-2 text-xs font-bold text-purple-700 shadow-2xs hover:bg-purple-100 hover:shadow-xs dark:border-purple-900/60 dark:bg-purple-950/60 dark:text-purple-300 transition-all shrink-0 active:scale-95"
+          >
+            <Merge className="h-4 w-4" />
+            <span>Combine API Orders</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowSingleOrderModal(true)}
+            className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 hover:shadow-md transition-all shrink-0 active:scale-95"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Create Order</span>
+          </button>
         </div>
       </div>
+
+      {/* Single Order Creation Modal */}
+      <CreateSingleOrderModal
+        isOpen={showSingleOrderModal}
+        onClose={() => setShowSingleOrderModal(false)}
+        onOrderCreated={() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('refreshRecentBatches'));
+          }
+        }}
+      />
+
+      {/* Combine Orders Modal */}
+      <CombineOrdersModal
+        isOpen={showCombineModal}
+        onClose={() => setShowCombineModal(false)}
+        onSuccess={() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('refreshRecentBatches'));
+          }
+        }}
+      />
 
       <form onSubmit={handleUploadSubmit} className="mt-4">
         <div className="flex flex-wrap items-end gap-4">
@@ -195,6 +244,161 @@ interface RecentOrderBatchesCardProps {
   onResumeBatch: (batchId: number, batchNo?: string) => void;
 }
 
+// Helper to determine status details and UI badges
+const getBatchStatusDetails = (b: BatchOrderItem) => {
+  const totalCount = b.totalOrderCount ?? b.totalRows ?? 0;
+  const passCount = b.passCount ?? b.savedRows ?? b.passRows ?? 0;
+  const failCount = b.failCount ?? b.failedRows ?? 0;
+
+  // 1. If 0 failures and passCount > 0 (or passCount === totalCount), batch is PASSED/VALIDATED
+  if (failCount === 0 && passCount > 0 && totalCount > 0) {
+    const val = b.batchStatus !== undefined ? b.batchStatus : b.status;
+    const num = Number(val);
+    if (num === 3) {
+      return {
+        code: 3,
+        label: 'SUBMITTED',
+        badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
+      };
+    }
+    return {
+      code: 2,
+      label: 'VALIDATED',
+      badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+    };
+  }
+
+  // 2. If failCount > 0 and 0 passed -> FAILED
+  if (failCount > 0 && passCount === 0) {
+    return {
+      code: 4,
+      label: 'FAILED',
+      badgeClass: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800',
+    };
+  }
+
+  // 3. Evaluate by numeric batchStatus enum if present
+  const val = b.batchStatus !== undefined ? b.batchStatus : b.status;
+  const num = Number(val);
+
+  if (!isNaN(num) && num > 0) {
+    switch (num) {
+      case 1:
+        return {
+          code: 1,
+          label: 'RECEIVED',
+          badgeClass: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+        };
+      case 2:
+        return {
+          code: 2,
+          label: 'VALIDATED',
+          badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+        };
+      case 3:
+        return {
+          code: 3,
+          label: 'SUBMITTED',
+          badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
+        };
+      case 4:
+        return {
+          code: 4,
+          label: 'FAILED',
+          badgeClass: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800',
+        };
+      case 5:
+        return {
+          code: 5,
+          label: 'MOVED / CANCELLED',
+          badgeClass: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+        };
+      default:
+        break;
+    }
+  }
+
+  const str = String(val || '').toUpperCase();
+  if (str.includes('RECEIV') || str.includes('UPLOAD')) {
+    return {
+      code: 1,
+      label: 'RECEIVED',
+      badgeClass: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+    };
+  }
+  if (str.includes('VALIDAT') || str.includes('PASS')) {
+    return {
+      code: 2,
+      label: 'VALIDATED',
+      badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+    };
+  }
+  if (str.includes('SUBMIT')) {
+    return {
+      code: 3,
+      label: 'SUBMITTED',
+      badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
+    };
+  }
+  if (str.includes('FAIL')) {
+    return {
+      code: 4,
+      label: 'FAILED',
+      badgeClass: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800',
+    };
+  }
+  if (str.includes('MOVE') || str.includes('CANCEL')) {
+    return {
+      code: 5,
+      label: 'MOVED / CANCELLED',
+      badgeClass: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    };
+  }
+
+  return {
+    code: 0,
+    label: str || 'UNKNOWN',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400',
+  };
+};
+
+// Helper to determine Source details and UI badges
+const getSourceDetails = (sourceId?: number | string) => {
+  const num = Number(sourceId);
+  switch (num) {
+    case 1:
+      return {
+        code: 1,
+        label: 'EXCEL',
+        badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+      };
+    case 2:
+      return {
+        code: 2,
+        label: 'API',
+        badgeClass: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
+      };
+    case 3:
+      return {
+        code: 3,
+        label: 'B2B',
+        badgeClass: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
+      };
+    case 4:
+      return {
+        code: 4,
+        label: 'MANUAL',
+        badgeClass: 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/60 dark:text-cyan-300 dark:border-cyan-800',
+      };
+    default:
+      return {
+        code: 0,
+        label: sourceId !== undefined && sourceId !== null ? String(sourceId) : 'EXCEL',
+        badgeClass: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400',
+      };
+  }
+};
+
 export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ onResumeBatch }) => {
   const todayStr = new Date().toISOString().split('T')[0];
   const past30DaysDate = new Date();
@@ -204,6 +408,8 @@ export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ 
   const [filterStartDate, setFilterStartDate] = useState<string>(past30DaysStr);
   const [filterEndDate, setFilterEndDate] = useState<string>(todayStr);
   const [filterClientId, setFilterClientId] = useState<string>('ALL');
+  const [filterBatchStatus, setFilterBatchStatus] = useState<string>('DEFAULT');
+  const [filterSourceId, setFilterSourceId] = useState<string>('ALL');
 
   const [batchList, setBatchList] = useState<BatchOrderItem[]>([]);
   const [loadingBatches, setLoadingBatches] = useState<boolean>(false);
@@ -247,9 +453,11 @@ export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ 
         startDate: filterStartDate,
         endDate: filterEndDate,
         clientId: filterClientId !== 'ALL' ? filterClientId : undefined,
+        batchStatus: filterBatchStatus !== 'DEFAULT' && filterBatchStatus !== 'ALL' ? filterBatchStatus : undefined,
+        sourceId: filterSourceId !== 'ALL' ? filterSourceId : undefined,
       });
 
-      const list = res?.data || res || [];
+      const list = Array.isArray(res) ? res : ((res as any)?.data || []);
       if (Array.isArray(list)) {
         setBatchList(list);
       } else {
@@ -261,24 +469,57 @@ export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ 
     } finally {
       setLoadingBatches(false);
     }
-  }, [filterStartDate, filterEndDate, filterClientId]);
+  }, [filterStartDate, filterEndDate, filterClientId, filterBatchStatus, filterSourceId]);
 
   useEffect(() => {
     fetchBatches();
+
+    const handleRefresh = () => {
+      fetchBatches();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('refreshRecentBatches', handleRefresh);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('refreshRecentBatches', handleRefresh);
+      }
+    };
   }, [fetchBatches]);
 
   const handleDeleteTrigger = (batch: BatchOrderItem) => {
     setBatchToDelete(batch);
   };
 
-  const filteredBatches = batchList.filter(
-    (b) =>
+  const filteredBatches = batchList.filter((b) => {
+    const matchesSearch =
+      !searchQuery ||
       b.batchNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.clientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.clientCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.orderFileName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      String(b.batchId || b.id).includes(searchQuery)
-  );
+      String(b.batchId || b.id).includes(searchQuery);
+
+    if (!matchesSearch) return false;
+
+    if (filterSourceId !== 'ALL' && b.sourceId !== undefined && b.sourceId !== null) {
+      if (Number(b.sourceId) !== Number(filterSourceId)) {
+        return false;
+      }
+    }
+
+    const statusDetails = getBatchStatusDetails(b);
+
+    if (filterBatchStatus === 'DEFAULT') {
+      // By default display 2 (VALIDATED) and 1 (RECEIVED) status list
+      return statusDetails.code === 1 || statusDetails.code === 2;
+    } else if (filterBatchStatus !== 'ALL') {
+      return statusDetails.code === Number(filterBatchStatus);
+    }
+
+    return true;
+  });
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -294,6 +535,7 @@ export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ 
 
         {/* Date & Filter Controls */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Date Range Picker */}
           <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800">
             <Calendar className="h-3.5 w-3.5 text-slate-400" />
             <input
@@ -311,12 +553,13 @@ export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ 
             />
           </div>
 
+          {/* Client Filter Dropdown */}
           <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800">
             <Filter className="h-3.5 w-3.5 text-slate-400" />
             <select
               value={filterClientId}
               onChange={(e) => setFilterClientId(e.target.value)}
-              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none text-xs"
+              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none text-xs font-medium"
             >
               <option value="ALL">All Clients</option>
               {clientOptions.map((c) => (
@@ -327,12 +570,46 @@ export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ 
             </select>
           </div>
 
+          {/* Source ID Filter Dropdown */}
+          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800">
+            <Filter className="h-3.5 w-3.5 text-slate-400" />
+            <select
+              value={filterSourceId}
+              onChange={(e) => setFilterSourceId(e.target.value)}
+              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none text-xs font-medium"
+            >
+              <option value="ALL">All Sources (Default)</option>
+              <option value="1">1: EXCEL</option>
+              <option value="2">2: API</option>
+              <option value="3">3: B2B</option>
+              <option value="4">4: MANUAL</option>
+            </select>
+          </div>
+
+          {/* Batch Status Filter Dropdown */}
+          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800">
+            <Tag className="h-3.5 w-3.5 text-slate-400" />
+            <select
+              value={filterBatchStatus}
+              onChange={(e) => setFilterBatchStatus(e.target.value)}
+              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none text-xs font-medium"
+            >
+              <option value="DEFAULT">RECEIVED & VALIDATED</option>
+              <option value="ALL">All Statuses</option>
+              <option value="1">RECEIVED</option>
+              <option value="2">VALIDATED</option>
+              <option value="3">SUBMITTED</option>
+              <option value="4">FAILED</option>
+              <option value="5">MOVED / CANCELLED</option>
+            </select>
+          </div>
+
           <button
             onClick={fetchBatches}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            title="Refresh order batches"
+            className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
           </button>
 
           <div className="relative">
@@ -354,41 +631,45 @@ export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ 
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
               <th className="px-4 py-3 font-semibold uppercase">CLIENT NAME</th>
-              <th className="px-4 py-3 font-semibold uppercase">ORDER DATE</th>
-              <th className="px-4 py-3 font-semibold uppercase">BATCH NO</th>
-              <th className="px-4 py-3 font-semibold uppercase">TOTAL COUNT</th>
-              <th className="px-4 py-3 font-semibold uppercase">PASS COUNT</th>
-              <th className="px-4 py-3 font-semibold uppercase">WARN COUNT</th>
-              <th className="px-4 py-3 font-semibold uppercase">FAIL COUNT</th>
+              <th className="px-4 py-3 font-semibold uppercase">BATCH NO & FILE</th>
+              <th className="px-4 py-3 font-semibold uppercase">SOURCE</th>
+              <th className="px-4 py-3 font-semibold uppercase">UPLOADED AT</th>
+              <th className="px-4 py-3 font-semibold uppercase">STATUS</th>
+              <th className="px-4 py-3 font-semibold uppercase">TOTAL</th>
+              <th className="px-4 py-3 font-semibold uppercase">PASS</th>
+              <th className="px-4 py-3 font-semibold uppercase">WARN</th>
+              <th className="px-4 py-3 font-semibold uppercase">FAIL</th>
               <th className="px-4 py-3 text-center font-semibold uppercase">ACTION</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {loadingBatches ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-slate-500">
+                <td colSpan={10} className="py-8 text-center text-slate-500">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-blue-600" />
                   <span className="mt-2 block text-xs">Loading order batches...</span>
                 </td>
               </tr>
             ) : filteredBatches.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-slate-500">
-                  No order batches found for date range ({filterStartDate} to {filterEndDate}).
+                <td colSpan={10} className="py-8 text-center text-slate-500">
+                  No order batches found for date range ({filterStartDate} to {filterEndDate}) and selected filters.
                 </td>
               </tr>
             ) : (
               filteredBatches.map((b) => {
                 const targetBatchId = b.batchId || b.id;
-                const clientDisplayName = b.clientName || b.clientCode || 'XOXODAY';
+                const clientDisplayName = b.clientName || b.clientCode || 'N/A';
                 const dateStr = b.uploadedAt
-                  ? b.uploadedAt.split('T')[0]
+                  ? b.uploadedAt.replace('T', ' ').substring(0, 16)
                   : b.orderDate || new Date().toISOString().split('T')[0];
                 const batchNoStr = b.batchNo || (targetBatchId ? `202600${targetBatchId}` : 'N/A');
                 const totalCount = b.totalOrderCount ?? b.totalRows ?? 0;
                 const passCount = b.passCount ?? b.savedRows ?? b.passRows ?? 0;
                 const warningCount = b.warningCount ?? b.warningRows ?? 0;
-                const failCount = b.failCount ?? b.failedRows ?? b.failRows ?? 0;
+                const failCount = b.failCount ?? b.failedRows ?? 0;
+                const statusInfo = getBatchStatusDetails(b);
+                const sourceInfo = getSourceDetails(b.sourceId);
 
                 return (
                   <tr
@@ -396,13 +677,36 @@ export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ 
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
                   >
                     <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                      {clientDisplayName}
+                      <div>{clientDisplayName}</div>
+                      {b.businessUnitName && (
+                        <div className="text-[10px] font-normal text-slate-400 dark:text-slate-500">
+                          {b.businessUnitName}
+                        </div>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                    <td className="px-4 py-3">
+                      <div className="font-mono font-semibold text-blue-600 dark:text-blue-400">
+                        {batchNoStr}
+                      </div>
+                      {b.orderFileName && (
+                        <div className="flex items-center gap-1 text-[11px] font-normal text-slate-500 dark:text-slate-400 truncate max-w-[180px]" title={b.orderFileName}>
+                          <FileText className="h-3 w-3 shrink-0 text-slate-400" />
+                          <span className="truncate">{b.orderFileName}</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-extrabold tracking-wide ${sourceInfo.badgeClass}`}>
+                        {sourceInfo.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
                       {dateStr}
                     </td>
-                    <td className="px-4 py-3 font-mono font-semibold text-blue-600 dark:text-blue-400">
-                      {batchNoStr}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-extrabold tracking-wide ${statusInfo.badgeClass}`}>
+                        {statusInfo.label}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <button
@@ -468,25 +772,29 @@ export const RecentOrderBatchesCard: React.FC<RecentOrderBatchesCardProps> = ({ 
                         )}
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => targetBatchId && onResumeBatch(targetBatchId, batchNoStr)}
-                          title="Resume Batch Wizard"
-                          className="inline-flex items-center gap-1 rounded-xl bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
-                        >
-                          <span>Resume</span>
-                          <ArrowRight className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTrigger(b)}
-                          title="Delete Batch"
-                          className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950 dark:text-red-400 transition-colors"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                      {statusInfo.label === 'SUBMITTED' || statusInfo.code === 3 ? (
+                        <span className="text-slate-400 text-xs italic font-medium">Submitted</span>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => targetBatchId && onResumeBatch(targetBatchId, batchNoStr)}
+                            title="Resume Batch Wizard"
+                            className="inline-flex items-center gap-1 rounded-xl bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 transition-colors"
+                          >
+                            <span>Resume</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTrigger(b)}
+                            title="Delete Batch"
+                            className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950 dark:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

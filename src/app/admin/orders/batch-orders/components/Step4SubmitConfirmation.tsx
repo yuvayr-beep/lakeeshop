@@ -79,6 +79,7 @@ export const Step4SubmitConfirmation: React.FC<Step4SubmitConfirmationProps> = (
   };
 
   const passRows = summary?.passRows ?? summary?.totalRows ?? 0;
+  const warnRows = summary?.warningRows ?? (summary as any)?.warningCount ?? 0;
   const failRows = summary?.failRows ?? 0;
   const totalRows = summary?.totalRows ?? 0;
 
@@ -154,7 +155,7 @@ export const Step4SubmitConfirmation: React.FC<Step4SubmitConfirmationProps> = (
         </div>
       ) : (
         <div className="mt-6 space-y-4">
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
               <p className="text-xs font-semibold text-slate-500">Total Orders</p>
               <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{totalRows}</p>
@@ -163,6 +164,11 @@ export const Step4SubmitConfirmation: React.FC<Step4SubmitConfirmationProps> = (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-950/50 dark:bg-emerald-950/20">
               <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Validated Pass</p>
               <p className="mt-1 text-xl font-bold text-emerald-600 dark:text-emerald-400">{passRows}</p>
+            </div>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-950/50 dark:bg-amber-950/20">
+              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">Warning Rows</p>
+              <p className="mt-1 text-xl font-bold text-amber-600 dark:text-amber-400">{warnRows}</p>
             </div>
 
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-950/50 dark:bg-red-950/20">

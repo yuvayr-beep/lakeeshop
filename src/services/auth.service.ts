@@ -82,6 +82,9 @@ export const saveAuthTokens = (tokens: SignInResponse) => {
   localStorage.setItem('refreshToken', tokens.refreshToken);
   localStorage.setItem('expiresIn', String(tokens.expiresIn));
   localStorage.setItem('tokenType', tokens.tokenType);
+  localStorage.removeItem('idle_is_locked');
+  localStorage.removeItem('isLocked');
+  localStorage.setItem('idle_last_active_time', Date.now().toString());
 };
 
 export const clearAuthTokens = () => {
@@ -90,6 +93,9 @@ export const clearAuthTokens = () => {
   localStorage.removeItem('expiresIn');
   localStorage.removeItem('tokenType');
   localStorage.removeItem('userPhone');
+  localStorage.removeItem('idle_is_locked');
+  localStorage.removeItem('isLocked');
+  localStorage.removeItem('idle_last_active_time');
 };
 
 export const isAuthenticated = (): boolean => {

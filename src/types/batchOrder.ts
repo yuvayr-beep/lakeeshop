@@ -17,6 +17,11 @@ export interface BatchOrderItem {
   originalFileUrl?: string;
   batchType?: number;
 
+  totalRecords?: number;
+  passedCount?: number;
+  failedCount?: number;
+  warnCount?: number;
+
   // Fallback / legacy field definitions
   orderDate?: string;
   totalRows?: number;
@@ -87,11 +92,15 @@ export interface StagingErrorOrder {
   totalPrice?: number | null;
   price?: number | null;
   orderDate?: string | null;
+  id?: number;
+  productCode?: string | null;
   remarks?: string | null;
   blocking?: boolean;
   errorId?: number;
   errorCode?: string;
   errorMessage?: string;
+  isSplit?: boolean;
+  splitQty?: number;
 }
 
 export interface MasterValidationError {

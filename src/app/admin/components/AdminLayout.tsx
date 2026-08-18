@@ -14,9 +14,18 @@ import { clearSelectedCourier } from '@/redux/slices/courierSlice';
 interface AdminLayoutProps {
   children: React.ReactNode;
   fullWidth?: boolean;
+  pageTitle?: string;
+  pageSubtitle?: string;
+  pageIcon?: React.ReactNode;
 }
 
-export default function AdminLayout({ children, fullWidth = true }: AdminLayoutProps) {
+export default function AdminLayout({
+  children,
+  fullWidth = true,
+  pageTitle,
+  pageSubtitle,
+  pageIcon,
+}: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useAppDispatch();
@@ -116,6 +125,9 @@ export default function AdminLayout({ children, fullWidth = true }: AdminLayoutP
         <AdminTopbar
           onToggleSidebar={() => handleToggleSidebar(!sidebarOpen)}
           onMobileMenu={() => handleToggleMobileSidebar(true)}
+          pageTitle={pageTitle}
+          pageSubtitle={pageSubtitle}
+          pageIcon={pageIcon}
         />
         <main className={`flex-1 overflow-auto scrollbar-thin px-4 md:px-6 xl:px-8 py-6 w-full ${fullWidth ? '' : 'max-w-screen-2xl mx-auto'}`}>
           {children}

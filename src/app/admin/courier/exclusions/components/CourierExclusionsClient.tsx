@@ -177,12 +177,25 @@ const PRESET_EXCLUSION_REASONS = [
   'Custom Reason / Other',
 ];
 
-// NDJSON parser helper
+// NDJSON & JSON parser helper
 const parseNdjson = (raw: any): any[] => {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'object') return [raw];
+  if (typeof raw === 'object') {
+    if (Array.isArray(raw.data)) return raw.data;
+    if (Array.isArray(raw.content)) return raw.content;
+    if (Array.isArray(raw.items)) return raw.items;
+    if (Array.isArray(raw.result)) return raw.result;
+    return [raw];
+  }
   if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return parseNdjson(parsed);
+      } catch {}
+    }
     return raw
       .split('\n')
       .map((line) => line.trim())
@@ -331,48 +344,78 @@ export default function CourierExclusionsClient() {
   };
 
   // ===========================================================================
-  // BACKEND PRODUCT API SEARCH & FILTERING (GET /prod/products)
+  // BACKEND PRODUCT API SEARCH & FILTERING (POST /prod/products/bulk & GET /prod/products)
   // ===========================================================================
   const fetchFilteredProducts = useCallback(async () => {
     setLoadingProducts(true);
     try {
-      const params = new URLSearchParams();
       const q = productSearch.trim();
+      let skuParts: string[] = [];
+      let isBulkSkuSearch = false;
+
       if (q) {
-        const isSku = /^[A-Z0-9-]+$/i.test(q) && q.includes('-');
-        if (isSku) {
-          params.append('sku', q);
+        if (q.includes(',') || q.includes(';') || q.includes('\n') || q.includes('\r')) {
+          skuParts = q.split(/[,\n\r;]+/).map((p) => p.trim()).filter(Boolean);
+          isBulkSkuSearch = skuParts.length > 0;
         } else {
-          params.append('name', q);
+          const spaceParts = q.split(/\s+/).map((p) => p.trim()).filter(Boolean);
+          const isAllSkus = spaceParts.length > 1 && spaceParts.every((p) => /^[A-Z0-9-]+$/i.test(p) && p.includes('-'));
+          if (isAllSkus) {
+            skuParts = spaceParts;
+            isBulkSkuSearch = true;
+          }
         }
       }
-      if (brandFilter) {
-        params.append('brand', brandFilter);
-      }
-      if (productTypeFilter) {
-        params.append('productType', productTypeFilter);
-      }
-      if (categoryFilter) {
-        params.append('sku', categoryFilter);
-      }
-      if (comboFilter === 'COMBO') {
-        params.append('isCombo', 'true');
-      } else if (comboFilter === 'SINGLE') {
-        params.append('isCombo', 'false');
-      }
 
-      const queryString = params.toString();
-      const url = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
+      let parsedRaw: any[] = [];
 
-      const res = await axiosInstance.get(url, {
-        headers: {
-          Accept: 'application/x-ndjson',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        },
-      });
+      if (isBulkSkuSearch) {
+        const res = await axiosInstance.post<string>('/prod/products/bulk', skuParts, {
+          headers: {
+            Accept: 'application/x-ndjson',
+            'Content-Type': 'application/json',
+          },
+          responseType: 'text',
+          transformResponse: [(data) => data],
+        });
+        parsedRaw = parseNdjson(res.data);
+      } else {
+        const params = new URLSearchParams();
+        if (q) {
+          const isSku = /^[A-Z0-9-]+$/i.test(q) && q.includes('-');
+          if (isSku) {
+            params.append('sku', q);
+          } else {
+            params.append('name', q);
+          }
+        }
+        if (brandFilter) {
+          params.append('brand', brandFilter);
+        }
+        if (productTypeFilter) {
+          params.append('productType', productTypeFilter);
+        }
+        if (categoryFilter) {
+          params.append('sku', categoryFilter);
+        }
+        if (comboFilter === 'COMBO') {
+          params.append('isCombo', 'true');
+        } else if (comboFilter === 'SINGLE') {
+          params.append('isCombo', 'false');
+        }
 
-      const parsedRaw = parseNdjson(res.data);
+        const queryString = params.toString();
+        const url = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
+
+        const res = await axiosInstance.get(url, {
+          headers: {
+            Accept: 'application/x-ndjson',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+        });
+        parsedRaw = parseNdjson(res.data);
+      }
       const formattedProducts: ProductItem[] = parsedRaw.map((p: any) => ({
         id: p.id,
         productName: p.baseProductName || p.productName || p.defaultSku || `Product #${p.id}`,
@@ -552,8 +595,17 @@ export default function CourierExclusionsClient() {
   // Fetch Client Exclusions
   const fetchClientExclusions = async () => {
     setLoadingClientExclusions(true);
+    console.log('====================================');
+    console.log('[API REQUEST] GET /courier/exclusions/client/all');
+    console.log('cURL command for Swagger:');
+    console.log(
+      `curl -X 'GET' \\\n  'https://v2.lakeetech.com/courier/exclusions/client/all' \\\n  -H 'accept: application/x-ndjson, application/json, */*' \\\n  -H 'Authorization: Bearer YOUR_TOKEN_HERE'`
+    );
+    console.log('====================================');
+
     try {
       const res = await axiosInstance.get('/courier/exclusions/client/all');
+      console.log('[API RESPONSE] GET /courier/exclusions/client/all:', res.data);
       const raw = res.data?.data || res.data;
       setClientExclusions(parseNdjson(raw));
     } catch (err) {
@@ -566,8 +618,17 @@ export default function CourierExclusionsClient() {
   // Fetch Product Exclusions
   const fetchProductExclusions = async () => {
     setLoadingProductExclusions(true);
+    console.log('====================================');
+    console.log('[API REQUEST] GET /courier/exclusions/product/all');
+    console.log('cURL command for Swagger:');
+    console.log(
+      `curl -X 'GET' \\\n  'https://v2.lakeetech.com/courier/exclusions/product/all' \\\n  -H 'accept: application/x-ndjson, application/json, */*' \\\n  -H 'Authorization: Bearer YOUR_TOKEN_HERE'`
+    );
+    console.log('====================================');
+
     try {
       const res = await axiosInstance.get('/courier/exclusions/product/all');
+      console.log('[API RESPONSE] GET /courier/exclusions/product/all:', res.data);
       const raw = res.data?.data || res.data;
       setProductExclusions(parseNdjson(raw));
     } catch (err) {
@@ -591,11 +652,14 @@ export default function CourierExclusionsClient() {
   const getClientExclusionRecord = (courierServiceId: number) => {
     if (!selectedClient) return null;
     const targetProgramId = selectedProgram ? selectedProgram.id : null;
-    return clientExclusions.find(
-      (excl) =>
-        excl.clientId === selectedClient.id &&
-        (excl.programId === targetProgramId || (!excl.programId && !targetProgramId)) &&
-        excl.courierServiceId === courierServiceId
+    return (
+      clientExclusions.find(
+        (excl) =>
+          excl.clientId === selectedClient.id &&
+          (excl.programId === targetProgramId || (!excl.programId && !targetProgramId)) &&
+          excl.courierServiceId === courierServiceId &&
+          excl.active !== false
+      ) || null
     );
   };
 
@@ -605,8 +669,15 @@ export default function CourierExclusionsClient() {
       return;
     }
 
-    const currentRecord = getClientExclusionRecord(service.id);
-    const isCurrentlyBlocked = currentRecord ? currentRecord.active : false;
+    const targetProgramId = selectedProgram ? selectedProgram.id : null;
+    const matchingRecords = clientExclusions.filter(
+      (excl) =>
+        excl.clientId === selectedClient.id &&
+        (excl.programId === targetProgramId || (!excl.programId && !targetProgramId)) &&
+        excl.courierServiceId === service.id
+    );
+
+    const isCurrentlyBlocked = matchingRecords.some((rec) => rec.active !== false) || matchingRecords.length > 0;
     const nextActiveState = !isCurrentlyBlocked; // true = block, false = unblock
 
     setTogglingServiceId(service.id);
@@ -614,45 +685,75 @@ export default function CourierExclusionsClient() {
 
     const finalReason = reasonInputs[service.id]?.trim() || getActiveReasonText();
 
-    const payload = {
-      clientId: selectedClient.id,
-      programId: selectedProgram ? selectedProgram.id : null,
-      courierServiceId: service.id,
-      reason: finalReason,
-      active: nextActiveState,
-    };
-
     try {
-      const res = await axiosInstance.post('/courier/exclusions/client', payload);
-      const saved = res.data?.data || res.data;
-
-      setClientExclusions((prev) => {
-        const filtered = prev.filter(
-          (excl) =>
-            !(
-              excl.clientId === selectedClient.id &&
-              (excl.programId === (selectedProgram ? selectedProgram.id : null) || (!excl.programId && !selectedProgram)) &&
-              excl.courierServiceId === service.id
-            )
-        );
-        return [
-          ...filtered,
-          {
-            id: saved?.id || currentRecord?.id,
-            clientId: selectedClient.id,
-            programId: selectedProgram ? selectedProgram.id : null,
-            courierServiceId: service.id,
-            reason: finalReason,
-            active: nextActiveState,
-          },
-        ];
-      });
-
       if (nextActiveState) {
+        // BLOCK: POST /courier/exclusions/client
+        const payload = {
+          clientId: selectedClient.id,
+          programId: targetProgramId,
+          courierServiceId: service.id,
+          reason: finalReason,
+          active: true,
+        };
+
+        console.log('====================================');
+        console.log('[API REQUEST] POST /courier/exclusions/client (BLOCK)');
+        console.log('Client ID:', selectedClient.id);
+        console.log('Program ID:', targetProgramId);
+        console.log('Courier Service ID:', service.id);
+        console.log('Payload:', JSON.stringify(payload, null, 2));
+        console.log('cURL command for Swagger:');
+        console.log(
+          `curl -X 'POST' \\\n  'https://v2.lakeetech.com/courier/exclusions/client' \\\n  -H 'accept: application/json' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \\\n  -d '${JSON.stringify(payload, null, 2)}'`
+        );
+        console.log('====================================');
+
+        const res = await axiosInstance.post('/courier/exclusions/client', payload);
+        console.log('[API RESPONSE] POST /courier/exclusions/client:', res.data);
         toast.success(`Blocked ${service.serviceName} for ${selectedClient.clientName}`, { id: toastId });
       } else {
+        // UNBLOCK: DELETE /courier/exclusions/client/{id}
+        const recordsWithId = matchingRecords.filter((r) => r.id !== undefined && r.id !== null);
+
+        if (recordsWithId.length > 0) {
+          for (const rec of recordsWithId) {
+            const exclId = rec.id;
+            console.log('====================================');
+            console.log(`[API REQUEST] DELETE /courier/exclusions/client/${exclId} (UNBLOCK)`);
+            console.log('Exclusion Record ID:', exclId);
+            console.log('Client ID:', selectedClient.id);
+            console.log('Program ID:', targetProgramId);
+            console.log('Courier Service ID:', service.id);
+            console.log('cURL command for Swagger:');
+            console.log(
+              `curl -X 'DELETE' \\\n  'https://v2.lakeetech.com/courier/exclusions/client/${exclId}' \\\n  -H 'accept: application/json' \\\n  -H 'Authorization: Bearer YOUR_TOKEN_HERE'`
+            );
+            console.log('====================================');
+
+            const res = await axiosInstance.delete(`/courier/exclusions/client/${exclId}`);
+            console.log(`[API RESPONSE] DELETE /courier/exclusions/client/${exclId}:`, res.data);
+          }
+        } else {
+          // Fallback if no record ID found in local state
+          const payload = {
+            clientId: selectedClient.id,
+            programId: targetProgramId,
+            courierServiceId: service.id,
+            reason: finalReason,
+            active: false,
+          };
+          console.log('====================================');
+          console.log('[API REQUEST] POST /courier/exclusions/client (UNBLOCK Fallback)');
+          console.log('Payload:', JSON.stringify(payload, null, 2));
+          console.log('====================================');
+          const res = await axiosInstance.post('/courier/exclusions/client', payload);
+          console.log('[API RESPONSE] POST /courier/exclusions/client:', res.data);
+        }
         toast.success(`Unblocked ${service.serviceName}`, { id: toastId });
       }
+
+      // Re-fetch client exclusions list to stay 100% in sync with backend
+      await fetchClientExclusions();
     } catch (err: any) {
       console.error('Failed to toggle client exclusion:', err);
       const errMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to update block status.';
@@ -700,7 +801,7 @@ export default function CourierExclusionsClient() {
   const isBulkBlockedForService = (serviceId: number) => {
     if (selectedProductIds.length === 0) return false;
     return selectedProductIds.every((prodId) =>
-      productExclusions.some((excl) => excl.productId === prodId && excl.courierServiceId === serviceId && excl.active)
+      productExclusions.some((excl) => excl.productId === prodId && excl.courierServiceId === serviceId && excl.active !== false)
     );
   };
 
@@ -722,49 +823,98 @@ export default function CourierExclusionsClient() {
 
     const finalReason = getActiveReasonText();
     let successCount = 0;
-    const newExclusions = [...productExclusions];
 
     try {
       for (const prodId of selectedProductIds) {
-        const payload = {
-          productId: prodId,
-          courierServiceId: service.id,
-          reason: finalReason,
-          active: nextActiveState,
-        };
+        const matchingRecords = productExclusions.filter(
+          (excl) => excl.productId === prodId && excl.courierServiceId === service.id
+        );
 
-        try {
-          const res = await axiosInstance.post('/courier/exclusions/product', payload);
-          const saved = res.data?.data || res.data;
+        if (nextActiveState) {
+          // BLOCK: POST /courier/exclusions/product
+          const existingRecord = matchingRecords[0];
+          const payload: Record<string, any> = {
+            productId: prodId,
+            courierServiceId: service.id,
+            reason: finalReason,
+            active: true,
+          };
 
-          // Update in-memory exclusions list
-          const existingIdx = newExclusions.findIndex(
-            (excl) => excl.productId === prodId && excl.courierServiceId === service.id
-          );
-          if (existingIdx >= 0) {
-            newExclusions[existingIdx] = {
-              id: saved?.id || newExclusions[existingIdx].id,
-              productId: prodId,
-              courierServiceId: service.id,
-              reason: finalReason,
-              active: nextActiveState,
-            };
-          } else {
-            newExclusions.push({
-              id: saved?.id,
-              productId: prodId,
-              courierServiceId: service.id,
-              reason: finalReason,
-              active: nextActiveState,
-            });
+          if (existingRecord?.id) {
+            payload.id = existingRecord.id;
           }
-          successCount++;
-        } catch (itemErr) {
-          console.error(`Error saving product exclusion for product ID ${prodId}:`, itemErr);
+
+          console.log('====================================');
+          console.log(`[API REQUEST] POST /courier/exclusions/product (BLOCK)`);
+          console.log('Product ID:', prodId);
+          console.log('Courier Service ID:', service.id);
+          console.log('Payload:', JSON.stringify(payload, null, 2));
+          console.log('cURL command for Swagger:');
+          console.log(
+            `curl -X 'POST' \\\n  'https://v2.lakeetech.com/courier/exclusions/product' \\\n  -H 'accept: application/json' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \\\n  -d '${JSON.stringify(payload, null, 2)}'`
+          );
+          console.log('====================================');
+
+          try {
+            const res = await axiosInstance.post('/courier/exclusions/product', payload);
+            console.log('[API RESPONSE] POST /courier/exclusions/product:', res.data);
+            successCount++;
+          } catch (itemErr) {
+            console.error(`Error saving product exclusion for product ID ${prodId}:`, itemErr);
+          }
+        } else {
+          // UNBLOCK: DELETE /courier/exclusions/product/{id}
+          const recordsWithId = matchingRecords.filter((r) => r.id !== undefined && r.id !== null);
+
+          if (recordsWithId.length > 0) {
+            for (const rec of recordsWithId) {
+              const exclId = rec.id;
+              console.log('====================================');
+              console.log(`[API REQUEST] DELETE /courier/exclusions/product/${exclId} (UNBLOCK)`);
+              console.log('Exclusion Record ID:', exclId);
+              console.log('Product ID:', prodId);
+              console.log('Courier Service ID:', service.id);
+              console.log('cURL command for Swagger:');
+              console.log(
+                `curl -X 'DELETE' \\\n  'https://v2.lakeetech.com/courier/exclusions/product/${exclId}' \\\n  -H 'accept: application/json' \\\n  -H 'Authorization: Bearer YOUR_TOKEN_HERE'`
+              );
+              console.log('====================================');
+
+              try {
+                const res = await axiosInstance.delete(`/courier/exclusions/product/${exclId}`);
+                console.log(`[API RESPONSE] DELETE /courier/exclusions/product/${exclId}:`, res.data);
+                successCount++;
+              } catch (itemErr) {
+                console.error(`Error deleting product exclusion record ID ${exclId}:`, itemErr);
+              }
+            }
+          } else {
+            // Fallback if no local record ID exists
+            const payload: Record<string, any> = {
+              productId: prodId,
+              courierServiceId: service.id,
+              reason: finalReason,
+              active: false,
+            };
+            console.log('====================================');
+            console.log(`[API REQUEST] POST /courier/exclusions/product (UNBLOCK Fallback)`);
+            console.log('Product ID:', prodId);
+            console.log('Courier Service ID:', service.id);
+            console.log('Payload:', JSON.stringify(payload, null, 2));
+            console.log('====================================');
+            try {
+              const res = await axiosInstance.post('/courier/exclusions/product', payload);
+              console.log('[API RESPONSE] POST /courier/exclusions/product:', res.data);
+              successCount++;
+            } catch (itemErr) {
+              console.error(`Error sending unblock fallback for product ID ${prodId}:`, itemErr);
+            }
+          }
         }
       }
 
-      setProductExclusions(newExclusions);
+      // Re-fetch clean list from server to stay 100% in sync
+      await fetchProductExclusions();
 
       if (nextActiveState) {
         toast.success(`Blocked ${service.serviceName} for ${successCount} product(s)`, { id: toastId });
@@ -783,31 +933,39 @@ export default function CourierExclusionsClient() {
     products.length > 0 && products.every((p) => selectedProductIds.includes(p.id));
 
   return (
-    <AdminLayout>
+    <AdminLayout
+      fullWidth={true}
+      pageTitle="Client & Product Courier Blocklists"
+      pageSubtitle="Courier Partners > Exclusions Engine"
+      pageIcon={<ShieldAlert className="h-5 w-5 text-amber-500" />}
+    >
       <div className="space-y-6 pb-12">
-        
-        {/* Top Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        {/* Tab Navigation & Inline Action */}
+        <div className="border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 pb-1">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => router.push('/admin/courier/partners')}
-              className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-colors shadow-sm"
-              title="Back to Courier Partners"
+              onClick={() => setActiveTab('CLIENT')}
+              className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition-all ${
+                activeTab === 'CLIENT'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
             >
-              <ArrowLeft size={18} />
+              <Building2 size={16} />
+              Tab 1: Client & Program Exclusions
             </button>
-            <div>
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-                <span onClick={() => router.push('/admin/courier/partners')} className="hover:underline cursor-pointer">
-                  Courier Partners
-                </span>
-                <ChevronRight size={12} />
-                <span className="text-slate-700 dark:text-slate-300 font-bold">Exclusions Engine</span>
-              </div>
-              <h1 className="text-xl font-bold text-slate-800 dark:text-white mt-0.5 flex items-center gap-2">
-                Client & Product Courier Blocklists
-              </h1>
-            </div>
+
+            <button
+              onClick={() => setActiveTab('PRODUCT')}
+              className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition-all ${
+                activeTab === 'PRODUCT'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              <PackageX size={16} />
+              Tab 2: Product Courier Exclusions
+            </button>
           </div>
 
           <button
@@ -815,37 +973,10 @@ export default function CourierExclusionsClient() {
               loadInitialData();
               fetchFilteredProducts();
             }}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-xs"
+            className="px-3.5 py-2 mb-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-xs"
           >
             <RefreshCw size={14} className={loadingClients || loadingServices || loadingProducts ? 'animate-spin' : ''} />
             Refresh Data
-          </button>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('CLIENT')}
-            className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition-all ${
-              activeTab === 'CLIENT'
-                ? 'border-[var(--primary)] text-[var(--primary)]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
-            <Building2 size={16} />
-            Tab 1: Client & Program Exclusions
-          </button>
-
-          <button
-            onClick={() => setActiveTab('PRODUCT')}
-            className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition-all ${
-              activeTab === 'PRODUCT'
-                ? 'border-[var(--primary)] text-[var(--primary)]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
-            <PackageX size={16} />
-            Tab 2: Product Courier Exclusions
           </button>
         </div>
 
@@ -1200,7 +1331,7 @@ export default function CourierExclusionsClient() {
                   {/* Search Input */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Product Name / SKU Code Search
+                      Search by SKU (comma-separated for bulk), Product Name
                     </label>
                     <div className="relative">
                       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1208,7 +1339,7 @@ export default function CourierExclusionsClient() {
                         type="text"
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
-                        placeholder="Type name, SKU code (e.g. DLRY-001)..."
+                        placeholder="Search by SKU (comma-separated for bulk), Product Name"
                         className="w-full h-9 pl-9 pr-3 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-800 dark:text-slate-100 transition-all font-medium"
                       />
                     </div>

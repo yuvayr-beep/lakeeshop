@@ -498,7 +498,7 @@ export default function TransferStockClient() {
   if (loadingInitial) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="animate-spin text-indigo-650 dark:text-indigo-400" size={32} />
+        <Loader2 className="animate-spin text-[var(--primary)]" size={32} />
         <span className="text-sm text-slate-500 font-bold">Initializing Transfer dashboard...</span>
       </div>
     );
@@ -509,7 +509,7 @@ export default function TransferStockClient() {
       {/* Header section */}
       <div>
         <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Boxes size={22} className="text-indigo-650 dark:text-indigo-400 animate-pulse" />
+          <Boxes size={22} className="text-[var(--primary)] animate-pulse" />
           Transfer Stock
         </h1>
         <p className="text-xs text-slate-700 dark:text-slate-400 mt-1">
@@ -524,7 +524,7 @@ export default function TransferStockClient() {
             onClick={() => { setTransferMode('single'); setTransferList([]); }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 ${
               transferMode === 'single'
-                ? 'bg-white dark:bg-slate-900 text-indigo-605 dark:text-indigo-400 shadow-md scale-100'
+                ? 'bg-white dark:bg-slate-900 text-[var(--primary)] shadow-md scale-100'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/40 dark:hover:bg-slate-800'
             }`}
           >
@@ -535,7 +535,7 @@ export default function TransferStockClient() {
             onClick={() => { setTransferMode('bulk'); setTransferList([]); }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 ${
               transferMode === 'bulk'
-                ? 'bg-white dark:bg-slate-900 text-indigo-605 dark:text-indigo-400 shadow-md scale-100'
+                ? 'bg-white dark:bg-slate-900 text-[var(--primary)] shadow-md scale-100'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/40 dark:hover:bg-slate-800'
             }`}
           >
@@ -554,13 +554,13 @@ export default function TransferStockClient() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
               <div className="bg-slate-50 dark:bg-slate-955 px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between rounded-t-2xl">
                 <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                  <ListFilter size={14} className="text-indigo-500" />
+                  <ListFilter size={14} className="text-[var(--primary)]" />
                   Search Filters
                 </h6>
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="text-[10px] text-slate-500 hover:text-indigo-600 font-bold flex items-center gap-1 transition-all"
+                  className="text-[10px] text-slate-500 hover:text-[var(--primary)] font-bold flex items-center gap-1 transition-all"
                 >
                   <RotateCcw size={10} />
                   Reset
@@ -586,7 +586,7 @@ export default function TransferStockClient() {
                           if (selectedProduct) setSelectedProduct(null);
                         }}
                         placeholder="Search product name or code..."
-                        className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
+                        className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
                       />
                       {selectedProduct && (
                         <span className="absolute right-3 top-3 text-emerald-500">
@@ -624,7 +624,7 @@ export default function TransferStockClient() {
                     <select
                       value={filterLocationId}
                       onChange={(e) => setFilterLocationId(e.target.value)}
-                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
+                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
                     >
                       <option value="">All Locations</option>
                       {locations.map((loc) => (
@@ -646,7 +646,7 @@ export default function TransferStockClient() {
                       value={filterBarcode}
                       onChange={(e) => setFilterBarcode(e.target.value)}
                       placeholder="Scan or enter unique unit barcode..."
-                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-mono"
+                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-mono"
                     />
                   </div>
 
@@ -660,7 +660,7 @@ export default function TransferStockClient() {
                       value={filterSerialNumber}
                       onChange={(e) => setFilterSerialNumber(e.target.value)}
                       placeholder="Enter unit serial/IMEI..."
-                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
+                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
                     />
                   </div>
 
@@ -672,7 +672,7 @@ export default function TransferStockClient() {
                     <select
                       value={filterGrnId}
                       onChange={(e) => setFilterGrnId(e.target.value)}
-                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
+                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
                     >
                       <option value="">All GRNs</option>
                       {grns.map((g) => (
@@ -693,7 +693,7 @@ export default function TransferStockClient() {
                       value={filterInvoiceNumber}
                       onChange={(e) => setFilterInvoiceNumber(e.target.value)}
                       placeholder="Enter supplier invoice number..."
-                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
+                      className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
                     />
                   </div>
                 </div>
@@ -702,7 +702,7 @@ export default function TransferStockClient() {
                   <button
                     type="submit"
                     disabled={searchingUnits}
-                    className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
+                    className="h-10 px-6 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
                   >
                     {searchingUnits ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -718,7 +718,7 @@ export default function TransferStockClient() {
             // BULK MODE PRODUCT SELECTION
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
               <div className="bg-slate-50 dark:bg-slate-955 px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 rounded-t-2xl">
-                <Package size={14} className="text-indigo-500" />
+                <Package size={14} className="text-[var(--primary)]" />
                 <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Select Product for Bulk Location Transfer
                 </h6>
@@ -744,7 +744,7 @@ export default function TransferStockClient() {
                         }
                       }}
                       placeholder="Search base product by name or SKU..."
-                      className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
+                      className="w-full h-10 pl-3 pr-8 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 font-semibold"
                     />
                     {selectedBulkProduct && (
                       <span className="absolute right-3 top-3 text-emerald-500">
@@ -782,7 +782,7 @@ export default function TransferStockClient() {
                   <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Inventory Units ({searchedUnits.length})
                   </h6>
-                  <span className="text-[10px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[10px] bg-[var(--primary-light-bg)] text-[var(--primary)] px-2 py-0.5 rounded-full font-bold">
                     {selectedUnitIds.size} Selected
                   </span>
                 </div>
@@ -796,7 +796,7 @@ export default function TransferStockClient() {
                             type="checkbox"
                             checked={selectedUnitIds.size === searchedUnits.length}
                             onChange={handleToggleSelectAllUnits}
-                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            className="rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)]"
                           />
                         </th>
                         <th className="py-2.5 px-2">Product Name</th>
@@ -813,7 +813,7 @@ export default function TransferStockClient() {
                           <tr
                             key={`unit-${unit.inventoryUnitId}`}
                             className={`hover:bg-slate-50/60 dark:hover:bg-slate-850/20 transition-all ${
-                              isChecked ? 'bg-indigo-50/30 dark:bg-indigo-950/10' : ''
+                              isChecked ? 'bg-[var(--primary-light-bg)]' : ''
                             }`}
                           >
                             <td className="py-2.5 px-4 text-center">
@@ -821,7 +821,7 @@ export default function TransferStockClient() {
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => handleToggleSelectUnit(unit.inventoryUnitId)}
-                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                className="rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)]"
                               />
                             </td>
                             <td className="py-2.5 px-2">
@@ -862,7 +862,7 @@ export default function TransferStockClient() {
                         <select
                           value={quickDestId}
                           onChange={(e) => setQuickDestId(e.target.value)}
-                          className="h-8 px-2 text-xs bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-lg focus:outline-none text-slate-805 dark:text-slate-200 font-semibold"
+                          className="h-8 px-2 text-xs bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-lg focus:outline-none text-slate-805 dark:text-slate-200 font-semibold"
                         >
                           <option value="">Select Location</option>
                           {locations.map((loc) => (
@@ -882,7 +882,7 @@ export default function TransferStockClient() {
                           value={quickRemarks}
                           onChange={(e) => setQuickRemarks(e.target.value)}
                           placeholder="e.g. Rack reorganization"
-                          className="w-full h-8 px-2.5 text-xs bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-lg focus:outline-none text-slate-805 dark:text-slate-200"
+                          className="w-full h-8 px-2.5 text-xs bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-lg focus:outline-none text-slate-805 dark:text-slate-200"
                         />
                       </div>
                     </div>
@@ -890,7 +890,7 @@ export default function TransferStockClient() {
                     <button
                       type="button"
                       onClick={handleAddSingleUnitsToCart}
-                      className="h-8 px-4 bg-[#4f46e5] hover:bg-[#4338ca] text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-md flex-shrink-0"
+                      className="h-8 px-4 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-md flex-shrink-0"
                     >
                       <Plus size={14} />
                       Add Selected to List
@@ -911,7 +911,7 @@ export default function TransferStockClient() {
 
                 {fetchingSummary ? (
                   <div className="py-10 flex flex-col items-center justify-center gap-2">
-                    <Loader2 size={24} className="animate-spin text-indigo-550" />
+                    <Loader2 size={24} className="animate-spin text-[var(--primary)]" />
                     <span className="text-xs text-slate-400">Loading stock breakdown...</span>
                   </div>
                 ) : productSummaries.length === 0 ? (
@@ -956,7 +956,7 @@ export default function TransferStockClient() {
                                   })
                                 }
                                 placeholder="0"
-                                className="w-full h-8 text-center text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-lg focus:outline-none font-bold"
+                                className="w-full h-8 text-center text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-lg focus:outline-none font-bold"
                               />
                             </td>
                             <td className="py-3 px-2">
@@ -968,7 +968,7 @@ export default function TransferStockClient() {
                                     [summary.locationId]: e.target.value
                                   })
                                 }
-                                className="w-full h-8 px-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-lg focus:outline-none font-semibold"
+                                className="w-full h-8 px-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-lg focus:outline-none font-semibold"
                               >
                                 <option value="">Select Destination</option>
                                 {locations.map((loc) => (
@@ -989,14 +989,14 @@ export default function TransferStockClient() {
                                   })
                                 }
                                 placeholder="Remarks..."
-                                className="w-full h-8 px-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-indigo-500 rounded-lg focus:outline-none"
+                                className="w-full h-8 px-2 text-xs bg-slate-50 dark:bg-slate-955 border border-slate-205 dark:border-slate-800 focus:border-[var(--primary)] rounded-lg focus:outline-none"
                               />
                             </td>
                             <td className="py-3 px-4 text-center">
                               <button
                                 type="button"
                                 onClick={() => handleAddBulkToCart(summary)}
-                                className="h-8 w-8 bg-indigo-50 hover:bg-indigo-650 dark:bg-indigo-900/20 dark:hover:bg-indigo-650 text-indigo-650 hover:text-white rounded-lg flex items-center justify-center transition-all mx-auto shadow-sm"
+                                className="h-8 w-8 bg-[var(--primary-light-bg)] hover:bg-[var(--primary)] text-[var(--primary)] hover:text-white rounded-lg flex items-center justify-center transition-all mx-auto shadow-sm"
                                 title="Add to Transfer List"
                               >
                                 <Plus size={16} />
@@ -1018,7 +1018,7 @@ export default function TransferStockClient() {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden sticky top-20">
             <div className="bg-slate-50 dark:bg-slate-955 px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                <ClipboardList size={14} className="text-indigo-505" />
+                <ClipboardList size={14} className="text-[var(--primary)]" />
                 Transfer List
               </h6>
               {transferList.length > 0 && (
@@ -1068,7 +1068,7 @@ export default function TransferStockClient() {
                             {item.sourceLocationCode}
                           </span>
                           <ArrowRight size={12} className="text-slate-400" />
-                          <span className="px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 rounded">
+                          <span className="px-1.5 py-0.5 bg-[var(--primary-light-bg)] text-[var(--primary)] rounded">
                             {item.destinationLocationCode}
                           </span>
                         </div>
@@ -1079,7 +1079,7 @@ export default function TransferStockClient() {
                             <span>Barcode: {item.barcode}</span>
                           </div>
                         ) : (
-                          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">
+                          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-[var(--primary)] font-bold">
                             <Package size={10} />
                             <span>Transfer Qty: {item.quantity} units</span>
                           </div>
@@ -1097,7 +1097,7 @@ export default function TransferStockClient() {
                   <button
                     type="button"
                     onClick={handleSubmitTransfers}
-                    className="w-full h-11 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-750 hover:to-blue-750 text-white rounded-xl text-xs font-bold transition-all shadow-lg flex items-center justify-center gap-2"
+                    className="w-full h-11 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-xl text-xs font-bold transition-all shadow-lg flex items-center justify-center gap-2"
                   >
                     <CheckCircle2 size={16} />
                     Confirm & Submit Transfers ({transferList.length})
@@ -1115,7 +1115,7 @@ export default function TransferStockClient() {
           <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up">
             <div className="bg-slate-50 dark:bg-slate-955 px-5 py-4 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <Activity size={16} className="text-indigo-500 animate-spin" />
+                <Activity size={16} className="text-[var(--primary)] animate-spin" />
                 Processing Stock Transfers
               </h3>
               <span className="text-xs text-slate-500 font-bold">

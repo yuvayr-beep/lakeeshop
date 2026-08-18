@@ -75,31 +75,6 @@ export default function CourierConfigClient() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Top Bar Navigation */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push('/admin/courier/partners')}
-            className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-colors shadow-sm"
-            title="Back to Courier Partners"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-              <span onClick={() => router.push('/admin/courier/partners')} className="hover:underline cursor-pointer">
-                Courier Partners
-              </span>
-              <ChevronRight size={12} />
-              <span className="text-slate-700 dark:text-slate-300 font-bold">Courier Configuration</span>
-            </div>
-            <h1 className="text-xl font-bold text-slate-800 dark:text-white mt-0.5 flex items-center gap-2">
-              Courier Configuration
-            </h1>
-          </div>
-        </div>
-      </div>
-
       {/* Courier Partner Banner / Card Context */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
         {loadingCourier ? (
@@ -109,6 +84,14 @@ export default function CourierConfigClient() {
         ) : courier ? (
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start md:items-center gap-4">
+              <button
+                onClick={() => router.push('/admin/courier/partners')}
+                className="w-10 h-10 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
+                title="Back to Courier Partners"
+              >
+                <ArrowLeft size={18} />
+              </button>
+
               <div className="w-14 h-14 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 flex items-center justify-center flex-shrink-0 shadow-sm">
                 {courier.logoUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */

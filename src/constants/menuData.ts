@@ -175,6 +175,130 @@ export const mockMenuData: MenuModule[] = [
         actions: ['READ', 'WRITE']
       },
       {
+        code: 'ORD_ADHOC_MGMT',
+        title: 'Ad-hoc Management',
+        href: '/admin/orders/adhoc-management',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'ORD_STOCK_ASSIGN',
+        title: 'Stock Assignment',
+        href: '/admin/orders/stock-assignment',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'ORD_COURIER_ASSIGN_GROUP',
+        title: 'Courier Assignment',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'ORD_COURIER_ASSIGN_BATCH',
+            title: 'Assign Batch',
+            href: '/admin/orders/courier-assignment',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_MANUAL_COURIER_ASSIGN',
+            title: 'Manual Assign',
+            href: '/admin/orders/manual-courier-assignment',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_UPLOAD_COURIER_ASSIGN',
+            title: 'Upload Courier Assign',
+            href: '/admin/orders/upload-courier-assignment',
+            actions: ['READ', 'WRITE']
+          }
+        ]
+      },
+      {
+        code: 'ORD_AWB_ASSIGN_GROUP',
+        title: 'AWB Assign',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'ORD_SHARE_TO_COURIER',
+            title: 'Share to Courier',
+            href: '/admin/orders/awb-assign/share-to-courier',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_COURIER_ASSIGN_BATCH',
+            title: 'Courier Assign Batch',
+            href: '/admin/orders/awb-assign/courier-assign-batch',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_COURIER_BATCH_UPLOAD',
+            title: 'Courier Batch Upload',
+            href: '/admin/orders/awb-assign/courier-batch-upload',
+            actions: ['READ', 'WRITE']
+          }
+        ]
+      },
+      {
+        code: 'ORD_PRINT_GROUP',
+        title: 'Print',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'ORD_PRINT_INVOICE_LIST',
+            title: 'Invoice List',
+            href: '/admin/orders/print/invoice-list',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_PRINT_INVOICE',
+            title: 'Print Invoice',
+            href: '/admin/orders/print/print-invoice',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_REPRINT_INVOICE',
+            title: 'Reprint Invoice',
+            href: '/admin/orders/print/reprint-invoice',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_BATCH_REPRINT_INVOICE',
+            title: 'Batch Reprint',
+            href: '/admin/orders/print/batch-reprint',
+            actions: ['READ', 'WRITE']
+          }
+        ]
+      },
+      {
+        code: 'ORD_REPORTS',
+        title: 'Reports',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'ORD_REP_DETAIL',
+            title: 'Order Detail Report',
+            href: '/admin/orders/reports/order-detail',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_REP_STATUS_CHECK',
+            title: 'Status Check Report',
+            href: '/admin/orders/reports/status-check',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_REP_STATUS_CHECK_BATCH',
+            title: 'Status Check Batch',
+            href: '/admin/orders/reports/status-check-batch',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_AWB_BATCH_JOBS',
+            title: 'AWB Batch Jobs',
+            href: '/admin/orders/reports/awb-batch-jobs',
+            actions: ['READ', 'WRITE']
+          }
+        ]
+      },
+      {
         code: 'ORD_MASTER_CONFIG',
         title: 'Master Configuration',
         actions: ['READ', 'WRITE'],
@@ -202,6 +326,18 @@ export const mockMenuData: MenuModule[] = [
             title: 'Master Code Lookups',
             href: '/admin/orders/master-config/master-lookups',
             actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_PRE_AWB_MASTER',
+            title: 'Pre-AWB Master',
+            href: '/admin/orders/master-config/pre-awb-master',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_INVOICE_GROUP',
+            title: 'Invoice Group',
+            href: '/admin/orders/master-config/invoice-group',
+            actions: ['READ', 'WRITE']
           }
         ]
       }
@@ -216,6 +352,12 @@ export const mockMenuData: MenuModule[] = [
         code: 'COUR_PARTNER',
         title: 'Courier Partner Management',
         href: '/admin/courier/partners',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_PINCODE_BLOCK',
+        title: 'Bulk Pincode Block Control',
+        href: '/admin/courier/pincode-block',
         actions: ['READ', 'WRITE']
       },
       {

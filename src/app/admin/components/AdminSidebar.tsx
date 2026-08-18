@@ -43,34 +43,33 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
 
   // Find active module/screen on render to prevent flickering/closing animations
   const initialActive = React.useMemo(() => {
+    let activeModuleCode = 'DASH';
+    let activeScreenCode: string | null = null;
+
+    if (!pathname) return { moduleCode: activeModuleCode, screenCode: activeScreenCode };
+
     const activeModule = mockMenuData.find((module) => {
-      if (module.code === 'CLIENTS' && pathname?.startsWith('/admin/clients')) return true;
-      if (module.code === 'SUPPLIERS' && pathname?.startsWith('/admin/suppliers')) return true;
-      if (module.code === 'STOCK' && pathname?.startsWith('/admin/stock')) return true;
-      if (module.code === 'ORDERS' && pathname?.startsWith('/admin/orders')) return true;
-      if (module.code === 'COURIER' && pathname?.startsWith('/admin/courier')) return true;
-      if (module.href && pathname?.startsWith(module.href)) return true;
+      if (module.href && (pathname === module.href || pathname.startsWith(module.href))) return true;
       return module.screens.some((s) => {
-        if (pathname === s.href) return true;
-        if (s.subScreens?.some((sub) => pathname === sub.href)) return true;
-        if (s.href && s.href !== '/' && pathname.startsWith(s.href.split('/').slice(0, 3).join('/'))) return true;
+        if (s.href && (pathname === s.href || pathname.startsWith(s.href))) return true;
+        if (s.subScreens?.some((sub) => sub.href && (pathname === sub.href || pathname.startsWith(sub.href)))) return true;
         return false;
       });
     });
-    let activeModuleCode = 'DASH';
-    let activeScreenCode: string | null = null;
+
     if (activeModule) {
       activeModuleCode = activeModule.code;
       const activeScreen = activeModule.screens.find((s) => {
-        if (pathname === s.href) return true;
-        if (s.subScreens?.some((sub) => pathname === sub.href)) return true;
-        if (s.href && s.href !== '/' && pathname.startsWith(s.href.split('/').slice(0, 3).join('/'))) return true;
+        if (s.href && (pathname === s.href || pathname.startsWith(s.href))) return true;
+        if (s.subScreens?.some((sub) => sub.href && (pathname === sub.href || pathname.startsWith(sub.href)))) return true;
         return false;
       });
+
       if (activeScreen && activeScreen.subScreens) {
         activeScreenCode = activeScreen.code;
       }
     }
+
     return { moduleCode: activeModuleCode, screenCode: activeScreenCode };
   }, [pathname]);
 
@@ -80,8 +79,12 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
   const isCollapsed = collapsed && !mobileOpen;
 
   useEffect(() => {
-    setExpandedModule(initialActive.moduleCode);
-    setExpandedScreen(initialActive.screenCode);
+    if (initialActive.moduleCode) {
+      setExpandedModule(initialActive.moduleCode);
+    }
+    if (initialActive.screenCode) {
+      setExpandedScreen(initialActive.screenCode);
+    }
   }, [initialActive]);
 
   const [isMounted, setIsMounted] = useState(false);
@@ -221,7 +224,9 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                     {module.screens.map((screen) => {
                       if (screen.subScreens && screen.subScreens.length > 0) {
                         const isScreenExpanded = expandedScreen === screen.code;
-                        const hasActiveSubChild = screen.subScreens.some((sub) => pathname === sub.href);
+                        const hasActiveSubChild = screen.subScreens.some(
+                          (sub) => sub.href && (pathname === sub.href || pathname?.startsWith(sub.href))
+                        );
 
                         return (
                           <div key={screen.code} className="space-y-0.5" style={{ width: '100%' }}>
@@ -258,7 +263,9 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                                   className="overflow-hidden ml-3 pl-3 border-l border-slate-100 dark:border-slate-800 mt-0.5 space-y-0.5"
                                 >
                                   {screen.subScreens.map((subScreen) => {
-                                    const isSubActive = pathname === subScreen.href;
+                                    const isSubActive = subScreen.href
+                                      ? pathname === subScreen.href || pathname?.startsWith(subScreen.href)
+                                      : false;
                                     return (
                                       <Link
                                         key={subScreen.code}

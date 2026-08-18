@@ -79,12 +79,12 @@ const toProduct = (product: ApiProduct): Product => {
     modelNumber: product.modelNumber || '-',
     taxSlab: product.taxPercentage !== null && product.taxPercentage !== undefined ? `${product.taxPercentage}%` : '-',
     status: product.status ? 'active' : 'inactive',
-    productStatusCode: product.productStatusCode || 
-                       (product as any).product_status_code || 
-                       'TEMP_BLOCKED',
-    offlineStatusCode: product.offlineStatusCode || 
-                       (product as any).offline_status_code || 
-                       'OFFLINE',
+    productStatusCode: product.productStatusCode ||
+      (product as any).product_status_code ||
+      'TEMP_BLOCKED',
+    offlineStatusCode: product.offlineStatusCode ||
+      (product as any).offline_status_code ||
+      'OFFLINE',
     defaultCourierPrice: product.defaultCourierPrice ?? 0,
     uom: '',
     hsnCode: product.hsnCode || '-',
@@ -810,7 +810,7 @@ export default function ProductManagementClient() {
       const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
-      
+
       const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
@@ -891,10 +891,10 @@ export default function ProductManagementClient() {
         prev.map((p) =>
           selectedIds.includes(p.id)
             ? {
-                ...p,
-                productStatusCode: statusCode,
-                status: statusCode === 'ACTIVE' ? 'active' : 'inactive',
-              }
+              ...p,
+              productStatusCode: statusCode,
+              status: statusCode === 'ACTIVE' ? 'active' : 'inactive',
+            }
             : p
         )
       );
@@ -906,10 +906,10 @@ export default function ProductManagementClient() {
         prev.map((p) =>
           selectedIds.includes(p.id)
             ? {
-                ...p,
-                productStatusCode: statusCode,
-                status: statusCode === 'ACTIVE' ? 'active' : 'inactive',
-              }
+              ...p,
+              productStatusCode: statusCode,
+              status: statusCode === 'ACTIVE' ? 'active' : 'inactive',
+            }
             : p
         )
       );
@@ -948,9 +948,9 @@ export default function ProductManagementClient() {
         prev.map((p) =>
           selectedIds.includes(p.id)
             ? {
-                ...p,
-                offlineStatusCode: statusCode,
-              }
+              ...p,
+              offlineStatusCode: statusCode,
+            }
             : p
         )
       );
@@ -962,9 +962,9 @@ export default function ProductManagementClient() {
         prev.map((p) =>
           selectedIds.includes(p.id)
             ? {
-                ...p,
-                offlineStatusCode: statusCode,
-              }
+              ...p,
+              offlineStatusCode: statusCode,
+            }
             : p
         )
       );
@@ -1168,7 +1168,7 @@ export default function ProductManagementClient() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by SKU (comma-separated for bulk), name, brand, or category…"
+            placeholder="Search by SKU (comma-separated for bulk), Product Name"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full h-9 pl-8 pr-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"

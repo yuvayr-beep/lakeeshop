@@ -8,7 +8,6 @@ import {
   Tag, ShieldAlert, Check, X, FileText, ExternalLink, Calendar, ArrowRight, 
   Loader2, Sparkles, Filter, ChevronLeft, ChevronRight, Info, ShieldCheck, Power
 } from 'lucide-react';
-import AdminLayout from '@/app/admin/components/AdminLayout';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 
@@ -779,88 +778,67 @@ export default function ColumnMappingClient() {
   }, [filteredTemplates, currentPage]);
 
   return (
-    <AdminLayout>
-      <div className="p-4 md:p-6 space-y-6 w-full">
-        
-        {/* Top Header Banner */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-              <Layers size={14} />
-              <span>Orders / Master Configuration</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2.5">
-              <FileSpreadsheet className="text-blue-600 dark:text-blue-400" size={26} />
-              Client Column Mapping Setup
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
-              Map client-specific Excel order columns to standard system order ingestion fields. Upload sample templates, align fields, and manage mapping configurations.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={fetchTemplates}
-              disabled={loadingTemplates}
-              className="p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-2xs"
-              title="Refresh Templates"
-            >
-              <RefreshCw size={16} className={loadingTemplates ? 'animate-spin text-blue-600' : ''} />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                resetFormState();
-                setIsModalOpen(true);
-              }}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-semibold shadow-md transition-all duration-150 flex items-center gap-2 hover:scale-[1.02]"
-            >
-              <Plus size={16} />
-              <span>Create New Mapping</span>
-            </button>
-          </div>
+    <div className="space-y-6 pb-12 w-full">
+      {/* Filters & Search Toolbar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+        <div className="relative w-full sm:w-80">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Search by template, client, file..."
+            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          />
         </div>
 
-        {/* Filters & Search Toolbar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-          <div className="relative w-full sm:w-80">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="Search by template, client, file..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            />
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end flex-wrap">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <Filter size={14} />
+            <span>Filter Client:</span>
           </div>
+          <select
+            value={clientFilter}
+            onChange={(e) => {
+              setClientFilter(e.target.value === '' ? '' : Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          >
+            <option value="">All Clients</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.clientName} ({c.clientCode})
+              </option>
+            ))}
+          </select>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Filter size={14} />
-              <span>Filter Client:</span>
-            </div>
-            <select
-              value={clientFilter}
-              onChange={(e) => {
-                setClientFilter(e.target.value === '' ? '' : Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            >
-              <option value="">All Clients</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.clientName} ({c.clientCode})
-                </option>
-              ))}
-            </select>
-          </div>
+          <button
+            type="button"
+            onClick={fetchTemplates}
+            disabled={loadingTemplates}
+            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-2xs shrink-0"
+            title="Refresh Templates"
+          >
+            <RefreshCw size={16} className={loadingTemplates ? 'animate-spin text-blue-600' : ''} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              resetFormState();
+              setIsModalOpen(true);
+            }}
+            className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-150 flex items-center gap-2 hover:scale-[1.02] shrink-0 cursor-pointer"
+          >
+            <Plus size={16} />
+            <span>Create New Mapping</span>
+          </button>
         </div>
+      </div>
 
         {/* Templates Table Container */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -1023,8 +1001,6 @@ export default function ColumnMappingClient() {
             </div>
           )}
         </div>
-
-      </div>
 
       {/* CREATE / EDIT MAPPING MODAL & WIZARD */}
       {isModalOpen && (
@@ -1440,7 +1416,6 @@ export default function ColumnMappingClient() {
           </div>
         </div>
       )}
-
-    </AdminLayout>
+    </div>
   );
 }

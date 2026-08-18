@@ -34,10 +34,6 @@ export default function LockScreenModal() {
       if (userPhone) {
         await signIn({ phone: userPhone, password });
       }
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('idle_last_active_time', Date.now().toString());
-        localStorage.setItem('idle_is_locked', 'false');
-      }
       dispatch(unlockSession());
       toast.success('Session Unlocked', {
         description: 'Welcome back!',
@@ -54,10 +50,6 @@ export default function LockScreenModal() {
   };
 
   const handleSwitchAccount = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('idle_is_locked');
-      localStorage.removeItem('idle_last_active_time');
-    }
     dispatch(logout());
     router.replace('/');
   };

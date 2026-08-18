@@ -114,7 +114,7 @@ export default function POTable({
                     if (el) el.indeterminate = someSelected && !allSelected;
                   }}
                   onChange={toggleAll}
-                  className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
+                  className="w-4 h-4 rounded border-slate-300 accent-[var(--primary)] cursor-pointer"
                 />
               </th>
               <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-left w-12">S.No</th>
@@ -146,7 +146,7 @@ export default function POTable({
                     key={po.id}
                     className={`border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors group ${
                       isSelected
-                        ? 'bg-blue-50 dark:bg-blue-900/10'
+                        ? 'bg-[var(--primary-light-bg)]'
                         : index % 2 === 0
                         ? 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
                         : 'bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-800/40'
@@ -157,11 +157,11 @@ export default function POTable({
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleOne(po.id)}
-                        className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
+                        className="w-4 h-4 rounded border-slate-300 accent-[var(--primary)] cursor-pointer"
                       />
                     </td>
                     <td className="px-3 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">{sNo}</td>
-                    <td className="px-3 py-3 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap">
+                    <td className="px-3 py-3 font-mono text-xs text-[var(--primary)] font-semibold whitespace-nowrap">
                       {po.poNumber}
                     </td>
                     <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-350 whitespace-nowrap">
@@ -176,7 +176,7 @@ export default function POTable({
                     <td className="px-3 py-3 text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
                       <button
                         onClick={() => onShowItems(po)}
-                        className="px-2 py-0.5 rounded bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:text-blue-700 font-semibold transition-all hover:scale-105"
+                        className="px-2 py-0.5 rounded bg-slate-100 hover:bg-[var(--primary-light-bg)] dark:bg-slate-800 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[var(--primary)] font-semibold transition-all hover:scale-105"
                         title="Click to view ordered items"
                       >
                         {po.totalSkus} / {po.totalSkuQty}
@@ -196,7 +196,7 @@ export default function POTable({
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => onEdit(po.id)}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-blue-600 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-[var(--primary)] transition-colors"
                           title="Edit Purchase Order"
                         >
                           <Edit2 size={14} />
@@ -253,7 +253,7 @@ export default function POTable({
               <select
                 value={perPage}
                 onChange={(e) => onPerPageChange(Number(e.target.value))}
-                className="h-7 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-350"
+                className="h-7 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--primary)] text-slate-700 dark:text-slate-350"
               >
                 {PER_PAGE_OPTIONS.map((opt) => (
                   <option key={`per-page-${opt}`} value={opt}>
@@ -283,7 +283,7 @@ export default function POTable({
                   onClick={() => onPageChange(pn)}
                   className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${
                     pn === page
-                      ? 'bg-blue-600 text-white shadow-sm font-semibold'
+                      ? 'bg-[var(--primary)] text-white shadow-sm font-semibold'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
                   }`}
                 >

@@ -256,50 +256,6 @@ export default function CourierPartnersClient() {
 
   return (
     <div className="space-y-5 pb-12">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[var(--primary-light-bg)] text-[var(--primary)] flex items-center justify-center font-bold">
-              <Truck size={20} />
-            </div>
-            Courier Partner Management
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Configure carrier accounts, origin hubs, tracking templates, and commercial liability limits.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={fetchCouriers}
-            disabled={loading}
-            className="flex items-center justify-center p-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm"
-            title="Refresh list"
-          >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-          </button>
-
-          <button
-            onClick={handleExportExcel}
-            disabled={exportingExcel || filteredCouriers.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
-          >
-            <Download size={15} />
-            Export Excel
-          </button>
-
-          <button
-            onClick={handleCreateClick}
-            className="flex items-center gap-2 px-4 py-2.5 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:opacity-95"
-            style={{ backgroundColor: 'var(--primary)' }}
-          >
-            <Plus size={16} />
-            Add Courier Partner
-          </button>
-        </div>
-      </div>
-
       {/* Floating Bulk Action Bar */}
       {selectedIds.length > 0 && (
         <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl flex items-center justify-between animate-fade-in">
@@ -347,10 +303,40 @@ export default function CourierPartnersClient() {
           )}
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end ml-auto">
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap mr-1">
             Showing {filteredCouriers.length} records
           </span>
+
+          <button
+            type="button"
+            onClick={fetchCouriers}
+            disabled={loading}
+            className="flex items-center justify-center p-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-2xs cursor-pointer"
+            title="Refresh list"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin text-blue-600' : ''} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={exportingExcel || filteredCouriers.length === 0}
+            className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+          >
+            <Download size={14} />
+            <span>Export Excel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCreateClick}
+            className="flex items-center gap-2 px-4 py-2 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:opacity-95 cursor-pointer"
+            style={{ backgroundColor: 'var(--primary)' }}
+          >
+            <Plus size={15} />
+            <span>Add Courier Partner</span>
+          </button>
         </div>
       </div>
 

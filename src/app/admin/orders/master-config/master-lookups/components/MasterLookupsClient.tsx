@@ -6,7 +6,6 @@ import {
   ChevronLeft, ChevronRight, CheckCircle2, XCircle, 
   Layers, Code2, Tag, ShieldAlert, Table, ListFilter
 } from 'lucide-react';
-import AdminLayout from '@/app/admin/components/AdminLayout';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 
@@ -324,96 +323,75 @@ export default function MasterLookupsClient() {
   };
 
   return (
-    <AdminLayout>
-      <div className="p-4 md:p-6 space-y-6 w-full">
-
-        {/* Top Banner matching admin/products/brand */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-              <Database size={14} />
-              <span>Orders / Master Configuration</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-850 dark:text-white tracking-tight flex items-center gap-2.5">
-              <Code2 className="text-blue-600 dark:text-blue-400" size={26} />
-              Master Code Lookups
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-3xl">
-              Centralized master dictionary for order sources, pricing rules, reshipment reasons, timeline tracking actions, validation errors, and execution statuses.
-            </p>
+    <div className="space-y-6 pb-12 w-full">
+      {/* Compact Master Category Selector Bar */}
+      <div className="bg-white dark:bg-slate-900 p-3 px-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+        
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+            <ListFilter size={15} className="text-blue-600 dark:text-blue-400" />
+            <span>Select Category:</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => fetchLookupData(selectedCategory)}
-              disabled={loading}
-              className="p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-2xs"
-              title="Refresh Current Lookup"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin text-blue-600' : ''} />
-            </button>
+          {/* Category Dropdown Select */}
+          <select
+            value={selectedCategory.id}
+            onChange={(e) => {
+              const found = LOOKUP_CATEGORIES.find((c) => c.id === e.target.value);
+              if (found) setSelectedCategory(found);
+            }}
+            className="w-full md:w-64 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-xs font-bold text-blue-700 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            {LOOKUP_CATEGORIES.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
 
-            <button
-              type="button"
-              onClick={handleExportExcel}
-              disabled={exporting || filteredData.length === 0}
-              className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition-all duration-150 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
-            >
-              <Download size={15} />
-              <span>Export {selectedCategory.name} Excel</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => fetchLookupData(selectedCategory)}
+            disabled={loading}
+            className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer"
+            title="Refresh Current Lookup"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin text-blue-600' : ''} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={exporting || filteredData.length === 0}
+            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all duration-150 flex items-center gap-1.5 hover:scale-[1.02] disabled:opacity-50 cursor-pointer"
+          >
+            <Download size={14} />
+            <span>Export {selectedCategory.name} Excel</span>
+          </button>
         </div>
 
-        {/* Compact Master Category Selector Bar */}
-        <div className="bg-white dark:bg-slate-900 p-3 px-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
-          
-          <div className="flex items-center gap-2.5 w-full md:w-auto">
-            <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
-              <ListFilter size={15} className="text-blue-600 dark:text-blue-400" />
-              <span>Select Category:</span>
-            </div>
-
-            {/* Category Dropdown Select */}
-            <select
-              value={selectedCategory.id}
-              onChange={(e) => {
-                const found = LOOKUP_CATEGORIES.find((c) => c.id === e.target.value);
-                if (found) setSelectedCategory(found);
-              }}
-              className="w-full md:w-64 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-xs font-bold text-blue-700 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              {LOOKUP_CATEGORIES.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Quick horizontal scrollable pill tabs for fast 1-click switching */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full max-w-full md:max-w-2xl py-0.5 no-scrollbar">
-            {LOOKUP_CATEGORIES.map((cat) => {
-              const isSelected = selectedCategory.id === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50'
-                  }`}
-                >
-                  <span>{cat.name}</span>
-                </button>
-              );
-            })}
-          </div>
-
+        {/* Quick horizontal scrollable pill tabs for fast 1-click switching */}
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full max-w-full md:max-w-xl py-0.5 no-scrollbar">
+          {LOOKUP_CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory.id === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50'
+                }`}
+              >
+                <span>{cat.name}</span>
+              </button>
+            );
+          })}
         </div>
+
+      </div>
 
         {/* Filter & Search Bar */}
         <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
@@ -567,7 +545,6 @@ export default function MasterLookupsClient() {
           )}
         </div>
 
-      </div>
-    </AdminLayout>
+    </div>
   );
 }

@@ -27,18 +27,45 @@ export const Step2ReviewCount: React.FC<Step2ReviewCountProps> = ({
 
   return (
     <div className="w-full space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
-          <FileCheck className="h-5 w-5" />
+      {/* Header with Action Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+            <FileCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Parsed Order Record Summary
+            </h2>
+            <p className="text-xs text-slate-500">
+              Batch #{batchId} parsing counts and initial validation check
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">
-            Parsed Order Record Summary
-          </h2>
-          <p className="text-xs text-slate-500">
-            Batch #{batchId} parsing counts and initial validation check
-          </p>
+
+        {/* Action Controls at End of Header */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onAbort}
+            className="rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-all cursor-pointer"
+          >
+            Save (&) Exit
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAbortModal(true)}
+            className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-600 shadow-2xs hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-400 transition-all cursor-pointer"
+          >
+            Abort
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            className="rounded-xl bg-blue-600 px-4 py-1.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition-all cursor-pointer"
+          >
+            Next
+          </button>
         </div>
       </div>
 
@@ -82,14 +109,28 @@ export const Step2ReviewCount: React.FC<Step2ReviewCountProps> = ({
         <div className="min-h-[50px] rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
           {failRowsList.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
-              {failRowsList.map((f: any, idx: number) => (
-                <span
-                  key={idx}
-                  className="rounded bg-red-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-red-700 dark:bg-red-950 dark:text-red-300"
-                >
-                  Row #{f.rowNumber || f}
-                </span>
-              ))}
+              {failRowsList.map((f: any, idx: number) => {
+                const rowNum = typeof f === 'object' && f !== null 
+                  ? (f.rowNo ?? f.rowNumber ?? f.row_no ?? f.row ?? idx + 1) 
+                  : f;
+                const reasonText = typeof f === 'object' && f !== null 
+                  ? (f.reason ?? f.message ?? f.errorMessage ?? f.error ?? '') 
+                  : '';
+
+                const rowNumDisplay = typeof rowNum === 'object' && rowNum !== null ? JSON.stringify(rowNum) : String(rowNum);
+                const reasonDisplay = typeof reasonText === 'object' && reasonText !== null ? JSON.stringify(reasonText) : String(reasonText);
+
+                return (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-red-700 dark:bg-red-950 dark:text-red-300 border border-red-200 dark:border-red-900"
+                    title={reasonDisplay || undefined}
+                  >
+                    <span>Row #{rowNumDisplay}</span>
+                    {reasonDisplay ? <span className="font-normal opacity-90">({reasonDisplay})</span> : null}
+                  </span>
+                );
+              })}
             </div>
           ) : (
             <span className="text-slate-400 italic">No parsing row failures detected. All rows imported successfully.</span>

@@ -37,7 +37,7 @@ function StyledInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full h-9 px-3 text-sm bg-white dark:bg-slate-950 border border-slate-400 dark:border-slate-650 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-955 dark:text-white font-medium placeholder:text-slate-500 ${props.className ?? ''}`}
+      className={`w-full h-9 px-3 text-sm bg-white dark:bg-slate-950 border border-slate-400 dark:border-slate-650 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-slate-955 dark:text-white font-medium placeholder:text-slate-500 ${props.className ?? ''}`}
     />
   );
 }
@@ -47,7 +47,7 @@ function StyledSelect({ children, ...props }: React.SelectHTMLAttributes<HTMLSel
     <div className="relative">
       <select
         {...props}
-        className="w-full h-9 px-3 pr-8 text-sm bg-white dark:bg-slate-950 border border-slate-400 dark:border-slate-650 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-955 dark:text-white font-medium appearance-none"
+        className="w-full h-9 px-3 pr-8 text-sm bg-white dark:bg-slate-950 border border-slate-400 dark:border-slate-650 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-slate-955 dark:text-white font-medium appearance-none"
       >
         {children}
       </select>
@@ -855,8 +855,8 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
     set('comboProducts', data.comboProducts.map((c) => c.componentProductId === id ? { ...c, quantity: qty } : c));
   };
 
-  const inputCls = 'w-full h-9 px-3 text-sm bg-white dark:bg-slate-955 border border-slate-400 dark:border-slate-650 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-955 dark:text-white font-medium placeholder:text-slate-500';
-  const toggleCls = (active: boolean) => `relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${active ? 'bg-indigo-600' : 'bg-slate-400 dark:bg-slate-600'}`;
+  const inputCls = 'w-full h-9 px-3 text-sm bg-white dark:bg-slate-955 border border-slate-400 dark:border-slate-655 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-slate-955 dark:text-white font-medium placeholder:text-slate-500';
+  const toggleCls = (active: boolean) => `relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${active ? 'bg-[var(--primary)]' : 'bg-slate-400 dark:bg-slate-600'}`;
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
@@ -867,7 +867,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
           <select
             value={data.productType}
             onChange={(e) => set('productType', e.target.value as 'simple' | 'grouped')}
-            className="h-8 pl-3 pr-8 text-sm bg-white dark:bg-slate-955 border border-slate-400 dark:border-slate-650 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-955 dark:text-white font-medium appearance-none"
+            className="h-8 pl-3 pr-8 text-sm bg-white dark:bg-slate-955 border border-slate-400 dark:border-slate-655 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-slate-955 dark:text-white font-medium appearance-none"
           >
             <option value="simple">Single product</option>
             <option value="grouped">Combo product</option>
@@ -895,10 +895,10 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-300 dark:border-slate-700 last:border-b-0 ${activeTab === tab.id
-                  ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-r-2 border-r-indigo-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-[var(--primary-light-bg)] text-[var(--primary)] border-r-2 border-r-[var(--primary)]' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
             >
-              <span className={activeTab === tab.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}>{tab.icon}</span>
+              <span className={activeTab === tab.id ? 'text-[var(--primary)]' : 'text-slate-400'}>{tab.icon}</span>
               <div>
                 <div className="text-xs font-semibold">{tab.label}</div>
                 <div className="text-[10px] text-slate-400 mt-0.5">{tab.desc}</div>
@@ -951,7 +951,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
                     getId={(h) => String(h.id)}
                     placeholder="Select HSN Code"
                   />
-                  <button type="button" onClick={() => setShowHsnCreate(true)} className="flex items-center justify-center p-2 h-9 w-9 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex-shrink-0">
+                  <button type="button" onClick={() => setShowHsnCreate(true)} className="flex items-center justify-center p-2 h-9 w-9 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors flex-shrink-0">
                     <Plus size={16} />
                   </button>
                 </div>
@@ -988,7 +988,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
                         });
                         setShowSkuModal(true);
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
                     >
                       <Plus size={14} /> Add SKU
                     </button>
@@ -1208,7 +1208,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
             <div>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-slate-600 dark:text-slate-400">Add products to this combo bundle</p>
-                <button type="button" onClick={() => setShowComboModal(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                <button type="button" onClick={() => setShowComboModal(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors">
                   <Plus size={13} /> Add Product
                 </button>
               </div>
@@ -1273,7 +1273,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
                     <button
                       type="button"
                       onClick={() => setShowAlternateModal(true)}
-                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors shadow-sm"
                     >
                       <Plus size={14} /> Add Alternate Product
                     </button>
@@ -1370,7 +1370,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
                     getId={(w) => w.warrantyCode}
                     placeholder="Select Warranty"
                   />
-                  <button type="button" onClick={() => setShowWarrantyCreate(true)} className="flex items-center gap-1 px-3 h-9 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                  <button type="button" onClick={() => setShowWarrantyCreate(true)} className="flex items-center gap-1 px-3 h-9 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors">
                     <Plus size={13} />
                   </button>
                 </div>
@@ -1386,7 +1386,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
                     getId={(h) => h.handlingCode}
                     placeholder="Select Handling Code"
                   />
-                  <button type="button" onClick={() => setShowHandlingCreate(true)} className="flex items-center gap-1 px-3 h-9 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                  <button type="button" onClick={() => setShowHandlingCreate(true)} className="flex items-center gap-1 px-3 h-9 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors">
                     <Plus size={13} />
                   </button>
                 </div>
@@ -1440,7 +1440,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
             </div>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
               <button type="button" onClick={() => setShowHsnCreate(false)} className="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
-              <button type="button" onClick={addHsn} className="px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Create</button>
+              <button type="button" onClick={addHsn} className="px-3 py-2 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors">Create</button>
             </div>
           </div>
         </div>
@@ -1461,7 +1461,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
             </div>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
               <button type="button" onClick={() => setShowWarrantyCreate(false)} className="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
-              <button type="button" onClick={addWarranty} className="px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Create</button>
+              <button type="button" onClick={addWarranty} className="px-3 py-2 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors">Create</button>
             </div>
           </div>
         </div>
@@ -1482,7 +1482,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
             </div>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
               <button type="button" onClick={() => setShowHandlingCreate(false)} className="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
-              <button type="button" onClick={addHandling} className="px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Create</button>
+              <button type="button" onClick={addHandling} className="px-3 py-2 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors">Create</button>
             </div>
           </div>
         </div>
@@ -1510,7 +1510,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
             </div>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
               <button type="button" onClick={() => setShowComboModal(false)} className="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
-              <button type="button" onClick={addComboProduct} className="px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Add</button>
+              <button type="button" onClick={addComboProduct} className="px-3 py-2 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors">Add</button>
             </div>
           </div>
         </div>
@@ -1558,7 +1558,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
                 type="button"
                 onClick={addAlternateProduct}
                 disabled={!alternateModalProductId}
-                className="px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add
               </button>
@@ -1637,7 +1637,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
                   id="isDefaultSku"
                   checked={skuForm.isDefault}
                   onChange={(e) => setSkuForm({ ...skuForm, isDefault: e.target.checked })}
-                  className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 bg-transparent"
+                  className="rounded border-slate-300 dark:border-slate-700 text-[var(--primary)] focus:ring-[var(--primary)] h-4 w-4 bg-transparent"
                 />
                 <label htmlFor="isDefaultSku" className="text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer select-none">
                   Set as Default SKU for this product
@@ -1655,7 +1655,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
               <button
                 type="button"
                 onClick={saveSku}
-                className="px-3 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                className="px-3 py-2 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors"
               >
                 {editingSkuId ? 'Save Changes' : 'Add SKU'}
               </button>

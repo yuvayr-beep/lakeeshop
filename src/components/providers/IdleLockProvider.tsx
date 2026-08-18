@@ -79,6 +79,10 @@ export default function IdleLockProvider({
   useEffect(() => {
     if (!isAuthenticated) {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(IS_LOCKED_KEY);
+        localStorage.removeItem('isLocked');
+      }
       return;
     }
 
@@ -135,6 +139,15 @@ export default function IdleLockProvider({
       }
     }, 10000);
 
+    // Global Keyboard Shortcut for manual locking (Alt + L)
+    const handleShortcutKeyDown = (e: KeyboardEvent) => {
+      const isLKey = e.key === 'l' || e.key === 'L' || e.code === 'KeyL';
+      if (isLKey && (e.altKey || ((e.ctrlKey || e.metaKey) && e.shiftKey))) {
+        e.preventDefault();
+        lockPortal();
+      }
+    };
+
     const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
 
     // Throttle user activity events (max 1 update per second to localStorage)
@@ -153,6 +166,7 @@ export default function IdleLockProvider({
       }
     };
 
+    window.addEventListener('keydown', handleShortcutKeyDown);
     events.forEach((evt) => {
       window.addEventListener(evt, handleUserActivity, { passive: true });
     });
@@ -162,6 +176,7 @@ export default function IdleLockProvider({
       clearInterval(intervalId);
       if (timerRef.current) clearTimeout(timerRef.current);
       if (throttleTimeout) clearTimeout(throttleTimeout);
+      window.removeEventListener('keydown', handleShortcutKeyDown);
       events.forEach((evt) => {
         window.removeEventListener(evt, handleUserActivity);
       });

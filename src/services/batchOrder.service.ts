@@ -31,8 +31,22 @@ export const batchOrderService = {
     return response.data;
   },
 
+  // Combine Online Orders by Client
+  combineOnlineOrders: async (clientId: number) => {
+    const url = `/order/batch/combine-online?clientId=${clientId}`;
+    const response = await axiosInstance.post(url, {});
+    return response.data;
+  },
+
   // 3. Get Batch List (NDJSON / JSON array)
-  getBatchList: async (params?: { startDate?: string; endDate?: string; clientId?: number | string }): Promise<BatchOrderItem[]> => {
+  getBatchList: async (params?: {
+    startDate?: string;
+    endDate?: string;
+    clientId?: number | string;
+    batchStatus?: number | string;
+    batchType?: number | string;
+    sourceId?: number | string;
+  }): Promise<BatchOrderItem[]> => {
     const today = new Date();
     const endDateStr = today.toISOString().split('T')[0];
     const pastDate = new Date();
@@ -46,6 +60,18 @@ export const batchOrderService = {
 
     if (params?.clientId && String(params.clientId) !== 'ALL') {
       queryParams.clientId = params.clientId;
+    }
+
+    if (params?.batchStatus !== undefined && String(params.batchStatus) !== 'ALL' && String(params.batchStatus) !== 'DEFAULT') {
+      queryParams.batchStatus = params.batchStatus;
+    }
+
+    if (params?.batchType) {
+      queryParams.batchType = params.batchType;
+    }
+
+    if (params?.sourceId) {
+      queryParams.sourceId = params.sourceId;
     }
 
     const response = await axiosInstance.get('/order/batch/list', {
@@ -111,11 +137,7 @@ export const batchOrderService = {
     return [];
   },
 
-  // 4. Combine Online API Orders into Batch
-  combineOnlineOrders: async (clientId: number) => {
-    const response = await axiosInstance.post(`/order/batch/combine-online?clientId=${clientId}`);
-    return response.data;
-  },
+
 
   // 5. Trigger Asynchronous Validation for Batch
   validateBatch: async (batchId: number) => {
@@ -175,13 +197,55 @@ export const batchOrderService = {
     return [];
   },
 
+  // 7b. Fetch Split Orders for Batch (NDJSON / JSON)
+  getSplitOrders: async (batchId: number): Promise<StagingErrorOrder[]> => {
+    const response = await axiosInstance.get(`/order/staging/split-orders`, {
+      params: { batchId },
+      headers: {
+        accept: 'application/x-ndjson, application/json, */*',
+      },
+      transformResponse: [(data) => data],
+    });
+
+    const rawData = response.data;
+    if (!rawData) return [];
+
+    if (typeof rawData === 'object' && Array.isArray(rawData)) {
+      return rawData;
+    }
+
+    if (typeof rawData === 'string') {
+      const trimmed = rawData.trim();
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          return JSON.parse(trimmed);
+        } catch {
+          // Fall through
+        }
+      }
+
+      const lines = trimmed.split('\n').filter((line) => line.trim().length > 0);
+      const records: StagingErrorOrder[] = [];
+
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line.trim());
+          if (parsed && typeof parsed === 'object') {
+            records.push(parsed);
+          }
+        } catch (e) {
+          console.warn('Failed to parse NDJSON line in split-orders:', line);
+        }
+      }
+      return records;
+    }
+
+    return [];
+  },
+
   // 6. Revalidate Batch (Triggers async re-validation engine)
   revalidateBatch: async (batchId: number) => {
-    console.log('=== [API CALL] REVALIDATE BATCH ===');
-    console.log(`POST /order/staging/validate/${batchId}`);
-    console.log('===================================');
     const response = await axiosInstance.post(`/order/staging/validate/${batchId}`, {});
-    console.log('=== [API RESPONSE] REVALIDATE BATCH ===', response.data);
     return response.data;
   },
 
@@ -193,22 +257,13 @@ export const batchOrderService = {
 
   // 8. Revalidate Single Staging Row (Synchronous)
   revalidateStagingRow: async (stagingId: number) => {
-    console.log('=== [API CALL] REVALIDATE STAGING ROW ===');
-    console.log(`POST /order/staging/revalidate/${stagingId}`);
-    console.log('=========================================');
     const response = await axiosInstance.post(`/order/staging/revalidate/${stagingId}`, {});
-    console.log('=== [API RESPONSE] REVALIDATE STAGING ROW ===', response.data);
     return response.data;
   },
 
   // 9. Update Incorrect Staging Row Data
   updateStagingRow: async (stagingId: number, data: Partial<StagingErrorOrder>) => {
-    console.log('=== [API CALL] UPDATE STAGING ROW ===');
-    console.log(`PUT /order/staging/${stagingId}`);
-    console.log('Payload Data:', JSON.stringify(data, null, 2));
-    console.log('======================================');
     const response = await axiosInstance.put(`/order/staging/${stagingId}`, data);
-    console.log('=== [API RESPONSE] UPDATE STAGING ROW ===', response.data);
     return response.data;
   },
 
@@ -264,34 +319,107 @@ export const batchOrderService = {
 
   // 12. Download Batch Orders File by Count Type (ALL, PASS, WARN, FAIL)
   downloadBatchOrders: async (batchId: number, type: 'ALL' | 'PASS' | 'WARN' | 'FAIL', batchNo?: string) => {
+    return batchOrderService.downloadMultipleBatches([batchId], type, `${batchNo || `batch_${batchId}`}_${type.toLowerCase()}.xlsx`);
+  },
+
+  // 13. Download Multiple Selected Batches (Unified Excel)
+  downloadMultipleBatches: async (batchIds: (number | string)[], type: string = 'ALL', defaultFileName?: string) => {
+    try {
+      const payload = {
+        batchIds,
+        type,
+      };
+
+      const response = await axiosInstance.post(
+        '/order/batch/download',
+        payload,
+        {
+          responseType: 'blob',
+          headers: {
+            'Content-Type': 'application/json',
+            accept: '*/*',
+          },
+        }
+      );
+
+      if (response.data instanceof Blob && response.data.type?.includes('json')) {
+        const text = await response.data.text();
+        try {
+          const errObj = JSON.parse(text);
+          if (errObj.message || errObj.error) {
+            throw new Error(errObj.message || errObj.error);
+          }
+        } catch (pErr: any) {
+          if (pErr.message && !pErr.message.includes('JSON')) throw pErr;
+        }
+      }
+
+      let fileName = defaultFileName || `orders_download_${Date.now()}.xlsx`;
+      const contentDisposition = response.headers?.['content-disposition'] ? String(response.headers['content-disposition']) : '';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+          fileName = filenameMatch[1];
+        }
+      }
+
+      const contentType = response.headers?.['content-type'] ? String(response.headers['content-type']) : 'application/octet-stream';
+      const blob = new Blob([response.data], {
+        type: contentType,
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      if (err.response?.data instanceof Blob) {
+        const text = await err.response.data.text();
+        try {
+          const errObj = JSON.parse(text);
+          throw new Error(errObj.message || errObj.error || 'Failed to download batch report Excel file.');
+        } catch {
+          // Fall through
+        }
+      }
+      throw err;
+    }
+  },
+
+  // 14. Initiate Async Export Job (Old ERP Layout / Large Datasets)
+  initiateExportJob: async (batchIds: number[], type: string = 'ALL') => {
     const response = await axiosInstance.post(
-      '/order/batch/download',
+      '/order/batch/export/order-details',
       {
-        batchIds: [batchId],
+        batchIds,
         type,
       },
       {
-        responseType: 'blob',
         headers: {
           'Content-Type': 'application/json',
-          accept: '*/*',
         },
       }
     );
+    return response.data; // { jobId: string, status: string, message?: string }
+  },
 
-    let fileName = `${batchNo || `batch_${batchId}`}_${type.toLowerCase()}.xlsx`;
-    const contentDisposition = response.headers?.['content-disposition'] ? String(response.headers['content-disposition']) : '';
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
-      if (filenameMatch && filenameMatch[1]) {
-        fileName = filenameMatch[1];
-      }
-    }
+  // 15. Poll Async Export Job Status
+  getExportJobStatus: async (jobId: string) => {
+    const response = await axiosInstance.get(`/order/batch/export/job/${jobId}`);
+    return response.data; // { jobId, status, totalRecords, processedRecords, progressPercentage, fileName }
+  },
+
+  // 16. Download Finalized Async Export File
+  downloadExportFile: async (fileName: string) => {
+    const response = await axiosInstance.get(`/order/batch/download/file/${fileName}`, {
+      responseType: 'blob',
+    });
 
     const contentType = response.headers?.['content-type'] ? String(response.headers['content-type']) : 'application/octet-stream';
-    const blob = new Blob([response.data], {
-      type: contentType,
-    });
+    const blob = new Blob([response.data], { type: contentType });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
