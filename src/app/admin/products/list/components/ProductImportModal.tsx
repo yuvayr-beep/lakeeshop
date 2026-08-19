@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Upload, Download, FileText, Check, AlertCircle, RefreshCw, CheckSquare, Square, Info } from 'lucide-react';
+import { X, Upload, Download, FileText, Check, AlertCircle, RefreshCw, CheckSquare, Square, Info, Search } from 'lucide-react';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 
@@ -65,6 +65,7 @@ export default function ProductImportModal({
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [prepopulateType, setPrepopulateType] = useState<'with-data' | 'without-data'>('with-data');
   const [skuInputText, setSkuInputText] = useState('');
+  const [fieldSearchQuery, setFieldSearchQuery] = useState('');
 
   useEffect(() => {
     setMode(initialMode);
@@ -72,6 +73,7 @@ export default function ProductImportModal({
     setResults(null);
     setPrepopulateType('with-data');
     setSkuInputText('');
+    setFieldSearchQuery('');
   }, [initialMode, open]);
 
   // Fetch customizable fields when switching to 'edit' mode
@@ -102,6 +104,10 @@ export default function ProductImportModal({
 
   if (!open) return null;
 
+  const filteredFields = fields.filter((f) =>
+    f.toLowerCase().includes(fieldSearchQuery.toLowerCase().trim())
+  );
+
   // Toggle field selection
   const toggleField = (field: string) => {
     setSelectedFields((prev) =>
@@ -109,8 +115,21 @@ export default function ProductImportModal({
     );
   };
 
-  const selectAllFields = () => setSelectedFields(fields);
-  const selectNoFields = () => setSelectedFields([]);
+  const selectAllFields = () => {
+    if (fieldSearchQuery.trim()) {
+      setSelectedFields((prev) => Array.from(new Set([...prev, ...filteredFields])));
+    } else {
+      setSelectedFields(fields);
+    }
+  };
+
+  const selectNoFields = () => {
+    if (fieldSearchQuery.trim()) {
+      setSelectedFields((prev) => prev.filter((f) => !filteredFields.includes(f)));
+    } else {
+      setSelectedFields([]);
+    }
+  };
 
   // Drag & drop handlers
   const handleDrag = (e: React.DragEvent) => {
@@ -422,57 +441,83 @@ export default function ProductImportModal({
                 </div>
 
                 <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-3">
-                  <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Select Fields to Edit ({selectedFields.length} of {fields.length})
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={selectAllFields}
-                      className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      Select All
-                    </button>
-                    <span className="text-slate-300">|</span>
-                    <button
-                      type="button"
-                      onClick={selectNoFields}
-                      className="text-[10px] font-bold text-slate-500 hover:underline"
-                    >
-                      Deselect All
-                    </button>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Select Fields to Edit ({selectedFields.length} of {fields.length})
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAllFields}
+                        className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        Select All {fieldSearchQuery.trim() ? 'Filtered' : ''}
+                      </button>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={selectNoFields}
+                        className="text-[10px] font-bold text-slate-500 hover:underline"
+                      >
+                        Deselect All {fieldSearchQuery.trim() ? 'Filtered' : ''}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {loadingFields ? (
-                  <div className="py-8 flex justify-center text-slate-400 text-xs gap-1.5 items-center">
-                    <RefreshCw size={14} className="animate-spin" />
-                    <span>Loading available fields...</span>
+                  {/* Search Input Box */}
+                  <div className="relative flex-shrink-0">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={fieldSearchQuery}
+                      onChange={(e) => setFieldSearchQuery(e.target.value)}
+                      placeholder="Search fields (e.g. name, brand, price, hsn)..."
+                      className="w-full pl-9 pr-8 py-1.5 text-xs border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 rounded-lg focus:ring-2 focus:ring-blue-500/25 focus:border-blue-550 outline-none transition-all"
+                    />
+                    {fieldSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setFieldSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[160px] overflow-y-auto scrollbar-thin pr-1 text-slate-750 dark:text-slate-300">
-                    {fields.map((field) => {
-                      const isSelected = selectedFields.includes(field);
-                      return (
-                        <button
-                          key={field}
-                          type="button"
-                          onClick={() => toggleField(field)}
-                          className="flex items-center gap-1.5 text-left p-1 hover:bg-slate-50 dark:hover:bg-slate-850 rounded text-[11px] font-medium"
-                        >
-                          {isSelected ? (
-                            <CheckSquare size={13} className="text-blue-600 flex-shrink-0" />
-                          ) : (
-                            <Square size={13} className="text-slate-400 flex-shrink-0" />
-                          )}
-                          <span className="truncate">{field}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+
+                  {loadingFields ? (
+                    <div className="py-8 flex justify-center text-slate-400 text-xs gap-1.5 items-center">
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>Loading available fields...</span>
+                    </div>
+                  ) : filteredFields.length === 0 ? (
+                    <div className="py-6 flex flex-col items-center justify-center text-slate-400 text-xs text-center">
+                      <Info size={18} className="mb-1 text-slate-300 dark:text-slate-600" />
+                      <span>No fields matching &quot;{fieldSearchQuery}&quot;</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[160px] overflow-y-auto scrollbar-thin pr-1 text-slate-750 dark:text-slate-300">
+                      {filteredFields.map((field) => {
+                        const isSelected = selectedFields.includes(field);
+                        return (
+                          <button
+                            key={field}
+                            type="button"
+                            onClick={() => toggleField(field)}
+                            className="flex items-center gap-1.5 text-left p-1 hover:bg-slate-50 dark:hover:bg-slate-850 rounded text-[11px] font-medium transition-colors"
+                          >
+                            {isSelected ? (
+                              <CheckSquare size={13} className="text-blue-600 flex-shrink-0" />
+                            ) : (
+                              <Square size={13} className="text-slate-400 flex-shrink-0" />
+                            )}
+                            <span className="truncate">{field}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
             </div>
             )}
 
