@@ -323,7 +323,7 @@ export default function ProductExportModal({
                     ) : (
                       <Download size={13} />
                     )}
-                    {downloading ? 'Generating...' : 'Download Template'}
+                    {downloading ? 'Generating...' : 'Download Excel'}
                   </button>
                 </div>
               </div>
