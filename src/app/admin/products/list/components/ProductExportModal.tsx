@@ -153,9 +153,13 @@ export default function ProductExportModal({
       if (fetchUrl.startsWith('https://v2.lakeetech.com')) {
         fetchUrl = fetchUrl.replace('https://v2.lakeetech.com', '');
       }
+      if (fetchUrl.startsWith('/api/proxy')) {
+        fetchUrl = fetchUrl.replace('/api/proxy', '');
+      }
 
       const response = await axiosInstance.get(fetchUrl, {
         responseType: 'blob',
+        timeout: 600000, // 10 minutes timeout to prevent Network Error on large files
         headers: {
           Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, */*'
         }
@@ -199,8 +203,24 @@ export default function ProductExportModal({
         onResetExportAll();
       }
     } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || 'Failed to download Excel file', { id: toastId });
+      console.warn('Blob stream failed, attempting direct download fallback:', err);
+      try {
+        let directUrl = exportDownloadUrl;
+        if (!directUrl.startsWith('http')) {
+          directUrl = `https://v2.lakeetech.com${directUrl.replace(/^\/api\/proxy/, '')}`;
+        }
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
+        if (token && !directUrl.includes('token=')) {
+          directUrl += (directUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
+        }
+        window.open(directUrl, '_blank');
+        toast.success('Excel download initiated!', { id: toastId });
+        if (onResetExportAll) {
+          onResetExportAll();
+        }
+      } catch (fallbackErr: any) {
+        toast.error(err.response?.data?.message || err.message || 'Failed to download Excel file', { id: toastId });
+      }
     } finally {
       setDownloading(false);
     }
