@@ -47,9 +47,9 @@ export default function ProductCreateScreen() {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [activeSection, setActiveSection] = useState('identity');
   const [loading, setLoading] = useState(false);
-  const [categoryId, setCategoryId] = useState('1');
-  const [brandId, setBrandId] = useState('1');
-  const [productTypeId, setProductTypeId] = useState('1');
+  const [categoryId, setCategoryId] = useState('');
+  const [brandId, setBrandId] = useState('');
+  const [productTypeId, setProductTypeId] = useState('');
   const [productData, setProductData] = useState<ProductDataState>(defaultProductDataState);
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
