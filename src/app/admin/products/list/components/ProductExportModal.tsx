@@ -144,6 +144,68 @@ export default function ProductExportModal({
     }
   };
 
+  const handleDownloadExportFile = async () => {
+    if (!exportDownloadUrl) return;
+    setDownloading(true);
+    const toastId = toast.loading('Downloading Excel file...');
+    try {
+      let fetchUrl = exportDownloadUrl;
+      if (fetchUrl.startsWith('https://v2.lakeetech.com')) {
+        fetchUrl = fetchUrl.replace('https://v2.lakeetech.com', '');
+      }
+
+      const response = await axiosInstance.get(fetchUrl, {
+        responseType: 'blob',
+        headers: {
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, */*'
+        }
+      });
+
+      if (response.data?.type && response.data.type.includes('application/json')) {
+        const text = await response.data.text();
+        const errJson = JSON.parse(text);
+        throw new Error(errJson.message || 'Failed to download export file.');
+      }
+
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      if (blob.size === 0) {
+        throw new Error('Downloaded file is empty (0 bytes).');
+      }
+
+      let filename = `all_products_export_${Date.now()}.xlsx`;
+      const contentDisposition = response.headers?.['content-disposition'] ? String(response.headers['content-disposition']) : '';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+
+      toast.success('Excel file downloaded successfully!', { id: toastId });
+
+      if (onResetExportAll) {
+        onResetExportAll();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to download Excel file', { id: toastId });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -254,18 +316,16 @@ export default function ProductExportModal({
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (exportDownloadUrl) {
-                            window.open(exportDownloadUrl, '_blank');
-                            if (onResetExportAll) {
-                              onResetExportAll();
-                            }
-                          }
-                        }}
-                        className="w-full flex items-center justify-center gap-1.5 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 animate-in fade-in"
+                        onClick={handleDownloadExportFile}
+                        disabled={downloading}
+                        className="w-full flex items-center justify-center gap-1.5 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 animate-in fade-in"
                       >
-                        <Download size={14} />
-                        Download Excel
+                        {downloading ? (
+                          <RefreshCw size={14} className="animate-spin" />
+                        ) : (
+                          <Download size={14} />
+                        )}
+                        {downloading ? 'Downloading...' : 'Download Excel'}
                       </button>
                     </div>
                   ) : (

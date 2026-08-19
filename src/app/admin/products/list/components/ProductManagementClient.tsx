@@ -551,10 +551,14 @@ export default function ProductManagementClient() {
     const updateFromJob = (data: ExportJobStatus) => {
       setExportJobId(data.jobId);
       setExportStatus(data.status || '');
-      setExportProgress(data.percentComplete ?? 0);
+      setExportProgress(data.percentComplete ?? (data.status === 'COMPLETED' ? 100 : 0));
       setExportTotalRecords(data.totalRecords ?? null);
       setExportProcessedRecords(data.processedRecords ?? null);
-      if (data.downloadUrl) setExportDownloadUrl(data.downloadUrl);
+
+      const effectiveUrl = data.downloadUrl || (data.status === 'COMPLETED' ? `/prod/products/export/job/${data.jobId}/download` : null);
+      if (effectiveUrl) {
+        setExportDownloadUrl(effectiveUrl);
+      }
     };
 
     try {
