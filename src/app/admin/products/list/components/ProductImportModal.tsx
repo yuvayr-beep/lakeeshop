@@ -231,7 +231,8 @@ export default function ProductImportModal({
         headers: {
           'Content-Type': 'multipart/form-data',
           Accept: 'application/x-ndjson'
-        }
+        },
+        timeout: 600000 // 10 minutes timeout for large batch uploads (e.g., 21,000 records)
       });
 
       // Parse ndjson or JSON response
