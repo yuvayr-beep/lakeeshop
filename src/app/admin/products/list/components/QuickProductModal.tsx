@@ -86,8 +86,10 @@ function SearchSelect<T>({
   useEffect(() => {
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      setOpenUpward(spaceBelow < 260);
+      const modalFooter = containerRef.current.closest('.max-w-6xl')?.querySelector('.border-t');
+      const bottomBoundary = modalFooter ? modalFooter.getBoundingClientRect().top : window.innerHeight;
+      const spaceBelow = bottomBoundary - rect.bottom;
+      setOpenUpward(spaceBelow < 220);
     }
   }, [isOpen]);
 
@@ -98,7 +100,7 @@ function SearchSelect<T>({
   );
 
   return (
-    <div className="relative flex-1" ref={containerRef}>
+    <div className={`relative flex-1 ${isOpen ? 'z-50' : 'z-1'}`} ref={containerRef}>
       <button
         type="button"
         onClick={() => {
@@ -114,8 +116,8 @@ function SearchSelect<T>({
       </button>
 
       {isOpen && (
-        <div className={`absolute z-50 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-hidden flex flex-col ${
-          openUpward ? 'bottom-full mb-1' : 'mt-1'
+        <div className={`absolute z-50 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-56 overflow-hidden flex flex-col ${
+          openUpward ? 'bottom-full mb-1' : 'top-full mt-1'
         }`}>
           <div className="p-2 border-b border-slate-100 dark:border-slate-800">
             <input
@@ -770,7 +772,7 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
             <div className="grid grid-cols-1 md:grid-cols-2 w-full">
               
               {/* Left Div - Fields */}
-              <div className="p-6 space-y-5 border-r border-slate-200 dark:border-slate-800 overflow-y-auto max-h-[70vh]">
+              <div className="p-6 pb-36 space-y-5 border-r border-slate-200 dark:border-slate-800 overflow-y-auto max-h-[70vh]">
                 
                 {/* 1. Product Name */}
                 <div>
