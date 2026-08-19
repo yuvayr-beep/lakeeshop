@@ -145,47 +145,81 @@ export default function ProductExportModal({
   };
 
   const handleDownloadExportFile = async () => {
-    if (!exportDownloadUrl) return;
     setDownloading(true);
-    const toastId = toast.loading('Downloading Excel file...');
+    const toastId = toast.loading('Downloading full product catalog Excel...');
     try {
-      let fetchUrl = exportDownloadUrl;
-      if (fetchUrl.startsWith('https://v2.lakeetech.com')) {
-        fetchUrl = fetchUrl.replace('https://v2.lakeetech.com', '');
-      }
-      if (fetchUrl.startsWith('/api/proxy')) {
-        fetchUrl = fetchUrl.replace('/api/proxy', '');
-      }
-
-      const response = await axiosInstance.get(fetchUrl, {
-        responseType: 'blob',
-        timeout: 600000, // 10 minutes timeout to prevent Network Error on large files
-        headers: {
-          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, */*'
-        }
-      });
-
-      if (response.data?.type && response.data.type.includes('application/json')) {
-        const text = await response.data.text();
-        const errJson = JSON.parse(text);
-        throw new Error(errJson.message || 'Failed to download export file.');
-      }
-
-      const blob = new Blob([response.data], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      });
-
-      if (blob.size === 0) {
-        throw new Error('Downloaded file is empty (0 bytes).');
-      }
-
+      let blob: Blob | null = null;
       let filename = `all_products_export_${Date.now()}.xlsx`;
-      const contentDisposition = response.headers?.['content-disposition'] ? String(response.headers['content-disposition']) : '';
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^";]+)"?/);
-        if (match && match[1]) {
-          filename = match[1];
+
+      // 1. If exportDownloadUrl exists, try streaming from exportDownloadUrl first
+      if (exportDownloadUrl) {
+        try {
+          let fetchUrl = exportDownloadUrl;
+          if (fetchUrl.startsWith('https://v2.lakeetech.com')) {
+            fetchUrl = fetchUrl.replace('https://v2.lakeetech.com', '');
+          }
+          if (fetchUrl.startsWith('/api/proxy')) {
+            fetchUrl = fetchUrl.replace('/api/proxy', '');
+          }
+
+          const response = await axiosInstance.get(fetchUrl, {
+            responseType: 'blob',
+            timeout: 600000,
+            headers: {
+              Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream, */*'
+            }
+          });
+
+          if (response.data && response.data.size > 500) {
+            blob = new Blob([response.data], {
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            const contentDisposition = response.headers?.['content-disposition'] ? String(response.headers['content-disposition']) : '';
+            if (contentDisposition) {
+              const match = contentDisposition.match(/filename="?([^";]+)"?/);
+              if (match && match[1]) {
+                filename = match[1];
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('exportDownloadUrl stream failed, falling back to prepopulated template:', err);
         }
+      }
+
+      // 2. Fallback: If blob is null or <= 500 bytes (empty template), request prepopulated catalog Excel via edit-template
+      if (!blob || blob.size <= 500) {
+        let exportFields = fields;
+        if (!exportFields || exportFields.length === 0) {
+          const fieldsRes = await axiosInstance.get('/prod/products/edit-fields');
+          if (fieldsRes.data?.success && Array.isArray(fieldsRes.data?.data)) {
+            exportFields = fieldsRes.data.data;
+          }
+        }
+
+        const payload = {
+          fields: exportFields.length > 0 ? exportFields : [],
+          prepopulateAll: true,
+          skus: [""],
+          clientId: 0
+        };
+
+        const response = await axiosInstance.post('/prod/products/edit-template', payload, {
+          responseType: 'blob',
+          timeout: 600000,
+          headers: {
+            Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        blob = new Blob([response.data], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+      }
+
+      if (!blob || blob.size === 0) {
+        throw new Error('Downloaded file is empty (0 bytes).');
       }
 
       const blobUrl = URL.createObjectURL(blob);
@@ -197,30 +231,14 @@ export default function ProductExportModal({
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
 
-      toast.success('Excel file downloaded successfully!', { id: toastId });
+      toast.success('Excel catalog downloaded successfully with full product data!', { id: toastId });
 
       if (onResetExportAll) {
         onResetExportAll();
       }
     } catch (err: any) {
-      console.warn('Blob stream failed, attempting direct download fallback:', err);
-      try {
-        let directUrl = exportDownloadUrl;
-        if (!directUrl.startsWith('http')) {
-          directUrl = `https://v2.lakeetech.com${directUrl.replace(/^\/api\/proxy/, '')}`;
-        }
-        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-        if (token && !directUrl.includes('token=')) {
-          directUrl += (directUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
-        }
-        window.open(directUrl, '_blank');
-        toast.success('Excel download initiated!', { id: toastId });
-        if (onResetExportAll) {
-          onResetExportAll();
-        }
-      } catch (fallbackErr: any) {
-        toast.error(err.response?.data?.message || err.message || 'Failed to download Excel file', { id: toastId });
-      }
+      console.error(err);
+      toast.error(err.message || 'Failed to download Excel catalog', { id: toastId });
     } finally {
       setDownloading(false);
     }
