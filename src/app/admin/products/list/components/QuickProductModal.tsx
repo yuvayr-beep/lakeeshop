@@ -910,8 +910,8 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
                         value={selectedProductTypeId}
                         onChange={setSelectedProductTypeId}
                         items={productTypeList}
-                        getLabel={(t) => t.productTypeName || (t as any).typeName || (t as any).name || ''}
-                        getSearchString={(t) => t.productTypeName || (t as any).typeName || (t as any).name || ''}
+                        getLabel={(t) => (t as any).productTypeName || t.displayName || t.code || ''}
+                        getSearchString={(t) => `${(t as any).productTypeName || t.displayName || ''} ${t.code || ''}`}
                         getId={(t) => String(t.productTypeId ?? (t as any).id ?? (t as any).product_type_id ?? '')}
                         placeholder="Select Product Type"
                       />
