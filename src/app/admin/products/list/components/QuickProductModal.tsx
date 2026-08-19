@@ -321,19 +321,41 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
 
   // Parse NDJSON helper
   const parseNdjson = (rawData: any) => {
+    if (!rawData) return [];
+    if (typeof rawData === 'object') {
+      if (Array.isArray(rawData)) return rawData;
+      if (Array.isArray(rawData.data)) return rawData.data;
+    }
     if (typeof rawData === 'string') {
+      const trimmed = rawData.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed.data)) return parsed.data;
+          if (Array.isArray(parsed)) return [parsed];
+        } catch {}
+      }
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          return JSON.parse(trimmed);
+        } catch {}
+      }
       const parsed: any[] = [];
-      rawData.split('\n').forEach((line) => {
+      trimmed.split(/\r?\n/).forEach((line) => {
         if (line.trim()) {
           try {
-            parsed.push(JSON.parse(line));
+            const json = JSON.parse(line.trim());
+            if (json && typeof json === 'object') {
+              if (Array.isArray(json.data)) {
+                parsed.push(...json.data);
+              } else {
+                parsed.push(json);
+              }
+            }
           } catch {}
         }
       });
       return parsed;
-    }
-    if (Array.isArray(rawData)) {
-      return rawData;
     }
     return [];
   };
@@ -350,7 +372,8 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
         const parsedHsn = parseNdjson(hsnRes.data);
         setHsnList(parsedHsn);
         if (parsedHsn.length > 0) {
-          setSelectedHsnId(String(parsedHsn[0].hsnId));
+          const firstHsnId = String(parsedHsn[0].hsnId ?? (parsedHsn[0] as any).id ?? (parsedHsn[0] as any).hsn_id ?? '');
+          setSelectedHsnId(firstHsnId);
         }
 
         // 2. Fetch Brands
@@ -358,7 +381,8 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
         const parsedBrands = parseNdjson(brandRes.data);
         setBrandList(parsedBrands);
         if (parsedBrands.length > 0) {
-          setSelectedBrandId(String(parsedBrands[0].brandId));
+          const firstBrandId = String(parsedBrands[0].brandId ?? (parsedBrands[0] as any).id ?? (parsedBrands[0] as any).brand_id ?? '');
+          setSelectedBrandId(firstBrandId);
         }
 
         // 3. Fetch Product Types
@@ -366,7 +390,8 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
         const parsedTypes = parseNdjson(typeRes.data);
         setProductTypeList(parsedTypes);
         if (parsedTypes.length > 0) {
-          setSelectedProductTypeId(String(parsedTypes[0].productTypeId));
+          const firstTypeId = String(parsedTypes[0].productTypeId ?? (parsedTypes[0] as any).id ?? (parsedTypes[0] as any).product_type_id ?? '');
+          setSelectedProductTypeId(firstTypeId);
         }
 
         // 4. Fetch Shipment Modes
@@ -473,9 +498,10 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
         effectiveFrom: newHsn.effectiveFrom
       };
       const response = await axiosInstance.post('/prod/hsn', payload);
-      const created = response.data;
+      const created = response.data?.data || response.data;
       setHsnList((prev) => [...prev, created]);
-      setSelectedHsnId(String(created.hsnId));
+      const newId = String(created.hsnId ?? (created as any).id ?? (created as any).hsn_id ?? '');
+      setSelectedHsnId(newId);
       setNewHsn({
         code: '',
         description: '',
@@ -818,9 +844,19 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
                       value={selectedHsnId}
                       onChange={setSelectedHsnId}
                       items={hsnList}
-                      getLabel={(h) => `${h.hsnCode} — ${h.taxPercentage}%`}
-                      getSearchString={(h) => `${h.hsnCode} ${h.description} ${h.taxPercentage}`}
-                      getId={(h) => String(h.hsnId)}
+                      getLabel={(h) => {
+                        const code = h.hsnCode || (h as any).code || (h as any).hsn_code || (h as any).hsn || '';
+                        const tax = h.taxPercentage ?? (h as any).gstRate ?? (h as any).tax_percentage ?? (h as any).tax ?? 0;
+                        const desc = h.description || (h as any).desc || '';
+                        return `${code}${desc ? ` — ${desc}` : ''} (${tax}%)`;
+                      }}
+                      getSearchString={(h) => {
+                        const code = h.hsnCode || (h as any).code || (h as any).hsn_code || (h as any).hsn || '';
+                        const tax = h.taxPercentage ?? (h as any).gstRate ?? (h as any).tax_percentage ?? (h as any).tax ?? 0;
+                        const desc = h.description || (h as any).desc || '';
+                        return `${code} ${desc} ${tax}`;
+                      }}
+                      getId={(h) => String(h.hsnId ?? (h as any).id ?? (h as any).hsn_id ?? '')}
                       placeholder="Select HSN Code"
                     />
                     <button
@@ -847,9 +883,9 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
                         value={selectedBrandId}
                         onChange={setSelectedBrandId}
                         items={brandList}
-                        getLabel={(b) => b.brandName}
-                        getSearchString={(b) => b.brandName}
-                        getId={(b) => String(b.brandId)}
+                        getLabel={(b) => b.brandName || (b as any).name || (b as any).brand_name || ''}
+                        getSearchString={(b) => b.brandName || (b as any).name || (b as any).brand_name || ''}
+                        getId={(b) => String(b.brandId ?? (b as any).id ?? (b as any).brand_id ?? '')}
                         placeholder="Select Brand"
                       />
                       <button
@@ -868,15 +904,15 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Product Type
                     </label>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1.5">Barcode identifier</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1.5">Classification type</p>
                     <div className="flex gap-2">
                       <SearchSelect
                         value={selectedProductTypeId}
                         onChange={setSelectedProductTypeId}
                         items={productTypeList}
-                        getLabel={(t) => t.displayName}
-                        getSearchString={(t) => t.displayName}
-                        getId={(t) => String(t.productTypeId)}
+                        getLabel={(t) => t.productTypeName || (t as any).typeName || (t as any).name || ''}
+                        getSearchString={(t) => t.productTypeName || (t as any).typeName || (t as any).name || ''}
+                        getId={(t) => String(t.productTypeId ?? (t as any).id ?? (t as any).product_type_id ?? '')}
                         placeholder="Select Product Type"
                       />
                       <button
