@@ -161,6 +161,21 @@ function DropdownSearchSelect<T>({
     getSearchString(item).toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (filteredItems.length > 0) {
+        const firstId = String(getId(filteredItems[0]));
+        onChange(firstId);
+        setIsOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsOpen(false);
+    }
+  };
+
   return (
     <div className="relative flex-1" ref={containerRef}>
       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{label}</label>
@@ -186,7 +201,8 @@ function DropdownSearchSelect<T>({
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Type to search..."
+              onKeyDown={handleInputKeyDown}
+              placeholder="Type to search & press Enter..."
               className="w-full h-8 px-2 text-xs bg-slate-100/50 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-750 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-200"
             />
           </div>

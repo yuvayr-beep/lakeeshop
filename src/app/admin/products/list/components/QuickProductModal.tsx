@@ -99,6 +99,21 @@ function SearchSelect<T>({
     getSearchString(item).toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (filteredItems.length > 0) {
+        const firstId = String(getId(filteredItems[0]));
+        onChange(firstId);
+        setIsOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsOpen(false);
+    }
+  };
+
   return (
     <div className={`relative flex-1 ${isOpen ? 'z-50' : 'z-1'}`} ref={containerRef}>
       <button
@@ -125,7 +140,8 @@ function SearchSelect<T>({
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Type to search..."
+              onKeyDown={handleInputKeyDown}
+              placeholder="Type to search & press Enter..."
               className="w-full h-8 px-2 text-xs bg-slate-100/50 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-850 dark:text-slate-200"
             />
           </div>
