@@ -10,6 +10,7 @@ interface ProductExportModalProps {
   onExportAll: () => void;
   exportingAll: boolean;
   exportProgress: number;
+  exportDownloadUrl?: string | null;
 }
 
 type ExportType = 'all' | 'custom';
@@ -19,7 +20,8 @@ export default function ProductExportModal({
   onClose,
   onExportAll,
   exportingAll,
-  exportProgress
+  exportProgress,
+  exportDownloadUrl
 }: ProductExportModalProps) {
   const [exportType, setExportType] = useState<ExportType>('all');
   const [fields, setFields] = useState<string[]>([]);
@@ -215,10 +217,30 @@ export default function ProductExportModal({
                       </div>
                       <div className="w-full bg-slate-200 dark:bg-slate-850 h-2 rounded-full overflow-hidden">
                         <div
-                          className="bg-emerald-500 h-full transition-all duration-305"
+                          className="bg-emerald-500 h-full transition-all duration-300"
                           style={{ width: `${exportProgress}%` }}
                         />
                       </div>
+                    </div>
+                  ) : exportDownloadUrl ? (
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                        <span>Export Ready!</span>
+                        <span>100%</span>
+                      </div>
+                      <div className="w-full bg-emerald-100 dark:bg-emerald-950/40 h-2 rounded-full overflow-hidden">
+                        <div className="bg-emerald-500 h-full w-full" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (exportDownloadUrl) window.open(exportDownloadUrl, '_blank');
+                        }}
+                        className="w-full flex items-center justify-center gap-1.5 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 animate-in fade-in"
+                      >
+                        <Download size={14} />
+                        Download Excel
+                      </button>
                     </div>
                   ) : (
                     <button

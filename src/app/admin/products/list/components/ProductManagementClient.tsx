@@ -624,10 +624,7 @@ export default function ProductManagementClient() {
   }, []);
 
   useEffect(() => {
-    if (exportDownloadUrl && !downloadTriggeredRef.current) {
-      downloadTriggeredRef.current = true;
-      window.open(exportDownloadUrl, '_blank');
-    }
+    // Auto-open disabled: user clicks "Download Excel" button in ProductExportModal once progress reaches 100%
   }, [exportDownloadUrl]);
 
   const loadSheetJS = () => {
@@ -1401,6 +1398,7 @@ export default function ProductManagementClient() {
         onExportAll={handleExportAll}
         exportingAll={exporting}
         exportProgress={exportProgress}
+        exportDownloadUrl={exportDownloadUrl}
       />
     </div>
   );
