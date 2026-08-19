@@ -253,7 +253,7 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
   const [selectedHsnId, setSelectedHsnId] = useState('');
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [selectedProductTypeId, setSelectedProductTypeId] = useState('');
-  const [selectedShipmentMode, setSelectedShipmentMode] = useState('DP');
+  const [selectedShipmentMode, setSelectedShipmentMode] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
 
   // Dropdown list data
@@ -310,6 +310,10 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
       setProductName('');
       setEanCode('');
       setSelectedCategoryId('');
+      setSelectedHsnId('');
+      setSelectedBrandId('');
+      setSelectedProductTypeId('');
+      setSelectedShipmentMode('');
       setExpandedIds(new Set());
     } else {
       document.body.style.overflow = '';
@@ -371,37 +375,21 @@ export default function QuickProductModal({ open, onClose, onSuccess }: QuickPro
         const hsnRes = await axiosInstance.get('/prod/hsn', { headers: { Accept: 'application/x-ndjson' } });
         const parsedHsn = parseNdjson(hsnRes.data);
         setHsnList(parsedHsn);
-        if (parsedHsn.length > 0) {
-          const firstHsnId = String(parsedHsn[0].hsnId ?? (parsedHsn[0] as any).id ?? (parsedHsn[0] as any).hsn_id ?? '');
-          setSelectedHsnId(firstHsnId);
-        }
 
         // 2. Fetch Brands
         const brandRes = await axiosInstance.get('/prod/brands', { headers: { Accept: 'application/x-ndjson' } });
         const parsedBrands = parseNdjson(brandRes.data);
         setBrandList(parsedBrands);
-        if (parsedBrands.length > 0) {
-          const firstBrandId = String(parsedBrands[0].brandId ?? (parsedBrands[0] as any).id ?? (parsedBrands[0] as any).brand_id ?? '');
-          setSelectedBrandId(firstBrandId);
-        }
 
         // 3. Fetch Product Types
         const typeRes = await axiosInstance.get('/prod/types', { headers: { Accept: 'application/x-ndjson' } });
         const parsedTypes = parseNdjson(typeRes.data);
         setProductTypeList(parsedTypes);
-        if (parsedTypes.length > 0) {
-          const firstTypeId = String(parsedTypes[0].productTypeId ?? (parsedTypes[0] as any).id ?? (parsedTypes[0] as any).product_type_id ?? '');
-          setSelectedProductTypeId(firstTypeId);
-        }
 
         // 4. Fetch Shipment Modes
         const shipRes = await axiosInstance.get('/prod/shipment-modes/all', { headers: { Accept: 'application/x-ndjson' } });
         const parsedShip = parseNdjson(shipRes.data);
         setShipmentModeList(parsedShip);
-        if (parsedShip.length > 0) {
-          const defaultMode = parsedShip.find((s: any) => s.modeCode === 'DP') || parsedShip[0];
-          setSelectedShipmentMode(defaultMode.modeCode);
-        }
 
         // 5. Fetch Categories
         const catRes = await axiosInstance.get('/prod/categories/client/0/export', { headers: { Accept: 'application/x-ndjson' } });
