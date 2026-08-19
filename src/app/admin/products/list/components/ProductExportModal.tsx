@@ -8,6 +8,7 @@ interface ProductExportModalProps {
   open: boolean;
   onClose: () => void;
   onExportAll: () => void;
+  onResetExportAll?: () => void;
   exportingAll: boolean;
   exportProgress: number;
   exportDownloadUrl?: string | null;
@@ -19,6 +20,7 @@ export default function ProductExportModal({
   open,
   onClose,
   onExportAll,
+  onResetExportAll,
   exportingAll,
   exportProgress,
   exportDownloadUrl
@@ -234,7 +236,12 @@ export default function ProductExportModal({
                       <button
                         type="button"
                         onClick={() => {
-                          if (exportDownloadUrl) window.open(exportDownloadUrl, '_blank');
+                          if (exportDownloadUrl) {
+                            window.open(exportDownloadUrl, '_blank');
+                            if (onResetExportAll) {
+                              onResetExportAll();
+                            }
+                          }
                         }}
                         className="w-full flex items-center justify-center gap-1.5 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 animate-in fade-in"
                       >

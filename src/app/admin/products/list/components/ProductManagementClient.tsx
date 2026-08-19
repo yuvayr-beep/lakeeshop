@@ -619,6 +619,18 @@ export default function ProductManagementClient() {
     }
   };
 
+  const handleResetExportAll = () => {
+    setExportError('');
+    setExportStatus('');
+    setExportProgress(0);
+    setExportDownloadUrl(null);
+    setExportJobId(null);
+    setExportTotalRecords(null);
+    setExportProcessedRecords(null);
+    setExporting(false);
+    clearExportPolling();
+  };
+
   useEffect(() => {
     return () => clearExportPolling();
   }, []);
@@ -1396,6 +1408,7 @@ export default function ProductManagementClient() {
         open={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
         onExportAll={handleExportAll}
+        onResetExportAll={handleResetExportAll}
         exportingAll={exporting}
         exportProgress={exportProgress}
         exportDownloadUrl={exportDownloadUrl}
