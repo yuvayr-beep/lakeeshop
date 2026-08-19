@@ -946,9 +946,19 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
                     value={data.selectedHsn}
                     onChange={(val) => set('selectedHsn', val)}
                     items={hsnCodes}
-                    getLabel={(h) => `${h.code} — ${h.gstRate}%`}
-                    getSearchString={(h) => `${h.code} ${h.description} ${h.gstRate}`}
-                    getId={(h) => String(h.id)}
+                    getLabel={(h) => {
+                      const code = h.code || (h as any).hsnCode || (h as any).hsn_code || '';
+                      const gst = h.gstRate ?? (h as any).taxPercentage ?? (h as any).tax ?? 0;
+                      const desc = h.description || (h as any).desc || '';
+                      return `${code}${desc ? ` — ${desc}` : ''} (${gst}%)`;
+                    }}
+                    getSearchString={(h) => {
+                      const code = h.code || (h as any).hsnCode || (h as any).hsn_code || '';
+                      const gst = h.gstRate ?? (h as any).taxPercentage ?? (h as any).tax ?? 0;
+                      const desc = h.description || (h as any).desc || '';
+                      return `${code} ${desc} ${gst}`;
+                    }}
+                    getId={(h) => String(h.id ?? (h as any).hsnId ?? (h as any).hsn_id ?? '')}
                     placeholder="Select HSN Code"
                   />
                   <button type="button" onClick={() => setShowHsnCreate(true)} className="flex items-center justify-center p-2 h-9 w-9 text-xs font-medium bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors flex-shrink-0">

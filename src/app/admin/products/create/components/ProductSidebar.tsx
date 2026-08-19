@@ -210,7 +210,7 @@ export function SearchSelect<T>({
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      setOpenUpward(spaceBelow < 260);
+      setOpenUpward(spaceBelow < 220);
     }
   }, [isOpen]);
 
@@ -236,7 +236,7 @@ export function SearchSelect<T>({
   };
 
   return (
-    <div className="relative flex-1" ref={containerRef}>
+    <div className={`relative flex-1 ${isOpen ? 'z-50' : 'z-1'}`} ref={containerRef}>
       <button
         type="button"
         onClick={() => {
@@ -808,9 +808,9 @@ export function BrandBox({ brandId, onBrandChange }: { brandId: string; onBrandC
           value={brandId}
           onChange={onBrandChange}
           items={brands}
-          getLabel={(item) => item.name}
-          getSearchString={(item) => item.name}
-          getId={(item) => String(item.id)}
+          getLabel={(item) => item.name || (item as any).brandName || (item as any).brand_name || ''}
+          getSearchString={(item) => item.name || (item as any).brandName || (item as any).brand_name || ''}
+          getId={(item) => String(item.id ?? (item as any).brandId ?? (item as any).brand_id ?? '')}
           placeholder="Select Brand"
         />
         <button type="button" onClick={() => setShowCreate(true)} className="flex items-center justify-center p-2 h-9 w-9 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex-shrink-0">
@@ -957,9 +957,9 @@ export function ProductTypeBox({ productTypeId, onProductTypeChange }: { product
           value={productTypeId}
           onChange={onProductTypeChange}
           items={productTypes}
-          getLabel={(item) => item.name}
-          getSearchString={(item) => item.name}
-          getId={(item) => String(item.id)}
+          getLabel={(item) => item.name || (item as any).displayName || (item as any).productTypeName || ''}
+          getSearchString={(item) => `${item.name || (item as any).displayName || (item as any).productTypeName || ''} ${(item as any).code || ''}`}
+          getId={(item) => String(item.id ?? (item as any).productTypeId ?? (item as any).product_type_id ?? '')}
           placeholder="Select Product Type"
         />
         <button type="button" onClick={() => setShowCreate(true)} className="flex items-center justify-center p-2 h-9 w-9 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex-shrink-0">
