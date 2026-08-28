@@ -333,8 +333,9 @@ export default function POWizard({ poId }: POWizardProps) {
   }, [supplierId, suppliers, isEditMode]);
 
   // Handle warehouse changes to fill billTo and shipTo
-  const handleWarehouseChange = async (whId: number) => {
+  const handleWarehouseChange = async (whId: number | '') => {
     setWarehouseId(whId);
+    if (!whId) return;
     try {
       const { data } = await axiosInstance.get(`/stock/warehouse/${whId}`);
       const wh = data.data || data;

@@ -13,36 +13,40 @@ export interface MenuScreen {
 }
 
 export interface MenuModule {
+  id: number;
   code: string;
   module: string;
-  icon?: string;
+  description: string;
+  icon?: string | null;
+  sortOrder: number;
+  title?: string;
   screens: MenuScreen[];
   href?: string;
 }
 
 export const mockMenuData: MenuModule[] = [
   {
+    id: 1,
     code: 'DASH',
     module: 'Dashboard',
+    description: 'This module contains multiple dashoards',
     icon: 'LayoutDashboard',
+    sortOrder: 0,
+    title: 'Dashboard',
     screens: [
       { code: 'DASH_OPS', title: 'Operations Dashboard', href: '/admin/dashboard/operations', actions: ['READ'] },
       // { code: 'DASH_ACC', title: 'Accounts Dashboard', href: '/admin/dashboard/accounts', actions: ['READ'] },
       // { code: 'DASH_OWN', title: 'Owner Dashboard', href: '/admin/dashboard/owner', actions: ['READ'] },
     ],
   },
-  // {
-  //   code: 'ORDER',
-  //   module: 'Order Process',
-  //   icon: 'ShoppingCart',
-  //   screens: [
-  //     { code: 'BATCH', title: 'Batch Order', href: '/admin/orders/batch', actions: ['READ', 'WRITE'] },
-  //   ],
-  // },
   {
-    code: 'PROD',
-    module: 'Products',
+    id: 3,
+    code: 'PRODUCT',
+    module: 'PROD_MOD',
+    description: 'Product Catalog Module',
     icon: 'Package',
+    sortOrder: 0,
+    title: 'Products',
     screens: [
       { code: 'PROD', title: 'Products', href: '/admin/products/list', actions: ['READ', 'WRITE'] },
       { code: 'PCAT', title: 'Product Category', href: '/admin/products/category', actions: ['READ', 'WRITE'] },
@@ -71,29 +75,66 @@ export const mockMenuData: MenuModule[] = [
     ],
   },
   {
-    code: 'CLIENTS',
-    module: 'Clients',
+    id: 6,
+    code: 'CLIENT',
+    module: 'CLIENT_MOD',
+    description: 'Client Management Module',
     icon: 'Users',
+    sortOrder: 0,
+    title: 'Clients',
     href: '/admin/clients/profile',
     screens: [],
   },
   {
-    code: 'SUPPLIERS',
-    module: 'Suppliers',
+    id: 7,
+    code: 'VENDOR',
+    module: 'VENDOR_MOD',
+    description: 'Supplier & Vendor Module',
     icon: 'Truck',
+    sortOrder: 0,
+    title: 'Supplier',
     href: '/admin/suppliers/profile',
     screens: [],
   },
   {
+    id: 4,
     code: 'STOCK',
-    module: 'Stock',
+    module: 'STOCK_MOD',
+    description: 'Inventory & Stock Module',
     icon: 'Boxes',
+    sortOrder: 0,
+    title: 'Stock',
     screens: [
       {
         code: 'STK_PROD_REL',
         title: 'Product Relations',
         href: '/admin/stock/product-relations',
         actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'STK_ALT_PROD',
+        title: 'Alternate Products',
+        href: '/admin/stock/alternate-products',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'STK_PROD_CONFIG',
+        title: 'Product Config',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'STK_PACK_QTY',
+            title: 'Product Pack Quantity',
+            href: '/admin/stock/product-config/pack-quantity',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'STK_MEASUREMENTS',
+            title: 'Product Measurements',
+            href: '/admin/stock/product-config/measurements',
+            actions: ['READ', 'WRITE']
+          }
+        ]
       },
       {
         code: 'STK_PO',
@@ -164,9 +205,13 @@ export const mockMenuData: MenuModule[] = [
     ]
   },
   {
-    code: 'ORDERS',
-    module: 'Orders',
+    id: 2,
+    code: 'ORDER',
+    module: 'ORDER_MOD',
+    description: 'Orders & Fulfillment Module',
     icon: 'ShoppingCart',
+    sortOrder: 0,
+    title: 'Orders',
     screens: [
       {
         code: 'ORD_BATCH',
@@ -340,13 +385,30 @@ export const mockMenuData: MenuModule[] = [
             actions: ['READ', 'WRITE']
           }
         ]
+      },
+      {
+        code: 'ORD_PROD_CONFIG',
+        title: 'Product Configuration',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'ORD_SPLIT_SURFACE_CONFIG',
+            title: 'Split & Surface Config',
+            href: '/admin/orders/product-config/split-surface',
+            actions: ['READ', 'WRITE']
+          }
+        ]
       }
     ]
   },
   {
+    id: 5,
     code: 'COURIER',
-    module: 'Courier',
+    module: 'COURIER_MOD',
+    description: 'Logistics & Courier Module',
     icon: 'Truck',
+    sortOrder: 0,
+    title: 'Courier',
     screens: [
       {
         code: 'COUR_PARTNER',
@@ -423,5 +485,50 @@ export const mockMenuData: MenuModule[] = [
         actions: ['READ', 'WRITE']
       }
     ]
+  },
+  {
+    id: 8,
+    code: 'FINANCE',
+    module: 'FINANCE_MOD',
+    description: 'Finance & Billing Module',
+    icon: 'BarChart3',
+    sortOrder: 0,
+    title: 'Finance & Billing',
+    screens: [],
+  },
+  {
+    id: 9,
+    code: 'USER',
+    module: 'USER_MOD',
+    description: 'User & Security Module',
+    icon: 'User',
+    sortOrder: 0,
+    title: 'User & Security',
+    screens: [
+      {
+        code: 'USER_ROLES_GROUP',
+        title: 'Roles',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'USER_SCREENS',
+            title: 'Screens',
+            href: '/admin/user/roles/screens',
+            actions: ['READ', 'WRITE']
+          }
+        ]
+      }
+    ],
+  },
+  {
+    id: 10,
+    code: 'MEDIA',
+    module: 'MEDIA_MOD',
+    description: 'Media Storage & File Asset Module',
+    icon: 'Boxes',
+    sortOrder: 0,
+    title: 'Media Storage',
+    screens: [],
   }
 ];
+

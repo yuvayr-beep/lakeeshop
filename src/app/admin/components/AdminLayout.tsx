@@ -17,6 +17,8 @@ interface AdminLayoutProps {
   pageTitle?: string;
   pageSubtitle?: string;
   pageIcon?: React.ReactNode;
+  headerAction?: React.ReactNode;
+  screenFit?: boolean;
 }
 
 export default function AdminLayout({
@@ -25,6 +27,8 @@ export default function AdminLayout({
   pageTitle,
   pageSubtitle,
   pageIcon,
+  headerAction,
+  screenFit = false,
 }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -112,7 +116,7 @@ export default function AdminLayout({
   }, [themeMode, themeColor, customHex]);
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">
+    <div className="h-screen flex overflow-hidden bg-slate-50 dark:bg-slate-950">
       <AdminSidebar
         collapsed={!sidebarOpen}
         mobileOpen={mobileSidebarOpen}
@@ -121,15 +125,16 @@ export default function AdminLayout({
         isInitialized={isInitialized}
       />
 
-      <div className={`flex-1 flex flex-col min-w-0 ${isInitialized ? 'transition-all duration-300' : ''}`}>
+      <div className={`flex-1 flex flex-col min-w-0 h-screen overflow-hidden ${isInitialized ? 'transition-all duration-300' : ''}`}>
         <AdminTopbar
           onToggleSidebar={() => handleToggleSidebar(!sidebarOpen)}
           onMobileMenu={() => handleToggleMobileSidebar(true)}
           pageTitle={pageTitle}
           pageSubtitle={pageSubtitle}
           pageIcon={pageIcon}
+          headerAction={headerAction}
         />
-        <main className={`flex-1 overflow-auto scrollbar-thin px-4 md:px-6 xl:px-8 py-6 w-full ${fullWidth ? '' : 'max-w-screen-2xl mx-auto'}`}>
+        <main className={`flex-1 min-h-0 ${screenFit ? 'overflow-hidden flex flex-col py-3' : 'overflow-auto scrollbar-thin py-6'} px-4 md:px-6 xl:px-8 w-full ${fullWidth ? '' : 'max-w-screen-2xl mx-auto'}`}>
           {children}
         </main>
         <AdminFooter />

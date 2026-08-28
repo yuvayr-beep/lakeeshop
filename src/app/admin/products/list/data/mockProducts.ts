@@ -31,6 +31,14 @@ export interface Product {
   images: ProductImage[];
   createdAt: string;
   updatedAt: string;
+  isSplit?: boolean;
+  splitQuantity?: number | null;
+  surfaceQuantity?: number | null;
+  packQuantity?: number | null;
+  length?: number | null;
+  width?: number | null;
+  height?: number | null;
+  weightNum?: number | null;
 }
 
 export const CATEGORIES = [

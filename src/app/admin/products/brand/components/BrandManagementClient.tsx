@@ -22,6 +22,33 @@ type Brand = {
 
 const PER_PAGE_OPTIONS = [10, 15, 25, 50];
 
+const parseNdjson = (raw: any): any[] => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'object') return [raw];
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return trimmed
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return line;
+          }
+        });
+    }
+  }
+  return [];
+};
+
 export default function BrandManagementClient() {
   // Data state
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -49,11 +76,12 @@ export default function BrandManagementClient() {
     setLoading(true);
     setError('');
     try {
-      const { data } = await axiosInstance.get<string>('/prod/brands', {
+      const response = await axiosInstance.get('/prod/brands', {
         headers: { Accept: 'application/x-ndjson' },
+        responseType: 'text',
+        transformResponse: [(data) => data],
       });
-      const lines = data.split('\n').filter(Boolean);
-      const parsed = lines.map((l) => JSON.parse(l) as Brand);
+      const parsed = parseNdjson(response.data) as Brand[];
       setBrands(parsed);
     } catch (err: any) {
       console.error(err);
@@ -248,15 +276,17 @@ export default function BrandManagementClient() {
     const formData = new FormData();
     formData.append('file', selectedFile);
     try {
-      const { data } = await axiosInstance.post<string>('/prod/brands/upload', formData, {
+      const response = await axiosInstance.post('/prod/brands/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         responseType: 'text',
+        transformResponse: [(data) => data],
       });
-      const lines = data.split('\n').filter(Boolean);
-      lines.forEach((line) => {
-        const parsed = JSON.parse(line);
-        if (parsed.success) toast.success(parsed.message, { id: toastId });
-        else toast.error(parsed.message, { id: toastId });
+      const parsedLines = parseNdjson(response.data);
+      parsedLines.forEach((item: any) => {
+        if (typeof item === 'object' && item !== null) {
+          if (item.success) toast.success(item.message || 'Brand uploaded successfully', { id: toastId });
+          else toast.error(item.message || item.error || 'Upload failed', { id: toastId });
+        }
       });
       setSelectedFile(null);
       setShowUploadArea(false);

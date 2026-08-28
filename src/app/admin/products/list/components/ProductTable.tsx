@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { ArrowUp, ArrowDown, ArrowUpDown, Edit2, Eye, ChevronLeft, ChevronRight, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpDown, Edit2, Eye, EyeOff, ChevronLeft, ChevronRight, X, Image as ImageIcon } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { Product } from '../data/mockProducts';
 
@@ -20,6 +20,7 @@ interface ProductTableProps {
   totalPages: number;
   onPageChange: (p: number) => void;
   onPerPageChange: (n: number) => void;
+  stockMap?: Record<string, number>;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'muted' | 'danger' }> = {
@@ -44,7 +45,7 @@ function SortIcon({ col, sortCol, sortDir }: { col: string; sortCol: string; sor
     : <ArrowDown size={11} className="text-blue-600 ml-1" />;
 }
 
-const PER_PAGE_OPTIONS = [10, 20, 50];
+const PER_PAGE_OPTIONS = [10, 20, 25, 50, 100];
 
 interface ImageCarouselModalProps {
   images: Product['images'];
@@ -119,7 +120,7 @@ function ImageCarouselModal({ images, productName, open, onClose }: ImageCarouse
 export default function ProductTable({
   products, allProducts, selectedIds, onSelectionChange,
   sortCol, sortDir, onSort, onEdit, onView,
-  page, perPage, total, totalPages, onPageChange, onPerPageChange,
+  page, perPage, total, totalPages, onPageChange, onPerPageChange, stockMap,
 }: ProductTableProps) {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -149,6 +150,7 @@ export default function ProductTable({
     { key: 'id', label: 'Image', sortable: false },
     { key: 'sku', label: 'SKU', sortable: true },
     { key: 'name', label: 'Product Name', sortable: true },
+    { key: 'stockQty', label: 'Avl Stock', sortable: true },
     // { key: 'category', label: 'Category', sortable: true },
     { key: 'brand', label: 'Brand', sortable: true },
     { key: 'productTypeName', label: 'Product Type', sortable: true },
@@ -173,12 +175,12 @@ export default function ProductTable({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[960px]">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60">
-              <th className="px-3 py-3 w-10">
+    <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl overflow-hidden shadow-xs">
+      <div className="flex-1 overflow-auto scrollbar-thin relative min-h-0">
+        <table className="w-full text-sm min-w-[1200px] border-separate border-spacing-0">
+          <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-800 shadow-2xs">
+            <tr>
+              <th className="sticky top-0 z-20 px-3 py-3 w-10 bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700/80">
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -190,18 +192,19 @@ export default function ProductTable({
               {cols.map((col) => (
                 <th
                   key={`th-${col.key}-${col.label}`}
-                  className={`px-3 py-3 text-xs font-600 text-black dark:text-slate-400 whitespace-nowrap text-left ${col.key === 'isCombo' ? 'w-10' : ''
+                  className={`sticky top-0 z-20 px-3 py-3 text-xs font-600 text-black dark:text-slate-400 whitespace-nowrap bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700/80 ${col.key === 'stockQty' ? 'text-center' : 'text-left'
+                    } ${col.key === 'isCombo' ? 'w-10' : ''
                     } ${col.sortable ? 'cursor-pointer hover:text-black/80 dark:hover:text-slate-200 select-none' : ''
                     }`}
                   onClick={() => col.sortable && onSort(col.key)}
                 >
-                  <span className="inline-flex items-center gap-0.5">
+                  <span className={`inline-flex items-center gap-0.5 ${col.key === 'stockQty' ? 'justify-center' : ''}`}>
                     {col.label}
                     {col.sortable && <SortIcon col={col.key} sortCol={sortCol} sortDir={sortDir} />}
                   </span>
                 </th>
               ))}
-              <th className="px-3 py-3 text-xs font-600 text-black dark:text-slate-400 text-center w-20">Actions</th>
+              <th className="sticky top-0 z-20 px-3 py-3 text-xs font-600 text-black dark:text-slate-400 text-center w-20 bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700/80">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -216,7 +219,7 @@ export default function ProductTable({
                       ? 'hover:bg-slate-50 dark:hover:bg-slate-800/40' : 'bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-800/40'
                     }`}
                 >
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -224,7 +227,7 @@ export default function ProductTable({
                       className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
                     />
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
                     {p.isCombo ? (
                       <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-orange-600 dark:bg-orange-700 text-white font-bold text-xs shadow-sm hover:scale-105 transition-transform select-none" title="Combo Product">
                         C
@@ -235,7 +238,7 @@ export default function ProductTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
                     {p.images && p.images.length > 0 ? (
                       <button
                         onClick={() => {
@@ -253,24 +256,45 @@ export default function ProductTable({
                       </div>
                     )}
                   </td>
-                  <td className="px-3 py-3 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap">{p.sku}</td>
-                  <td className="px-3 py-3">
-                    <div className="max-w-[180px]">
-                      <p className="text-xs font-medium text-black dark:text-slate-200 truncate">{p.name}</p>
-                      <p className="text-[10px] text-black dark:text-slate-400 truncate">{p.hsnCode}</p>
+                  <td className="px-3 py-3 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap border-b border-slate-100 dark:border-slate-800">{p.sku}</td>
+                  <td className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="min-w-[280px]">
+                      <p className="text-xs font-semibold text-black dark:text-slate-200 leading-snug break-words">{p.name}</p>
+                      {p.hsnCode && <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">HSN: {p.hsnCode}</p>}
                     </div>
                   </td>
+                  <td className="px-3 py-3 text-xs whitespace-nowrap text-center border-b border-slate-100 dark:border-slate-800">
+                    {stockMap && stockMap[p.id] === undefined ? (
+                      <span className="text-xs text-slate-400 animate-pulse">Loading...</span>
+                    ) : (
+                      (() => {
+                        const count = stockMap && stockMap[p.id] !== undefined ? stockMap[p.id] : (p.stockQty ?? 0);
+                        if (count === 0) {
+                          return (
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+                              0
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">
+                            {count}
+                          </span>
+                        );
+                      })()
+                    )}
+                  </td>
                   {/* <td className="px-3 py-3 text-xs text-black dark:text-slate-400 whitespace-nowrap">{p.category}</td> */}
-                  <td className="px-3 py-3 text-xs text-black dark:text-slate-400 whitespace-nowrap">{p.brand}</td>
-                  <td className="px-3 py-3 text-xs text-black dark:text-slate-400 whitespace-nowrap">{p.productTypeName}</td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 text-xs text-black dark:text-slate-400 whitespace-nowrap border-b border-slate-100 dark:border-slate-800">{p.brand}</td>
+                  <td className="px-3 py-3 text-xs text-black dark:text-slate-400 whitespace-nowrap border-b border-slate-100 dark:border-slate-800">{p.productTypeName}</td>
+                  <td className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
                     <div className="max-w-[140px]">
                       <p className="text-xs font-medium text-black dark:text-slate-200 truncate">{p.modelName}</p>
                       <p className="text-[10px] text-black dark:text-slate-400 truncate">{p.modelNumber}</p>
                     </div>
                   </td>
                   {/* <td className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{p.taxSlab}</td> */}
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
                     {(() => {
                       const statusCode = p.productStatusCode || (p.status === 'active' ? 'ACTIVE' : 'BLOCKED');
                       const statusInfo = statusConfig[statusCode] || { label: statusCode, variant: 'muted' };
@@ -284,7 +308,7 @@ export default function ProductTable({
                       );
                     })()}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
                     {(() => {
                       const offlineCode = p.offlineStatusCode || 'ONLINE';
                       const offlineInfo = offlineStatusConfig[offlineCode] || { label: offlineCode, variant: 'muted' };
@@ -298,22 +322,22 @@ export default function ProductTable({
                       );
                     })()}
                   </td>
-                  <td className="px-3 py-3">
-                    <div className="hidden group-hover:flex items-center justify-center gap-1">
+                  <td className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => onView && onView(p)}
-                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-blue-600 transition-colors"
+                        className="group/btn p-1 rounded-lg text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors"
                         title="View product details"
                       >
-                        <Eye size={13} />
+                        <Eye size={15} className="transition-transform duration-200 ease-out group-hover/btn:scale-125" />
                       </button>
                       {onEdit && (
                         <button
                           onClick={() => onEdit(p)}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-blue-600 transition-colors"
+                          className="group/btn p-1 rounded-lg text-slate-500 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 transition-colors"
                           title="Edit product"
                         >
-                          <Edit2 size={13} />
+                          <Edit2 size={15} className="transition-transform duration-200 ease-out group-hover/btn:scale-125" />
                         </button>
                       )}
                     </div>
@@ -335,7 +359,7 @@ export default function ProductTable({
       )}
 
       {/* Pagination */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+      <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2.5 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
         <div className="flex items-center gap-3">
           <span className="text-xs text-black dark:text-slate-400 tabular-nums">
             Showing {start}–{end} of {total} products

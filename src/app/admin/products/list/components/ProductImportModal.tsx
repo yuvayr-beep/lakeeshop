@@ -288,6 +288,96 @@ export default function ProductImportModal({
     }
   };
 
+  const loadSheetJS = () => {
+    return new Promise<any>((resolve, reject) => {
+      if ((window as any).XLSX) {
+        resolve((window as any).XLSX);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      script.onload = () => resolve((window as any).XLSX);
+      script.onerror = (err) => reject(err);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleExportErrorsExcel = async () => {
+    if (!results || results.length === 0) {
+      toast.error('No import results to export');
+      return;
+    }
+
+    const errorRows = results.filter((r) => !r.success);
+    const dataToExport = errorRows.length > 0 ? errorRows : results;
+
+    const toastId = toast.loading('Exporting error report to Excel...');
+    try {
+      const headers = ['Row / SKU', 'Product Name', 'Status', 'Error Details / Message'];
+      const rows = dataToExport.map((row, idx) => [
+        row.sku || `Row ${idx + 1}`,
+        row.productName || '',
+        row.success ? 'Success' : 'Failed',
+        row.message || row.error || (row.success ? 'Successfully processed' : 'Failed')
+      ]);
+
+      const XLSX = await loadSheetJS();
+      const worksheetData = [headers, ...rows];
+      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+      worksheet['!cols'] = [
+        { wch: 25 },
+        { wch: 35 },
+        { wch: 12 },
+        { wch: 60 }
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Import Errors');
+
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `import_errors_${mode}_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${dataToExport.length} rows to Excel`, { id: toastId });
+    } catch (err: any) {
+      console.error('Failed to export errors using SheetJS, falling back to CSV:', err);
+      try {
+        const headers = ['Row / SKU', 'Product Name', 'Status', 'Error Details / Message'];
+        const csvRows = [headers.join(',')];
+        dataToExport.forEach((row, idx) => {
+          const sku = `"${(row.sku || `Row ${idx + 1}`).replace(/"/g, '""')}"`;
+          const name = `"${(row.productName || '').replace(/"/g, '""')}"`;
+          const status = `"${row.success ? 'Success' : 'Failed'}"`;
+          const msg = `"${(row.message || row.error || (row.success ? 'Success' : 'Failed')).replace(/"/g, '""')}"`;
+          csvRows.push([sku, name, status, msg].join(','));
+        });
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `import_errors_${mode}_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success(`Exported ${dataToExport.length} rows to CSV`, { id: toastId });
+      } catch (fallbackErr) {
+        toast.error('Failed to export error report', { id: toastId });
+      }
+    }
+  };
+
   const activeConfig = MODE_CONFIG[mode];
 
   return (
@@ -592,14 +682,34 @@ export default function ProductImportModal({
 
             {/* Results output list */}
             {results && (
-              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 flex flex-col max-h-[220px]">
-                <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-700 dark:text-slate-350">
-                    Import Processing Summary
-                  </span>
-                  <span className="text-[10px] bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded font-mono font-bold">
-                    {results.length} Rows Processed
-                  </span>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 flex flex-col max-h-[260px]">
+                <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-700 dark:text-slate-350">
+                      Import Processing Summary
+                    </span>
+                    {results.filter((x) => !x.success).length > 0 && (
+                      <span className="text-[10px] bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                        <AlertCircle size={10} />
+                        {results.filter((x) => !x.success).length} Errors
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded font-mono font-bold">
+                      {results.length} Rows Processed
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleExportErrorsExcel}
+                      title="Download Import Errors Excel Report"
+                      className="p-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                    >
+                      <Download size={13} className="text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-[11px]">Errors Excel</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto scrollbar-thin divide-y divide-slate-100 dark:divide-slate-850 p-2 space-y-1">
                   {results.map((row, idx) => (
@@ -610,7 +720,7 @@ export default function ProductImportModal({
                             <Check size={10} strokeWidth={3} />
                           </div>
                         ) : (
-                          <div className="w-4 h-4 rounded-full bg-red-50 dark:bg-red-950/40 text-red-655 flex items-center justify-center flex-shrink-0">
+                          <div className="w-4 h-4 rounded-full bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center flex-shrink-0">
                             <AlertCircle size={10} strokeWidth={3} />
                           </div>
                         )}

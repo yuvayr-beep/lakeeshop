@@ -915,7 +915,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
               <Field label="Pricing & Courier Cost" hint="Base selling price, purchase cost, and courier cost in INR">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">MRP *</label>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">MRP</label>
                     <StyledInput type="number" placeholder="0.00" value={data.mrp} onChange={(e) => set('mrp', e.target.value)} />
                   </div>
                   <div>
@@ -1104,6 +1104,7 @@ export default function ProductDataTabs({ data, onChange, hideLinkedProducts, pr
               </Field>
               <Field label="Preferred Shipment Mode">
                 <StyledSelect value={data.preferredShipmentMode} onChange={(e) => set('preferredShipmentMode', e.target.value)}>
+                  <option value="">Select</option>
                   {shipmentModes.map((sm) => (
                     <option key={sm.modeCode} value={sm.modeCode}>
                       {sm.displayName}

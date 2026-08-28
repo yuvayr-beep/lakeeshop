@@ -133,11 +133,15 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
           const IconComp = iconMap[module.icon || 'LayoutDashboard'] || LayoutDashboard;
           const isExpanded = expandedModule === module.code;
           const hasActiveChild = 
-            (module.code === 'CLIENTS' && pathname?.startsWith('/admin/clients')) ||
-            (module.code === 'SUPPLIERS' && pathname?.startsWith('/admin/suppliers')) ||
+            (module.code === 'CLIENT' && pathname?.startsWith('/admin/clients')) ||
+            (module.code === 'VENDOR' && pathname?.startsWith('/admin/suppliers')) ||
             (module.code === 'STOCK' && pathname?.startsWith('/admin/stock')) ||
-            (module.code === 'ORDERS' && pathname?.startsWith('/admin/orders')) ||
-            (module.code === 'COURIER' && pathname?.startsWith('/admin/courier'))
+            (module.code === 'ORDER' && pathname?.startsWith('/admin/orders')) ||
+            (module.code === 'COURIER' && pathname?.startsWith('/admin/courier')) ||
+            (module.code === 'PRODUCT' && pathname?.startsWith('/admin/products')) ||
+            (module.code === 'FINANCE' && pathname?.startsWith('/admin/finance')) ||
+            (module.code === 'USER' && pathname?.startsWith('/admin/user')) ||
+            (module.code === 'MEDIA' && pathname?.startsWith('/admin/media'))
               ? true
               : module.href
                 ? pathname === module.href || pathname?.startsWith(module.href)
@@ -153,6 +157,8 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-white'
           } ${isCollapsed ? 'justify-center' : ''}`;
 
+          const displayTitle = module.title || module.module;
+
           return (
             <div key={module.code}>
               {/* Module header */}
@@ -164,7 +170,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                   }}
                   style={hasActiveChild ? { backgroundColor: 'var(--primary-light-bg)', color: 'var(--primary)' } : undefined}
                   className={buttonClasses}
-                  title={isCollapsed ? module.module : undefined}
+                  title={isCollapsed ? displayTitle : undefined}
                 >
                   <IconComp size={17} className="flex-shrink-0" />
                   <AnimatePresence initial={false}>
@@ -176,7 +182,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.15 }}
                       >
-                        {module.module}
+                        {displayTitle}
                       </motion.span>
                     )}
                   </AnimatePresence>
@@ -186,7 +192,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                   onClick={() => isCollapsed ? onRequestOpen() : toggleModule(module.code)}
                   style={hasActiveChild ? { backgroundColor: 'var(--primary-light-bg)', color: 'var(--primary)' } : undefined}
                   className={buttonClasses}
-                  title={isCollapsed ? module.module : undefined}
+                  title={isCollapsed ? displayTitle : undefined}
                 >
                   <IconComp size={17} className="flex-shrink-0" />
                   <AnimatePresence initial={false}>
@@ -198,7 +204,7 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.15 }}
                       >
-                        {module.module}
+                        {displayTitle}
                       </motion.span>
                     )}
                   </AnimatePresence>

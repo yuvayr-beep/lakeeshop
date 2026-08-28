@@ -363,7 +363,7 @@ export default function ProductCreateScreen() {
                     ref={editorRef}
                     contentEditable
                     onInput={handleVisualInput}
-                    placeholder="Write a detailed product description in visual mode…"
+                    data-placeholder="Write a detailed product description in visual mode…"
                     className="w-full min-h-[250px] p-5 focus:outline-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed overflow-y-auto bg-white dark:bg-slate-900 border-none prose dark:prose-invert max-w-none focus:ring-0"
                     style={{ outline: 'none' }}
                   />

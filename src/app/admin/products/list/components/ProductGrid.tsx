@@ -16,6 +16,7 @@ interface ProductGridProps {
   totalPages: number;
   onPageChange: (p: number) => void;
   onPerPageChange: (n: number) => void;
+  stockMap?: Record<string, number>;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'muted' | 'danger' }> = {
@@ -33,7 +34,7 @@ const offlineStatusConfig: Record<string, { label: string; variant: 'success' | 
   TEMP_OFFLINE: { label: 'Temporary Offline', variant: 'warning' },
 };
 
-const PER_PAGE_OPTIONS = [10, 20, 50];
+const PER_PAGE_OPTIONS = [10, 20, 25, 50, 100];
 
 interface ImageCarouselModalProps {
   images: Product['images'];
@@ -107,7 +108,7 @@ function ImageCarouselModal({ images, productName, open, onClose }: ImageCarouse
 
 export default function ProductGrid({
   products, selectedIds, onSelectionChange, onEdit, onView,
-  page, perPage, total, totalPages, onPageChange, onPerPageChange,
+  page, perPage, total, totalPages, onPageChange, onPerPageChange, stockMap,
 }: ProductGridProps) {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -147,9 +148,9 @@ export default function ProductGrid({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl overflow-hidden shadow-xs">
       {/* Select All top bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-700/60">
+      <div className="shrink-0 flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-700/60">
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -169,7 +170,7 @@ export default function ProductGrid({
       </div>
 
       {/* Grid container */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
+      <div className="flex-1 min-h-0 overflow-auto scrollbar-thin p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {products.map((p) => {
           const isSelected = selectedIds.includes(p.id);
           return (
@@ -234,7 +235,7 @@ export default function ProductGrid({
                   </div>
 
                   <h3
-                    className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1 line-clamp-2 h-8 leading-tight hover:text-blue-600 cursor-pointer"
+                    className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1 leading-snug break-words hover:text-blue-600 cursor-pointer"
                     title={p.name}
                     onClick={() => onView && onView(p)}
                   >
@@ -248,6 +249,29 @@ export default function ProductGrid({
                     <span className="text-[10px] text-slate-400 truncate max-w-[80px]" title={p.modelName || p.modelNumber}>
                       {p.modelName || p.modelNumber}
                     </span>
+                  </div>
+
+                  <div className="mt-1.5 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500 dark:text-slate-400">Avl Stock:</span>
+                    {stockMap && stockMap[p.id] === undefined ? (
+                      <span className="text-slate-400 text-[10px] animate-pulse">...</span>
+                    ) : (
+                      (() => {
+                        const count = stockMap && stockMap[p.id] !== undefined ? stockMap[p.id] : (p.stockQty ?? 0);
+                        if (count === 0) {
+                          return (
+                            <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+                              0
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">
+                            {count}
+                          </span>
+                        );
+                      })()
+                    )}
                   </div>
 
                   {/* Status badges */}
@@ -324,7 +348,7 @@ export default function ProductGrid({
       )}
 
       {/* Pagination (identical to ProductTable) */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+      <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
         <div className="flex items-center gap-3">
           <span className="text-xs text-black dark:text-slate-400 tabular-nums">
             Showing {start}–{end} of {total} products

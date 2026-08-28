@@ -96,9 +96,9 @@ export default function CourierListScreen({
     const q = searchQuery.toLowerCase();
     return clients.filter(
       (c) =>
-        c.clientName.toLowerCase().includes(q) ||
-        c.clientCode.toLowerCase().includes(q) ||
-        c.legalName.toLowerCase().includes(q)
+        (c.clientName || '').toLowerCase().includes(q) ||
+        (c.clientCode || '').toLowerCase().includes(q) ||
+        (c.legalName || '').toLowerCase().includes(q)
     );
   }, [clients, searchQuery]);
 

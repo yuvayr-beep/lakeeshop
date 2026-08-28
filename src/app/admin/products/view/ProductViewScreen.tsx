@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Star, ShoppingBag, Truck, Tag, Calendar, Shield, Cpu, Scale,
   ExternalLink, Layers, Copy, Check, Info, FileText, AlertCircle, RefreshCw,
-  Users, UserCheck, Warehouse, Mail, ChevronRight, Package, Grid, CheckCircle
+  Users, UserCheck, Warehouse, Mail, ChevronRight, Package, Grid, CheckCircle, Edit2
 } from 'lucide-react';
 import axiosInstance from '@/lib/axios';
 import Badge from '@/components/ui/Badge';
@@ -310,6 +310,216 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
   const [alternateProducts, setAlternateProducts] = useState<Array<ProductDetails>>([]);
   const [alternatesLoading, setAlternatesLoading] = useState(false);
 
+  // Client Shared state & API integration
+  const [clientShares, setClientShares] = useState<any[]>([]);
+  const [clientSharesLoading, setClientSharesLoading] = useState<boolean>(true);
+  const [clientMap, setClientMap] = useState<Record<number, string>>({});
+
+  // Verified Suppliers state & API integration
+  const [supplierShares, setSupplierShares] = useState<any[]>([]);
+  const [supplierSharesLoading, setSupplierSharesLoading] = useState<boolean>(true);
+  const [supplierMap, setSupplierMap] = useState<Record<number, string>>({});
+
+  // Real-time stock count state & SSE Stream integration
+  const [realtimeStock, setRealtimeStock] = useState<number | null>(null);
+
+  // 0. SSE & GET real-time stock stream subscriber
+  useEffect(() => {
+    if (!product || !product.id) return;
+    const productId = product.id;
+    let isSubscribed = true;
+    const controller = new AbortController();
+
+    async function fetchInitialStock() {
+      try {
+        const res = await axiosInstance.get<any>(`/stock/availability/${productId}`);
+        let stockCount: number | null = null;
+        if (res.data && typeof res.data.data === 'number') {
+          stockCount = res.data.data;
+        } else if (typeof res.data === 'number') {
+          stockCount = res.data;
+        }
+        if (stockCount !== null && isSubscribed) {
+          setRealtimeStock(stockCount);
+        }
+      } catch (err) {
+        console.warn(`GET /stock/availability/${productId} error:`, err);
+      }
+    }
+
+    async function startStockStream() {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        const streamUrl = `/api/proxy/stock/availability/${productId}/stream`;
+
+        const headers: Record<string, string> = {
+          Accept: 'text/event-stream',
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(streamUrl, {
+          method: 'GET',
+          headers,
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          console.warn(`SSE stock stream failed with status ${response.status}`);
+          return;
+        }
+
+        if (!response.body) {
+          console.warn('SSE stream response has no body reader');
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (isSubscribed) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split(/\r?\n/);
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('data:')) {
+              const dataValue = trimmedLine.replace(/^data:/, '').trim();
+              try {
+                const parsedJson = JSON.parse(dataValue);
+                if (parsedJson && typeof parsedJson.data === 'number' && isSubscribed) {
+                  setRealtimeStock(parsedJson.data);
+                } else if (typeof parsedJson === 'number' && isSubscribed) {
+                  setRealtimeStock(parsedJson);
+                }
+              } catch {
+                const parsedNum = parseInt(dataValue, 10);
+                if (!isNaN(parsedNum) && isSubscribed) {
+                  setRealtimeStock(parsedNum);
+                }
+              }
+            } else if (trimmedLine && !isNaN(Number(trimmedLine))) {
+              if (isSubscribed) {
+                setRealtimeStock(Number(trimmedLine));
+              }
+            }
+          }
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.warn('SSE stock stream error:', err);
+        }
+      }
+    }
+
+    fetchInitialStock();
+    startStockStream();
+
+    return () => {
+      isSubscribed = false;
+      controller.abort();
+    };
+  }, [product?.id]);
+
+  // 1. Fetch clients mapping
+  useEffect(() => {
+    async function loadClientMap() {
+      try {
+        const res = await axiosInstance.get<any>('/client', {
+          headers: { Accept: 'application/x-ndjson' },
+        });
+        const parsed = parseNdjson(res.data);
+        const map: Record<number, string> = {};
+        parsed.forEach((c: any) => {
+          if (c && c.id) {
+            map[c.id] = c.clientName || c.legalName || c.clientCode || `Client #${c.id}`;
+          }
+        });
+        setClientMap(map);
+      } catch (e) {
+        console.warn('Error loading clients map:', e);
+      }
+    }
+    loadClientMap();
+  }, []);
+
+  // 2. Fetch client-product-share for current sku
+  useEffect(() => {
+    if (!sku) return;
+    async function loadClientShares() {
+      setClientSharesLoading(true);
+      try {
+        const res = await axiosInstance.get<any>(`/prod/client-product-share?sku=${sku}`, {
+          headers: { Accept: 'application/x-ndjson' },
+        });
+        const parsed = parseNdjson(res.data);
+        if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+          setClientShares(parsed);
+        } else {
+          setClientShares([]);
+        }
+      } catch (err) {
+        console.warn('Error fetching client product share data:', err);
+        setClientShares([]);
+      } finally {
+        setClientSharesLoading(false);
+      }
+    }
+    loadClientShares();
+  }, [sku]);
+
+  // 3. Fetch suppliers mapping
+  useEffect(() => {
+    async function loadSupplierMap() {
+      try {
+        const res = await axiosInstance.get<any>('/vendor/suppliers', {
+          headers: { Accept: 'application/x-ndjson' },
+        });
+        const parsed = parseNdjson(res.data);
+        const map: Record<number, string> = {};
+        parsed.forEach((s: any) => {
+          if (s && s.id) {
+            map[s.id] = s.name || s.legalName || s.supplierCode || `Supplier #${s.id}`;
+          }
+        });
+        setSupplierMap(map);
+      } catch (e) {
+        console.warn('Error loading suppliers map:', e);
+      }
+    }
+    loadSupplierMap();
+  }, []);
+
+  // 4. Fetch supplier-product-share for current sku
+  useEffect(() => {
+    if (!sku) return;
+    async function loadSupplierShares() {
+      setSupplierSharesLoading(true);
+      try {
+        const res = await axiosInstance.get<any>(`/prod/supplier-product-share?sku=${sku}`, {
+          headers: { Accept: 'application/x-ndjson' },
+        });
+        const parsed = parseNdjson(res.data);
+        if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+          setSupplierShares(parsed);
+        } else {
+          setSupplierShares([]);
+        }
+      } catch (err) {
+        console.warn('Error fetching supplier product share data:', err);
+        setSupplierShares([]);
+      } finally {
+        setSupplierSharesLoading(false);
+      }
+    }
+    loadSupplierShares();
+  }, [sku]);
+
   // Load product details
   useEffect(() => {
     async function loadData() {
@@ -594,84 +804,71 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
 
   return (
     <div className="space-y-6">
-      {/* Top Breadcrumb and Actions Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
-        <div className="space-y-1">
-          <button
-            onClick={() => router.push('/admin/products/list')}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-[var(--primary)] transition-colors font-medium mb-1"
-          >
-            <ArrowLeft size={13} /> Back to Products
-          </button>
-          <div className="flex items-center gap-2 flex-wrap text-xs text-slate-400 dark:text-slate-500">
-            <span>Home</span>
-            <ChevronRight size={10} />
-            <span>Products</span>
-            <ChevronRight size={10} />
-            <span className="truncate max-w-[200px] text-slate-600 dark:text-slate-400 font-medium">
-              {product.categoryPath || 'Catalog'}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isFallback && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30 text-xs font-semibold animate-pulse">
-              <Info size={12} /> Live API Offline (Showing Demo Mock)
-            </div>
-          )}
-          <button
-            onClick={() => router.push(`/admin/products/edit?id=${product.id}`)}
-            className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            Edit Product
-          </button>
-        </div>
-      </div>
-
       {/* Main View Area: Image Gallery (Left) & Info Panel (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Side: Images & Long Description */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Large Image Frame */}
-          <div className="relative aspect-square rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 flex items-center justify-center overflow-hidden group shadow-sm">
-            <img
-              src={imagesToRender[activeImageIdx]?.url}
-              alt={imagesToRender[activeImageIdx]?.alt || product.baseProductName}
-              className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
-            />
-            {product.isCombo && (
-              <span className="absolute top-4 left-4 bg-[var(--primary)] text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
-                COMBO PACK
-              </span>
-            )}
-            <div className="absolute top-4 right-4 flex items-center gap-1.5 flex-wrap justify-end">
-              {(() => {
-                const pStatus = product.productStatusCode || (product.status ? 'ACTIVE' : 'BLOCKED');
-                let variant: 'success' | 'danger' | 'warning' | 'muted' = 'muted';
-                if (pStatus === 'ACTIVE') variant = 'success';
-                else if (pStatus === 'BLOCKED') variant = 'danger';
-                else if (pStatus === 'TEMP_BLOCKED') variant = 'warning';
+        <div className="lg:col-span-5 space-y-4">
+          {/* Combined Image Frame Container with Top Navigation Bar */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            {/* Top Navigation Header inside Image Box */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
+              <button
+                onClick={() => router.push('/admin/products/list')}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                <ArrowLeft size={13} /> Back to Products
+              </button>
+              <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-400 dark:text-slate-500">
+                <span>Home</span>
+                <ChevronRight size={9} />
+                <span>Products</span>
+                <ChevronRight size={9} />
+                <span className="truncate max-w-[140px] text-slate-600 dark:text-slate-400 font-medium">
+                  {product.categoryPath || 'Catalog'}
+                </span>
+              </div>
+            </div>
 
-                return (
-                  <Badge variant={variant} size="sm">
-                    {pStatus.replace('_', ' ')}
-                  </Badge>
-                );
-              })()}
-              {(() => {
-                const offStatus = product.offlineStatusCode || (product.isOffline ? 'OFFLINE' : 'ONLINE');
-                let variant: 'success' | 'danger' | 'warning' | 'muted' = 'success';
-                if (offStatus === 'ONLINE') variant = 'success';
-                else if (offStatus === 'OFFLINE') variant = 'danger';
-                else if (offStatus === 'TEMP_OFFLINE') variant = 'warning';
+            {/* Large Image Frame */}
+            <div className="relative aspect-square p-8 flex items-center justify-center overflow-hidden group">
+              <img
+                src={imagesToRender[activeImageIdx]?.url}
+                alt={imagesToRender[activeImageIdx]?.alt || product.baseProductName}
+                className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
+              />
+              {product.isCombo && (
+                <span className="absolute top-4 left-4 bg-[var(--primary)] text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
+                  COMBO PACK
+                </span>
+              )}
+              <div className="absolute top-4 right-4 flex items-center gap-1.5 flex-wrap justify-end">
+                {(() => {
+                  const pStatus = product.productStatusCode || (product.status ? 'ACTIVE' : 'BLOCKED');
+                  let variant: 'success' | 'danger' | 'warning' | 'muted' = 'muted';
+                  if (pStatus === 'ACTIVE') variant = 'success';
+                  else if (pStatus === 'BLOCKED') variant = 'danger';
+                  else if (pStatus === 'TEMP_BLOCKED') variant = 'warning';
 
-                return (
-                  <Badge variant={variant} size="sm">
-                    {offStatus.replace('_', ' ')}
-                  </Badge>
-                );
-              })()}
+                  return (
+                    <Badge variant={variant} size="sm">
+                      {pStatus.replace('_', ' ')}
+                    </Badge>
+                  );
+                })()}
+                {(() => {
+                  const offStatus = product.offlineStatusCode || (product.isOffline ? 'OFFLINE' : 'ONLINE');
+                  let variant: 'success' | 'danger' | 'warning' | 'muted' = 'success';
+                  if (offStatus === 'ONLINE') variant = 'success';
+                  else if (offStatus === 'OFFLINE') variant = 'danger';
+                  else if (offStatus === 'TEMP_OFFLINE') variant = 'warning';
+
+                  return (
+                    <Badge variant={variant} size="sm">
+                      {offStatus.replace('_', ' ')}
+                    </Badge>
+                  );
+                })()}
+              </div>
             </div>
           </div>
 
@@ -698,14 +895,58 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
         {/* Right Side: Product Details & Specs */}
         <div className="lg:col-span-7 space-y-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 lg:p-8 shadow-sm space-y-6">
-            {/* Header info */}
-            <div>
-              <div className="flex items-center gap-2 text-[var(--primary)] font-bold text-xs uppercase tracking-wider mb-1">
-                {product.brandName}
+            {/* Header info with SSE Real-time Stock Count & Edit Product button */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-[var(--primary)] font-bold text-xs uppercase tracking-wider mb-1">
+                  {product.brandName}
+                </div>
+                <h1 className="text-xl lg:text-2xl font-bold text-slate-800 dark:text-white leading-snug">
+                  {product.baseProductName}
+                </h1>
               </div>
-              <h1 className="text-xl lg:text-2xl font-bold text-slate-800 dark:text-white leading-snug">
-                {product.baseProductName}
-              </h1>
+
+              <div className="flex items-center gap-2.5 self-start sm:self-auto flex-shrink-0 flex-wrap">
+                {/* Real-time Stock Badge */}
+                <div className={`flex items-center gap-2.5 px-3.5 py-2 rounded-2xl shadow-xs border ${
+                  realtimeStock === 0
+                    ? 'bg-red-50/80 dark:bg-red-950/40 border-red-200 dark:border-red-800/60'
+                    : 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60'
+                }`}>
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                      realtimeStock === 0 ? 'bg-red-400' : 'bg-emerald-400'
+                    }`}></span>
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                      realtimeStock === 0 ? 'bg-red-500' : 'bg-emerald-500'
+                    }`}></span>
+                  </span>
+                  <div className="flex flex-col leading-none">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Live Stock</span>
+                    <span className={`text-sm font-black font-mono mt-0.5 ${
+                      realtimeStock === 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'
+                    }`}>
+                      {realtimeStock !== null ? realtimeStock : (product.stockQty ?? '...')}
+                    </span>
+                  </div>
+                  <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md ml-0.5 ${
+                    realtimeStock === 0
+                      ? 'text-red-700 dark:text-red-300 bg-red-200/60 dark:bg-red-900/60'
+                      : 'text-emerald-700 dark:text-emerald-300 bg-emerald-200/60 dark:bg-emerald-900/60'
+                  }`}>
+                    Realtime
+                  </span>
+                </div>
+
+                {/* Edit Product Button */}
+                <button
+                  onClick={() => router.push(`/admin/products/edit?id=${product.id}`)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors shadow-xs"
+                >
+                  <Edit2 size={13} />
+                  Edit Product
+                </button>
+              </div>
             </div>
 
             {/* Price section */}
@@ -831,7 +1072,9 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
                 </div>
                 <div>
                   <span className="text-slate-400 block mb-0.5">Stock Qty</span>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">{product.stockQty !== undefined ? product.stockQty : 'N/A'}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    {realtimeStock !== null ? realtimeStock : (product.stockQty !== undefined ? product.stockQty : 'N/A')}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-400 block mb-0.5">Preorder (Backorder)</span>
@@ -1039,80 +1282,166 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
       {/* Row 3: Client Shared (Left) & Suppliers List (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Box: Client Shared Table */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-            <Users className="text-[var(--primary)]" size={18} />
-            <h2 className="text-base font-bold text-slate-800 dark:text-white">Client Shared Matrix</h2>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4 flex flex-col">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <Users className="text-[var(--primary)]" size={18} />
+              <h2 className="text-base font-bold text-slate-800 dark:text-white">Client Shared</h2>
+            </div>
+            {clientShares.length > 0 && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                {clientShares.length} {clientShares.length === 1 ? 'record' : 'records'}
+              </span>
+            )}
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold">
-                  <th className="py-2.5 px-3">Client / Business</th>
-                  <th className="py-2.5 px-3">Date Shared</th>
-                  <th className="py-2.5 px-3">Margin Slab</th>
+          <div className="overflow-x-auto overflow-y-auto max-h-[260px] scrollbar-thin rounded-xl">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold">
+                  <th className="py-2.5 px-3">Client Name</th>
+                  <th className="py-2.5 px-3">Client SKU Code</th>
+                  <th className="py-2.5 px-3">Transfer Price</th>
+                  <th className="py-2.5 px-3">Valid From</th>
                   <th className="py-2.5 px-3">Status</th>
                 </tr>
               </thead>
-              <tbody>
-                {mockClientsShared.map((row, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 dark:border-slate-800/60 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
-                    <td className="py-3 px-3 font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <UserCheck size={13} className="text-slate-400" /> {row.client}
-                    </td>
-                    <td className="py-3 px-3 text-slate-500">{row.date}</td>
-                    <td className="py-3 px-3 font-mono text-[var(--primary)]">{row.margin}</td>
-                    <td className="py-3 px-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold ${row.status === 'Active'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400'
-                        : row.status === 'Pending Approval'
-                          ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                        }`}>
-                        {row.status}
-                      </span>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {clientSharesLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-400">
+                      <RefreshCw size={16} className="animate-spin inline-block mr-2 text-[var(--primary)]" />
+                      Loading client shared records...
                     </td>
                   </tr>
-                ))}
+                ) : clientShares.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-400">
+                      No client sharing records found for this product.
+                    </td>
+                  </tr>
+                ) : (
+                  clientShares.map((row: any, idx: number) => {
+                    const clientName = clientMap[row.clientId] || (row.clientId === 0 ? 'General / Default' : `Client #${row.clientId}`);
+                    const statusText = row.shareStatus || (row.status ? 'APPROVED' : 'INACTIVE');
+                    const isApproved = statusText === 'APPROVED' || statusText === 'ACTIVE';
+                    const isPending = statusText === 'DRAFT' || statusText === 'PENDING';
+
+                    return (
+                      <tr key={row.clientShareId || idx} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300">
+                          <div className="flex items-center gap-1.5 min-w-[130px]" title={clientName}>
+                            <UserCheck size={13} className="text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{clientName}</span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                          {row.clientSkuCode || '-'}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-[var(--primary)] whitespace-nowrap">
+                          {row.transferPrice !== undefined && row.transferPrice !== null
+                            ? `₹${Number(row.transferPrice).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                            : '-'}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-500 text-[11px] whitespace-nowrap">
+                          {row.validFrom || '-'}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                            isApproved
+                              ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40'
+                              : isPending
+                                ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700'
+                          }`}>
+                            {statusText}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Right Box: Suppliers List Table */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-            <Warehouse className="text-[var(--primary)]" size={18} />
-            <h2 className="text-base font-bold text-slate-800 dark:text-white">Verified Suppliers</h2>
+        {/* Right Box: Verified Suppliers Table */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4 flex flex-col">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <Warehouse className="text-[var(--primary)]" size={18} />
+              <h2 className="text-base font-bold text-slate-800 dark:text-white">Verified Suppliers</h2>
+            </div>
+            {supplierShares.length > 0 && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                {supplierShares.length} {supplierShares.length === 1 ? 'record' : 'records'}
+              </span>
+            )}
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold">
+          <div className="overflow-x-auto overflow-y-auto max-h-[260px] scrollbar-thin rounded-xl">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold">
                   <th className="py-2.5 px-3">Supplier Name</th>
+                  <th className="py-2.5 px-3">Supplier SKU</th>
                   <th className="py-2.5 px-3">Price</th>
-                  <th className="py-2.5 px-3">Stock level</th>
-                  <th className="py-2.5 px-3">Lead Time</th>
-                  <th className="py-2.5 px-3">Rating</th>
+                  <th className="py-2.5 px-3">Status</th>
                 </tr>
               </thead>
-              <tbody>
-                {mockSuppliers.map((row, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 dark:border-slate-800/60 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
-                    <td className="py-3 px-3 font-semibold text-slate-700 dark:text-slate-300">
-                      {row.name}
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {supplierSharesLoading ? (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-slate-400">
+                      <RefreshCw size={16} className="animate-spin inline-block mr-2 text-[var(--primary)]" />
+                      Loading verified suppliers...
                     </td>
-                    <td className="py-3 px-3 font-bold text-slate-800 dark:text-white">₹{row.price}</td>
-                    <td className="py-3 px-3">
-                      <span className={`font-medium ${row.stock === 'Out of Stock' ? 'text-red-500' : 'text-slate-600 dark:text-slate-300'
-                        }`}>{row.stock}</span>
-                    </td>
-                    <td className="py-3 px-3 text-slate-500">{row.leadTime}</td>
-                    <td className="py-3 px-3 font-medium text-amber-500">{row.rating}</td>
                   </tr>
-                ))}
+                ) : supplierShares.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-slate-400">
+                      No supplier records found for this product.
+                    </td>
+                  </tr>
+                ) : (
+                  supplierShares.map((row: any, idx: number) => {
+                    const supplierName = supplierMap[row.supplierId] || (row.supplierId === 0 ? 'General / Main Supplier' : `Supplier #${row.supplierId}`);
+                    const statusText = row.shareStatus || (row.status ? 'APPROVED' : 'INACTIVE');
+                    const isApproved = statusText === 'APPROVED' || statusText === 'ACTIVE';
+                    const isPending = statusText === 'DRAFT' || statusText === 'PENDING';
+
+                    return (
+                      <tr key={row.id || idx} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300">
+                          <div className="flex items-center gap-1.5 min-w-[130px]" title={supplierName}>
+                            <Warehouse size={13} className="text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{supplierName}</span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                          {row.supplierSkuCode || '-'}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-slate-800 dark:text-white whitespace-nowrap">
+                          {row.supplierPrice !== undefined && row.supplierPrice !== null
+                            ? `₹${Number(row.supplierPrice).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                            : '-'}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                            isApproved
+                              ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40'
+                              : isPending
+                                ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700'
+                          }`}>
+                            {statusText}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

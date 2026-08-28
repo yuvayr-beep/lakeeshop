@@ -206,9 +206,9 @@ export default function ProductModal({ open, onClose, product }: ProductModalPro
                 {...register('unitPrice', { required: 'Unit price is required', min: { value: 0, message: 'Must be ≥ 0' }, valueAsNumber: true })} />
               {errors.unitPrice && <p className="mt-1 text-[10px] text-red-500">{errors.unitPrice.message}</p>}
             </Field>
-            <Field label="MRP (₹)" required helper="Maximum retail price">
+            <Field label="MRP (₹)" helper="Maximum retail price">
               <input type="number" step="0.01" min="0" className={inputClass(!!errors.mrp)} placeholder="0.00"
-                {...register('mrp', { required: 'MRP is required', min: { value: 0, message: 'Must be ≥ 0' }, valueAsNumber: true })} />
+                {...register('mrp', { min: { value: 0, message: 'Must be ≥ 0' }, valueAsNumber: true })} />
               {errors.mrp && <p className="mt-1 text-[10px] text-red-500">{errors.mrp.message}</p>}
             </Field>
             <Field label="Tax Slab (GST)" required>

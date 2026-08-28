@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import QuickProductModal from './QuickProductModal';
 import ProductImportModal from './ProductImportModal';
 import ProductExportModal from './ProductExportModal';
+import AdminLayout from '@/app/admin/components/AdminLayout';
 
 
 type ApiProductImage = ProductImage & { priority?: number };
@@ -21,13 +22,17 @@ interface ApiProduct {
   baseProductName?: string;
   defaultSku?: string;
   categoryPath?: string;
+  categoryJsonPath?: string;
   brandName?: string;
+  brandId?: number | null;
   productTypeName?: string;
+  productTypeId?: number | null;
   modelName?: string;
   modelNumber?: string;
   taxPercentage?: number | string | null;
   status?: boolean;
   hsnCode?: string;
+  hsnId?: number | null;
   mrp?: number | null;
   costPrice?: number | null;
   preferredShipmentMode?: string | null;
@@ -36,8 +41,11 @@ interface ApiProduct {
   width?: number | null;
   height?: number | null;
   isCombo?: boolean;
+  comboItems?: any[];
   images?: ApiProductImage[] | string | null;
   shortDescription?: string;
+  longDescription?: string | null;
+  longDescriptionHtml?: string | null;
   createdAt?: string;
   updatedAt?: string;
   productStatusCode?: string;
@@ -45,6 +53,22 @@ interface ApiProduct {
   isBlocked?: boolean;
   isOffline?: boolean;
   defaultCourierPrice?: number | null;
+  isExternal?: boolean;
+  isSplit?: boolean;
+  eanCode?: string | null;
+  variant?: string | null;
+  size?: string | null;
+  capacity?: string | null;
+  packQuantity?: number | null;
+  colorCode?: string | null;
+  materialCode?: string | null;
+  gender?: string | null;
+  patternFinishCode?: string | null;
+  editionCode?: string | null;
+  warrantyCode?: string | null;
+  handlingCode?: string | null;
+  splitQuantity?: number | null;
+  surfaceQuantity?: number | null;
 }
 
 const getCategoryLeaf = (categoryPath?: string) => {
@@ -205,10 +229,56 @@ const parseNdjson = (raw: string): any[] => {
   }
 };
 
-const fetchProductData = async (search: string, filters: any): Promise<ApiProduct[]> => {
+const logProductApiCall = (method: string, endpoint: string, bodyPayload: any, rawResponse: any, parsedList: any[], totalCount?: number) => {
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('accessToken') || 'YOUR_ACCESS_TOKEN') : 'YOUR_ACCESS_TOKEN';
+  const fullUrl = `https://v2.lakeetech.com${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+
+  let curl = `curl -X '${method.toUpperCase()}' \\\n  '${fullUrl}' \\\n  -H 'accept: application/x-ndjson'`;
+  curl += ` \\\n  -H 'Authorization: Bearer ${token}'`;
+  if (bodyPayload) {
+    curl += ` \\\n  -H 'Content-Type: application/json' \\\n  -d '${JSON.stringify(bodyPayload)}'`;
+  }
+
+  console.group(`%c[Product List API Request] ${method.toUpperCase()} ${endpoint}`, 'color: #2563eb; font-weight: bold; font-size: 12px;');
+  console.log('%ccURL Command:', 'color: #10b981; font-weight: bold;');
+  console.log(curl);
+  if (totalCount !== undefined) {
+    console.log('%cTotal Count (x-total-count):', 'color: #059669; font-weight: bold;', totalCount);
+  }
+  console.log('%cRaw API Response:', 'color: #d97706; font-weight: bold;', rawResponse);
+  console.log(`%cParsed Products (${parsedList.length} items):`, 'color: #8b5cf6; font-weight: bold;', parsedList);
+  console.groupEnd();
+};
+
+interface FetchProductResult {
+  products: ApiProduct[];
+  totalCount?: number;
+}
+
+const fetchProductData = async (
+  search: string,
+  filters: any,
+  pageIndex: number = 0,
+  pageSize: number = 10
+): Promise<FetchProductResult> => {
   const q = search.trim();
+  let responseData = '';
+  let requestMethod = 'GET';
+  let requestUrl = '';
+  let requestBody: any = null;
+  let responseHeaders: any = null;
+
+  const hasAdvanceFilter = Object.values(filters || {}).some(
+    (val) => val !== undefined && val !== null && String(val).trim() !== ''
+  );
+
   if (!q) {
     const params = new URLSearchParams();
+    if (!hasAdvanceFilter) {
+      params.append('page', String(pageIndex));
+      params.append('size', String(pageSize));
+    }
+
     if (filters.categoryCode) {
       params.append('sku', filters.categoryCode);
     }
@@ -244,9 +314,9 @@ const fetchProductData = async (search: string, filters: any): Promise<ApiProduc
     }
 
     const queryString = params.toString();
-    const url = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
+    requestUrl = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
 
-    const response = await axiosInstance.get<string>(url, {
+    const response = await axiosInstance.get<string>(requestUrl, {
       headers: {
         Accept: 'application/x-ndjson',
         'Cache-Control': 'no-cache',
@@ -255,98 +325,108 @@ const fetchProductData = async (search: string, filters: any): Promise<ApiProduc
       responseType: 'text',
       transformResponse: [(data) => data],
     });
-    return parseNdjson(response.data) as ApiProduct[];
-  }
-
-  let skuParts: string[] = [];
-  let isBulkSkuSearch = false;
-
-  if (q.includes(',') || q.includes(';') || q.includes('\n') || q.includes('\r')) {
-    skuParts = q.split(/[,\n\r;]+/).map(p => p.trim()).filter(Boolean);
-    isBulkSkuSearch = skuParts.length > 0;
-  } else {
-    // Check if space-separated parts all look like SKUs
-    const spaceParts = q.split(/\s+/).map(p => p.trim()).filter(Boolean);
-    const isAllSkus = spaceParts.length > 1 && spaceParts.every(p => /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(p));
-    if (isAllSkus) {
-      skuParts = spaceParts;
-      isBulkSkuSearch = true;
-    }
-  }
-
-  let responseData = '';
-  if (isBulkSkuSearch) {
-    const response = await axiosInstance.post<string>('/prod/products/bulk', skuParts, {
-      headers: {
-        Accept: 'application/x-ndjson',
-        'Content-Type': 'application/json',
-      },
-      responseType: 'text',
-      transformResponse: [(data) => data],
-    });
     responseData = response.data;
+    responseHeaders = response.headers;
   } else {
-    const params = new URLSearchParams();
-    const isSku = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(q);
-    if (isSku) {
-      params.append('sku', q);
+    let skuParts: string[] = [];
+    let isBulkSkuSearch = false;
+
+    if (q.includes(',') || q.includes(';') || q.includes('\n') || q.includes('\r')) {
+      skuParts = q.split(/[,\n\r;]+/).map(p => p.trim()).filter(Boolean);
+      isBulkSkuSearch = skuParts.length > 0;
     } else {
-      params.append('name', q);
+      // Check if space-separated parts all look like SKUs
+      const spaceParts = q.split(/\s+/).map(p => p.trim()).filter(Boolean);
+      const isAllSkus = spaceParts.length > 1 && spaceParts.every(p => /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(p));
+      if (isAllSkus) {
+        skuParts = spaceParts;
+        isBulkSkuSearch = true;
+      }
     }
 
-    if (filters.categoryCode) {
-      params.append('sku', filters.categoryCode);
-    }
-    if (filters.brand) {
-      params.append('brand', filters.brand);
-    }
-    if (filters.productType) {
-      params.append('productType', filters.productType);
-    }
-    if (filters.minMrp) {
-      params.append('minMrp', filters.minMrp);
-    }
-    if (filters.maxMrp) {
-      params.append('maxMrp', filters.maxMrp);
-    }
-    if (filters.minCostPrice) {
-      params.append('minCostPrice', filters.minCostPrice);
-    }
-    if (filters.maxCostPrice) {
-      params.append('maxCostPrice', filters.maxCostPrice);
-    }
-    if (filters.isCombo !== '') {
-      params.append('isCombo', filters.isCombo);
-    }
-    if (filters.isOffline) {
-      params.append('isOffline', filters.isOffline);
-    }
-    if (filters.isBlocked) {
-      params.append('isBlocked', filters.isBlocked);
-    }
-    if (filters.isExternal !== '') {
-      params.append('isExternal', filters.isExternal);
-    }
+    if (isBulkSkuSearch) {
+      requestMethod = 'POST';
+      requestUrl = '/prod/products/bulk';
+      requestBody = skuParts;
+      const response = await axiosInstance.post<string>(requestUrl, skuParts, {
+        headers: {
+          Accept: 'application/x-ndjson',
+          'Content-Type': 'application/json',
+        },
+        responseType: 'text',
+        transformResponse: [(data) => data],
+      });
+      responseData = response.data;
+      responseHeaders = response.headers;
+    } else {
+      const params = new URLSearchParams();
+      if (!hasAdvanceFilter) {
+        params.append('page', String(pageIndex));
+        params.append('size', String(pageSize));
+      }
 
-    const queryString = params.toString();
-    const url = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
+      const isSku = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(q);
+      if (isSku) {
+        params.append('sku', q);
+      } else {
+        params.append('name', q);
+      }
 
-    const response = await axiosInstance.get<string>(url, {
-      headers: {
-        Accept: 'application/x-ndjson',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
-      responseType: 'text',
-      transformResponse: [(data) => data],
-    });
-    responseData = response.data;
+      if (filters.categoryCode) {
+        params.append('sku', filters.categoryCode);
+      }
+      if (filters.brand) {
+        params.append('brand', filters.brand);
+      }
+      if (filters.productType) {
+        params.append('productType', filters.productType);
+      }
+      if (filters.minMrp) {
+        params.append('minMrp', filters.minMrp);
+      }
+      if (filters.maxMrp) {
+        params.append('maxMrp', filters.maxMrp);
+      }
+      if (filters.minCostPrice) {
+        params.append('minCostPrice', filters.minCostPrice);
+      }
+      if (filters.maxCostPrice) {
+        params.append('maxCostPrice', filters.maxCostPrice);
+      }
+      if (filters.isCombo !== '') {
+        params.append('isCombo', filters.isCombo);
+      }
+      if (filters.isOffline) {
+        params.append('isOffline', filters.isOffline);
+      }
+      if (filters.isBlocked) {
+        params.append('isBlocked', filters.isBlocked);
+      }
+      if (filters.isExternal !== '') {
+        params.append('isExternal', filters.isExternal);
+      }
+
+      const queryString = params.toString();
+      requestUrl = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
+
+      const response = await axiosInstance.get<string>(requestUrl, {
+        headers: {
+          Accept: 'application/x-ndjson',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+        responseType: 'text',
+        transformResponse: [(data) => data],
+      });
+      responseData = response.data;
+      responseHeaders = response.headers;
+    }
   }
 
   let rawProducts = parseNdjson(responseData) as ApiProduct[];
 
   // Apply client-side filters for bulk SKU search
-  if (isBulkSkuSearch) {
+  if (q && requestUrl.includes('/prod/products/bulk')) {
     if (filters.brand) {
       rawProducts = rawProducts.filter(p => p.brandName?.toLowerCase() === filters.brand.toLowerCase());
     }
@@ -394,12 +474,37 @@ const fetchProductData = async (search: string, filters: any): Promise<ApiProduc
     }
   }
 
-  return rawProducts;
+  let totalCount: number | undefined = undefined;
+  if (responseHeaders) {
+    let headerVal: any = undefined;
+    if (typeof responseHeaders.get === 'function') {
+      headerVal = responseHeaders.get('x-total-count') || responseHeaders.get('X-Total-Count');
+    }
+    if (!headerVal) {
+      headerVal = responseHeaders['x-total-count'] ||
+                  responseHeaders['X-Total-Count'] ||
+                  responseHeaders['x-total-elements'] ||
+                  responseHeaders['total-count'] ||
+                  responseHeaders['total'];
+    }
+    if (headerVal !== undefined && headerVal !== null) {
+      const parsedHeader = parseInt(String(headerVal), 10);
+      if (!isNaN(parsedHeader)) {
+        totalCount = parsedHeader;
+      }
+    }
+  }
+
+  logProductApiCall(requestMethod, requestUrl, requestBody, responseData, rawProducts, totalCount);
+
+  return { products: rawProducts, totalCount };
 };
 
 export default function ProductManagementClient() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [totalServerCount, setTotalServerCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -515,10 +620,10 @@ export default function ProductManagementClient() {
     setLoading(true);
     setError('');
     try {
-      const rawProducts = await fetchProductData(search, filters);
+      const { products: rawProducts, totalCount } = await fetchProductData(search, filters, page - 1, perPage);
       setProducts(rawProducts.map(toProduct));
+      setTotalServerCount(totalCount ?? null);
       setSelectedIds([]);
-      setPage(1);
     } catch (err) {
       console.error(err);
       const status = (err as { response?: { status?: number } })?.response?.status;
@@ -526,10 +631,11 @@ export default function ProductManagementClient() {
         ? 'Unauthorized. Please sign in again and refresh the product list.'
         : 'Failed to load products. Please refresh and try again.');
       setProducts([]);
+      setTotalServerCount(null);
     } finally {
       setLoading(false);
     }
-  }, [search, filters]);
+  }, [search, filters, page, perPage]);
 
   interface ExportJobStatus {
     jobId: string;
@@ -668,7 +774,7 @@ export default function ProductManagementClient() {
     try {
       setExportSearchedProgress(30);
 
-      const rawProducts = await fetchProductData(search, filters);
+      const { products: rawProducts } = await fetchProductData(search, filters, 0, 10000);
 
       setExportSearchedProgress(50);
 
@@ -1016,6 +1122,46 @@ export default function ProductManagementClient() {
     fetchCategories();
   }, [fetchProducts, fetchStatuses, fetchOfflineStatuses, fetchBrands, fetchProductTypes, fetchCategories]);
 
+  useEffect(() => {
+    if (!products || products.length === 0) return;
+
+    let isMounted = true;
+    const idsToFetch = products
+      .map((p) => p.id)
+      .filter((id) => id && stockMap[id] === undefined);
+
+    if (idsToFetch.length === 0) return;
+
+    const fetchStocks = async () => {
+      const newStockMap: Record<string, number> = {};
+      await Promise.all(
+        idsToFetch.map(async (id) => {
+          try {
+            const res = await axiosInstance.get(`/stock/availability/${id}`);
+            if (res.data && typeof res.data.data === 'number') {
+              newStockMap[id] = res.data.data;
+            } else if (typeof res.data === 'number') {
+              newStockMap[id] = res.data;
+            } else {
+              newStockMap[id] = 0;
+            }
+          } catch {
+            newStockMap[id] = 0;
+          }
+        })
+      );
+      if (isMounted) {
+        setStockMap((prev) => ({ ...prev, ...newStockMap }));
+      }
+    };
+
+    fetchStocks();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [products]);
+
 
   const filtered = useMemo(() => {
     let data = [...products];
@@ -1033,11 +1179,38 @@ export default function ProductManagementClient() {
   }, [products, sortCol, sortDir]);
 
   const paginated = useMemo(() => {
-    const start = (page - 1) * perPage;
-    return filtered.slice(start, start + perPage);
+    if (filtered.length > perPage) {
+      const start = (page - 1) * perPage;
+      return filtered.slice(start, start + perPage);
+    }
+    return filtered;
   }, [filtered, page, perPage]);
 
-  const totalPages = Math.ceil(filtered.length / perPage);
+  const hasAdvanceFilter = useMemo(() => {
+    return Object.values(filters || {}).some(
+      (val) => val !== undefined && val !== null && String(val).trim() !== ''
+    );
+  }, [filters]);
+
+  const total = useMemo(() => {
+    if (hasAdvanceFilter) {
+      return filtered.length;
+    }
+    if (totalServerCount !== null && totalServerCount !== undefined) {
+      return totalServerCount;
+    }
+    if (filtered.length > perPage) {
+      return filtered.length;
+    }
+    if (filtered.length === perPage) {
+      return (page * perPage) + 1;
+    }
+    return Math.max(0, (page - 1) * perPage + filtered.length);
+  }, [hasAdvanceFilter, totalServerCount, filtered.length, page, perPage]);
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(total / perPage));
+  }, [total, perPage]);
 
   const handleSort = (col: keyof Product) => {
     if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -1062,146 +1235,133 @@ export default function ProductManagementClient() {
   const hasSearchOrFilter = search.trim() !== '' || activeFilterCount > 0;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Product Management</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {filtered.length} products · {activeCount} active
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
+    <AdminLayout
+      fullWidth={true}
+      screenFit={true}
+      pageTitle="Product Management"
+      pageSubtitle={`${total} products · ${activeCount} active on page`}
+      pageIcon={<Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+    >
+      <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
+        {/* Unified Single-Line Search & Toolbar Bar */}
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full">
+          {/* Search Input */}
+          <div className="relative flex-1 min-w-[200px] w-full">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by SKU (comma-separated for bulk), Product Name"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full h-9 pl-8 pr-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
+            />
+          </div>
 
-          {/* Download All Products (API Server Export)
-          <button
-            onClick={handleExportAll}
-            disabled={exporting}
-            className="relative overflow-hidden flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70 transition-colors"
-          >
-            {exporting && (
-              <span
-                className="absolute inset-y-0 left-0 bg-emerald-500/30"
-                style={{ width: `${Math.max(1, exportProgress)}%` }}
-              />
-            )}
-            <span className="relative flex items-center gap-1.5">
-              <Download size={13} className={exporting ? "animate-bounce" : ""} />
-              {exporting ? `Preparing All ${exportProgress}%` : 'Download All Products'}
-            </span>
-          </button>
-          */}
-          {/* View Mode Toggle Button */}
-          <button
-            onClick={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all duration-150 text-slate-600 dark:text-slate-300"
-            title={viewMode === 'list' ? "Switch to Grid View" : "Switch to List View"}
-          >
-            {viewMode === 'list' ? (
-              <>
-                <LayoutGrid size={13} />
-                <span>Grid View</span>
-              </>
-            ) : (
-              <>
-                <List size={13} />
-                <span>List View</span>
-              </>
-            )}
-          </button>
-          {/* Download Options Modal Trigger */}
-          <button
-            onClick={() => setExportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 active:scale-95 transition-all duration-150"
-          >
-            <Download size={13} />
-            Download
-          </button>
-          {/* Import Button */}
-          <button
-            onClick={() => {
-              setImportMode('create');
-              setImportModalOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-amber-500 text-white rounded-lg hover:bg-amber-600 active:scale-95 transition-all duration-150"
-          >
-            <Upload size={13} />
-            Import
-          </button>
-          <button
-            onClick={fetchProducts}
-            disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300 disabled:opacity-60"
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            {loading ? 'Loading' : 'Refresh'}
-          </button>
-          <style>{`
-            @keyframes thunder-pulse {
-              0%, 100% {
-                transform: scale(1);
-                filter: drop-shadow(0 0 1px rgba(245, 158, 11, 0.4));
+          {/* Action Buttons Group */}
+          <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+            {/* Advanced Filters Button */}
+            <button
+              onClick={() => setFiltersOpen((p) => !p)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                filtersOpen || activeFilterCount > 0
+                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Filter size={13} />
+              <span>Advanced Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="ml-1 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Grid/List View Button */}
+            <button
+              onClick={() => setViewMode((prev) => (prev === 'list' ? 'grid' : 'list'))}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all duration-150 text-slate-600 dark:text-slate-300"
+              title={viewMode === 'list' ? 'Switch to Grid View' : 'Switch to List View'}
+            >
+              {viewMode === 'list' ? (
+                <>
+                  <LayoutGrid size={13} />
+                  <span>Grid View</span>
+                </>
+              ) : (
+                <>
+                  <List size={13} />
+                  <span>List View</span>
+                </>
+              )}
+            </button>
+
+            {/* Download Button */}
+            <button
+              onClick={() => setExportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 active:scale-95 transition-all duration-150"
+            >
+              <Download size={13} />
+              <span>Download</span>
+            </button>
+
+            {/* Import Button */}
+            <button
+              onClick={() => {
+                setImportMode('create');
+                setImportModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-amber-500 text-white rounded-lg hover:bg-amber-600 active:scale-95 transition-all duration-150"
+            >
+              <Upload size={13} />
+              <span>Import</span>
+            </button>
+
+            {/* Refresh Button */}
+            <button
+              onClick={fetchProducts}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300 disabled:opacity-60"
+            >
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              <span>{loading ? 'Loading' : 'Refresh'}</span>
+            </button>
+
+            {/* Quick Product Create Button */}
+            <style>{`
+              @keyframes thunder-pulse {
+                0%, 100% {
+                  transform: scale(1);
+                  filter: drop-shadow(0 0 1px rgba(245, 158, 11, 0.4));
+                }
+                50% {
+                  transform: scale(1.15);
+                  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8));
+                }
               }
-              50% {
-                transform: scale(1.15);
-                filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8));
+              .animate-thunder-zap {
+                animation: thunder-pulse 1.8s infinite ease-in-out;
               }
-            }
-            .animate-thunder-zap {
-              animation: thunder-pulse 1.8s infinite ease-in-out;
-            }
-          `}</style>
-          <button
-            type="button"
-            onClick={() => setQuickCreateOpen(true)}
-            title="Quick Product Create"
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-all duration-150 active:scale-95 shadow-sm hover:shadow-md group relative overflow-hidden flex-shrink-0"
-          >
-            <Zap size={15} className="animate-thunder-zap text-white group-hover:scale-110 transition-transform" />
-          </button>
-          <button
-            onClick={handleAdd}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-150"
-          >
-            <Plus size={14} />
-            Add Product
-          </button>
-        </div>
-      </div>
+            `}</style>
+            <button
+              type="button"
+              onClick={() => setQuickCreateOpen(true)}
+              title="Quick Product Create"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-all duration-150 active:scale-95 shadow-sm hover:shadow-md group relative overflow-hidden flex-shrink-0"
+            >
+              <Zap size={15} className="animate-thunder-zap text-white group-hover:scale-110 transition-transform" />
+            </button>
 
-      <QuickProductModal
-        open={quickCreateOpen}
-        onClose={() => setQuickCreateOpen(false)}
-        onSuccess={fetchProducts}
-      />
-
-      {/* Search + filter bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by SKU (comma-separated for bulk), Product Name"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full h-9 pl-8 pr-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
-          />
+            {/* Add Product Button */}
+            <button
+              onClick={handleAdd}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-150"
+            >
+              <Plus size={14} />
+              <span>Add Product</span>
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setFiltersOpen((p) => !p)}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${filtersOpen || activeFilterCount > 0
-            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-        >
-          <Filter size={13} />
-          Advanced Filters
-          {activeFilterCount > 0 && (
-            <span className="ml-1 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-      </div>
 
       {/* Filters panel */}
       {filtersOpen && (
@@ -1343,7 +1503,7 @@ export default function ProductManagementClient() {
           />
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="flex-1 flex flex-col min-h-0 space-y-4 overflow-hidden">
           {viewMode === 'list' ? (
             <ProductTable
               products={paginated}
@@ -1357,10 +1517,11 @@ export default function ProductManagementClient() {
               onView={handleView}
               page={page}
               perPage={perPage}
-              total={filtered.length}
+              total={total}
               totalPages={totalPages}
               onPageChange={setPage}
               onPerPageChange={(n) => { setPerPage(n); setPage(1); }}
+              stockMap={stockMap}
             />
           ) : (
             <ProductGrid
@@ -1371,10 +1532,11 @@ export default function ProductManagementClient() {
               onView={handleView}
               page={page}
               perPage={perPage}
-              total={filtered.length}
+              total={total}
               totalPages={totalPages}
               onPageChange={setPage}
               onPerPageChange={(n) => { setPerPage(n); setPage(1); }}
+              stockMap={stockMap}
             />
           )}
 
@@ -1418,5 +1580,6 @@ export default function ProductManagementClient() {
         exportDownloadUrl={exportDownloadUrl}
       />
     </div>
-  );
+  </AdminLayout>
+);
 }
