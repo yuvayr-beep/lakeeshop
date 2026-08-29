@@ -47,6 +47,15 @@ const INITIAL_SCREENS: ScreenItem[] = [
     sortOrder: 1,
   },
   {
+    code: 'DASH_SSE',
+    title: 'SSE Dashboard Preview',
+    description: 'Server-Sent Events testing and live payload preview screen',
+    moduleCode: 'DASH',
+    path: '/preview_sse_dashboard.html?token=erp-init-2025',
+    componentName: 'SSEDashboardPreview',
+    sortOrder: 2,
+  },
+  {
     code: 'PROD_LIST',
     title: 'Products List',
     description: 'Product catalog master management',

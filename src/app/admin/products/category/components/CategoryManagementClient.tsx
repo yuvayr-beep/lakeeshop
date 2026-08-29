@@ -491,32 +491,60 @@ export default function CategoryManagementClient() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
       
-      {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <FolderOpen size={20} className="text-blue-600 dark:text-blue-400" />
-            Product Categories
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage your store hierarchical product categories, levels, and path mappings.
-          </p>
+      {/* Consolidated Single Line Filter and Toolbar */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-3 shadow-sm flex flex-wrap lg:flex-nowrap items-center justify-between gap-2.5">
+        
+        {/* Left Side: Search & Level Filter */}
+        <div className="flex items-center gap-2 flex-1 min-w-[280px]">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search by name, code or parent..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full h-9 pl-9 pr-3 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all font-medium"
+            />
+          </div>
+
+          {/* Level Dropdown Filter */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Level:</label>
+            <select
+              value={levelFilter}
+              onChange={(e) => {
+                setLevelFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-9 px-2.5 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
+            >
+              <option value="all">All Levels</option>
+              <option value="1">Level 1 (Roots)</option>
+              <option value="2">Level 2 (Sub-folders)</option>
+              <option value="3">Level 3 (Leaf nodes)</option>
+            </select>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        {/* Right Side: Tree Actions, Refresh, Export, Create */}
+        <div className="flex items-center gap-2 shrink-0 overflow-x-auto scrollbar-none py-0.5">
           {isHierarchyMode && (
-            <div className="flex items-center gap-1.5 border-r border-slate-200 dark:border-slate-800 pr-2.5 mr-1">
+            <div className="flex items-center gap-1 shrink-0 border-r border-slate-200 dark:border-slate-800 pr-2 mr-0.5">
               <button
                 onClick={handleExpandAll}
-                className="px-2.5 py-1.5 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
+                className="px-2.5 py-1.5 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors whitespace-nowrap"
               >
                 Expand All
               </button>
               <button
                 onClick={handleCollapseAll}
-                className="px-2.5 py-1.5 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
+                className="px-2.5 py-1.5 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors whitespace-nowrap"
               >
                 Collapse All
               </button>
@@ -525,16 +553,16 @@ export default function CategoryManagementClient() {
 
           <button
             onClick={fetchCategories}
-            className="flex items-center justify-center p-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm"
+            className="flex items-center justify-center w-9 h-9 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-2xs shrink-0"
             title="Refresh List"
           >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
           
           {selectedIds.length > 0 && (
             <button
               onClick={handleDeleteSelected}
-              className="flex items-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-2xs transition-all whitespace-nowrap shrink-0"
             >
               <Trash2 size={14} />
               Delete Selected ({selectedIds.length})
@@ -544,79 +572,24 @@ export default function CategoryManagementClient() {
           <button
             onClick={handleExportExcel}
             disabled={exportingExcel || categories.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-2xs transition-all hover:shadow-xs disabled:opacity-50 whitespace-nowrap shrink-0"
           >
-            <Download size={15} />
+            <Download size={14} />
             Export Excel
           </button>
 
           <button
             onClick={handleCreateClick}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-all hover:shadow-xs whitespace-nowrap shrink-0"
           >
-            <Plus size={15} />
+            <Plus size={14} />
             Create Category
           </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-        
-        {/* Search */}
-        <div className="relative w-full md:flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search by name, code or parent..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full h-10 pl-9 pr-4 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all font-medium"
-          />
-        </div>
-
-        {/* Level Dropdown Filter */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <label className="text-xs font-semibold text-slate-550 dark:text-slate-400 whitespace-nowrap">Level:</label>
-          <select
-            value={levelFilter}
-            onChange={(e) => {
-              setLevelFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-10 px-3.5 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
-          >
-            <option value="all">All Levels</option>
-            <option value="1">Level 1 (Roots)</option>
-            <option value="2">Level 2 (Sub-folders)</option>
-            <option value="3">Level 3 (Leaf nodes)</option>
-          </select>
-        </div>
-
-        {/* Page Size Selection */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <label className="text-xs font-semibold text-slate-550 dark:text-slate-400 whitespace-nowrap">Rows:</label>
-          <select
-            value={itemsPerPage}
-            onChange={(e) => {
-              setItemsPerPage(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="h-10 px-3.5 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
-          >
-            <option value={10}>10</option>
-            <option value={15}>15</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-          </select>
-        </div>
-      </div>
-
       {/* Info mode badge */}
-      <div className="flex items-center justify-between px-1">
+      <div className="shrink-0 flex items-center justify-between px-1">
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wide">
           <Sparkles size={12} className="text-blue-500" />
           <span>Current View: {isHierarchyMode ? 'Folder Hierarchy View' : 'Flat Search Results'}</span>
@@ -629,15 +602,15 @@ export default function CategoryManagementClient() {
       </div>
 
       {/* Main Content (Table) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
         
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-500">
+          <div className="flex-1 flex flex-col items-center justify-center py-24 text-slate-500">
             <RefreshCw size={36} className="animate-spin text-blue-600 mb-3" />
             <p className="text-sm font-medium">Fetching category records...</p>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 px-4">
+          <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 px-4">
             <AlertCircle size={36} className="text-red-500 mb-3" />
             <p className="text-sm font-semibold">{error}</p>
             <button
@@ -648,15 +621,15 @@ export default function CategoryManagementClient() {
             </button>
           </div>
         ) : displayRows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400 px-4">
+          <div className="flex-1 flex flex-col items-center justify-center py-24 text-slate-400 px-4">
             <FolderOpen size={44} className="text-slate-300 dark:text-slate-750 mb-3" />
             <p className="text-sm font-medium">No category records found</p>
             <p className="text-xs text-slate-500 mt-1">Try relaxing your search terms or filters above.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto scrollbar-thin">
+          <div className="flex-1 min-h-0 overflow-auto scrollbar-thin">
             <table className="w-full text-left border-collapse table-fixed min-w-[900px]">
-              <thead>
+              <thead className="sticky top-0 z-20 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800">
                 <tr className="border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/25">
                   {/* Checkbox Column */}
                   <th className="w-12 py-3.5 px-4 text-center">
@@ -872,7 +845,7 @@ export default function CategoryManagementClient() {
             const totalLabel = isHierarchyMode ? 'root categories' : 'matching categories';
 
             return (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+              <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-black dark:text-slate-400 tabular-nums">
                     Showing {startVal}–{endVal} of {totalVal} {totalLabel}

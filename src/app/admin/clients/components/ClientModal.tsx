@@ -248,7 +248,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         Client Code <span className="text-red-500">*</span>
@@ -276,20 +276,20 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
                         className="w-full h-10 px-3 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Legal Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={legalName}
-                      onChange={(e) => handleLegalNameChange(e.target.value)}
-                      placeholder="e.g. HDFC Bank Ltd"
-                      className="w-full h-10 px-3 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
-                    />
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Legal Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={legalName}
+                        onChange={(e) => handleLegalNameChange(e.target.value)}
+                        placeholder="e.g. HDFC Bank Ltd"
+                        className="w-full h-10 px-3 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-1">

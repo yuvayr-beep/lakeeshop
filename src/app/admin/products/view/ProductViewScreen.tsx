@@ -8,6 +8,25 @@ import {
 } from 'lucide-react';
 import axiosInstance from '@/lib/axios';
 import Badge from '@/components/ui/Badge';
+import StockBreakdownModal from '../components/StockBreakdownModal';
+
+export interface HierarchicalStockItem {
+  productId: number;
+  productCode?: string;
+  productName?: string;
+  relationRole?: string;
+  availableQty: number;
+}
+
+export interface HierarchicalStockBreakdownDto {
+  productId: number;
+  productCode?: string;
+  productName?: string;
+  relationRole?: string;
+  individualQty: number;
+  totalQty: number;
+  breakdown?: HierarchicalStockItem[];
+}
 
 interface ProductImage {
   alt: string;
@@ -320,108 +339,154 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
   const [supplierSharesLoading, setSupplierSharesLoading] = useState<boolean>(true);
   const [supplierMap, setSupplierMap] = useState<Record<number, string>>({});
 
-  // Real-time stock count state & SSE Stream integration
+  // Real-time stock count & breakdown state
   const [realtimeStock, setRealtimeStock] = useState<number | null>(null);
+  const [stockBreakdown, setStockBreakdown] = useState<HierarchicalStockBreakdownDto | null>(null);
+  const [showBreakdownModal, setShowBreakdownModal] = useState<boolean>(false);
+
+  const parseStockData = (parsedJson: any, targetProductId: number): HierarchicalStockBreakdownDto | null => {
+    if (parsedJson === undefined || parsedJson === null) return null;
+
+    const rawObj = (parsedJson && typeof parsedJson === 'object' && 'data' in parsedJson && typeof parsedJson.data === 'object' && parsedJson.data !== null)
+      ? parsedJson.data
+      : parsedJson;
+
+    if (typeof rawObj === 'number') {
+      return {
+        productId: targetProductId,
+        individualQty: rawObj,
+        totalQty: rawObj,
+      };
+    }
+
+    if (typeof parsedJson === 'number') {
+      return {
+        productId: targetProductId,
+        individualQty: parsedJson,
+        totalQty: parsedJson,
+      };
+    }
+
+    if (rawObj && typeof rawObj === 'object' && ('individualQty' in rawObj || 'totalQty' in rawObj || 'availableQty' in rawObj)) {
+      const individualQty = typeof rawObj.individualQty === 'number' ? rawObj.individualQty : (typeof rawObj.availableQty === 'number' ? rawObj.availableQty : 0);
+      const totalQty = typeof rawObj.totalQty === 'number' ? rawObj.totalQty : individualQty;
+
+      return {
+        productId: Number(rawObj.productId || targetProductId),
+        productCode: rawObj.productCode,
+        productName: rawObj.productName,
+        relationRole: rawObj.relationRole || 'INDEPENDENT',
+        individualQty,
+        totalQty,
+        breakdown: Array.isArray(rawObj.breakdown) ? rawObj.breakdown : [],
+      };
+    }
+
+    return null;
+  };
 
   // 0. SSE & GET real-time stock stream subscriber
   useEffect(() => {
     if (!product || !product.id) return;
-    const productId = product.id;
+    const productId = Number(product.id);
     let isSubscribed = true;
+    let retryTimer: NodeJS.Timeout | null = null;
     const controller = new AbortController();
 
-    async function fetchInitialStock() {
-      try {
-        const res = await axiosInstance.get<any>(`/stock/availability/${productId}`);
-        let stockCount: number | null = null;
-        if (res.data && typeof res.data.data === 'number') {
-          stockCount = res.data.data;
-        } else if (typeof res.data === 'number') {
-          stockCount = res.data;
-        }
-        if (stockCount !== null && isSubscribed) {
-          setRealtimeStock(stockCount);
-        }
-      } catch (err) {
-        console.warn(`GET /stock/availability/${productId} error:`, err);
-      }
-    }
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://v2.lakeetech.com';
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const authToken = (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null) || 'erp-init-2025';
+    const targetUrl = `${cleanBase}/stock/availability/${productId}/stream`;
 
     async function startStockStream() {
-      try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-        const streamUrl = `/api/proxy/stock/availability/${productId}/stream`;
+      console.log(`[Live Stock SSE Request] Product ID ${productId} -> Connecting to: ${targetUrl}`, {
+        productId,
+        url: targetUrl,
+        headers: { Authorization: `Bearer ${authToken.substring(0, 10)}...`, Accept: 'text/event-stream' }
+      });
 
-        const headers: Record<string, string> = {
-          Accept: 'text/event-stream',
-        };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
+      try {
+        // Initial REST GET fallback
+        try {
+          console.log(`[Live Stock REST Request] GET /stock/availability/${productId}`);
+          const res = await axiosInstance.get<any>(`/stock/availability/${productId}`);
+          console.log(`[Live Stock REST Response] Product ID ${productId} Data:`, res.data);
+          const initialDto = parseStockData(res.data, productId);
+          if (initialDto && isSubscribed) {
+            setStockBreakdown(initialDto);
+            setRealtimeStock(initialDto.totalQty);
+          }
+        } catch (err) {
+          console.warn(`[Live Stock REST Response Error] Product ID ${productId}:`, err);
         }
 
-        const response = await fetch(streamUrl, {
-          method: 'GET',
-          headers,
+        const response = await fetch(targetUrl, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Accept': 'text/event-stream',
+          },
           signal: controller.signal,
         });
 
+        console.log(`[Live Stock SSE Connection Response] Product ID ${productId} -> Status: ${response.status} ${response.statusText}`);
+
         if (!response.ok) {
-          console.warn(`SSE stock stream failed with status ${response.status}`);
+          if (isSubscribed) {
+            console.warn(`[Live Stock SSE Stream Error Response] Product ID ${productId} HTTP ${response.status} -> Retrying in 8s...`);
+            retryTimer = setTimeout(() => {
+              if (isSubscribed) startStockStream();
+            }, 8000);
+          }
           return;
         }
 
-        if (!response.body) {
-          console.warn('SSE stream response has no body reader');
-          return;
-        }
+        if (!response.body) return;
 
         const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        const decoder = new TextDecoder('utf-8');
         let buffer = '';
 
         while (isSubscribed) {
           const { done, value } = await reader.read();
           if (done) break;
+
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split(/\r?\n/);
+          const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 
           for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (trimmedLine.startsWith('data:')) {
-              const dataValue = trimmedLine.replace(/^data:/, '').trim();
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data:')) {
+              const jsonStr = trimmed.substring(5).trim();
               try {
-                const parsedJson = JSON.parse(dataValue);
-                if (parsedJson && typeof parsedJson.data === 'number' && isSubscribed) {
-                  setRealtimeStock(parsedJson.data);
-                } else if (typeof parsedJson === 'number' && isSubscribed) {
-                  setRealtimeStock(parsedJson);
+                const data = JSON.parse(jsonStr);
+                console.log(`[Live Stock SSE Stream Response Data] Product ID ${productId}:`, data);
+                const dto = parseStockData(data, productId);
+                if (dto && isSubscribed) {
+                  setStockBreakdown(dto);
+                  setRealtimeStock(dto.totalQty);
                 }
-              } catch {
-                const parsedNum = parseInt(dataValue, 10);
-                if (!isNaN(parsedNum) && isSubscribed) {
-                  setRealtimeStock(parsedNum);
-                }
-              }
-            } else if (trimmedLine && !isNaN(Number(trimmedLine))) {
-              if (isSubscribed) {
-                setRealtimeStock(Number(trimmedLine));
+              } catch (e) {
+                console.log(`[Live Stock SSE Stream Raw Response String] Product ID ${productId}:`, jsonStr);
               }
             }
           }
         }
       } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.warn('SSE stock stream error:', err);
+        if (!controller.signal.aborted && isSubscribed) {
+          console.error(`[Live Stock SSE Stream Exception] Product ID ${productId}:`, err);
+          retryTimer = setTimeout(() => {
+            if (isSubscribed) startStockStream();
+          }, 5000);
         }
       }
     }
 
-    fetchInitialStock();
     startStockStream();
 
     return () => {
       isSubscribed = false;
+      if (retryTimer) clearTimeout(retryTimer);
       controller.abort();
     };
   }, [product?.id]);
@@ -908,35 +973,79 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
 
               <div className="flex items-center gap-2.5 self-start sm:self-auto flex-shrink-0 flex-wrap">
                 {/* Real-time Stock Badge */}
-                <div className={`flex items-center gap-2.5 px-3.5 py-2 rounded-2xl shadow-xs border ${
-                  realtimeStock === 0
-                    ? 'bg-red-50/80 dark:bg-red-950/40 border-red-200 dark:border-red-800/60'
-                    : 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60'
-                }`}>
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                      realtimeStock === 0 ? 'bg-red-400' : 'bg-emerald-400'
-                    }`}></span>
-                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                      realtimeStock === 0 ? 'bg-red-500' : 'bg-emerald-500'
-                    }`}></span>
-                  </span>
-                  <div className="flex flex-col leading-none">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Live Stock</span>
-                    <span className={`text-sm font-black font-mono mt-0.5 ${
-                      realtimeStock === 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'
-                    }`}>
-                      {realtimeStock !== null ? realtimeStock : (product.stockQty ?? '...')}
-                    </span>
-                  </div>
-                  <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md ml-0.5 ${
-                    realtimeStock === 0
-                      ? 'text-red-700 dark:text-red-300 bg-red-200/60 dark:bg-red-900/60'
-                      : 'text-emerald-700 dark:text-emerald-300 bg-emerald-200/60 dark:bg-emerald-900/60'
-                  }`}>
-                    Realtime
-                  </span>
-                </div>
+                {(() => {
+                  const role = stockBreakdown?.relationRole;
+                  const indQty = stockBreakdown ? stockBreakdown.individualQty : realtimeStock;
+                  const totalQty = stockBreakdown ? stockBreakdown.totalQty : realtimeStock;
+                  const items = stockBreakdown?.breakdown || [];
+
+                  const tooltipLines = [];
+                  if (stockBreakdown) {
+                    tooltipLines.push(`Role: ${role || 'N/A'}`);
+                    tooltipLines.push(`Individual Qty: ${indQty}`);
+                    tooltipLines.push(`Total Qty: ${totalQty}`);
+                    if (items.length > 0) {
+                      tooltipLines.push('Breakdown:');
+                      items.forEach((it: any) => {
+                        tooltipLines.push(` - ${it.productName || it.productCode || it.productId} (${it.relationRole || 'ITEM'}): ${it.availableQty}`);
+                      });
+                    }
+                  }
+
+                  return (
+                    <div 
+                      onClick={() => setShowBreakdownModal(true)}
+                      className={`flex items-center gap-2.5 px-3.5 py-2 rounded-2xl shadow-xs border cursor-pointer hover:scale-105 transition-transform group/live-stock ${
+                        realtimeStock === 0
+                          ? 'bg-red-50/80 dark:bg-red-950/40 border-red-200 dark:border-red-800/60'
+                          : 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60'
+                      }`}
+                      title={tooltipLines.join('\n') + '\nClick to view full parent/child stock breakdown'}
+                    >
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                          realtimeStock === 0 ? 'bg-red-400' : 'bg-emerald-400'
+                        }`}></span>
+                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                          realtimeStock === 0 ? 'bg-red-500' : 'bg-emerald-500'
+                        }`}></span>
+                      </span>
+                      <div className="flex flex-col leading-none">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Live Stock</span>
+                          {role && role !== 'INDEPENDENT' && (
+                            <span className={`px-1 py-0.2 text-[8px] font-black rounded uppercase ${
+                              role === 'PARENT' 
+                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' 
+                                : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                            }`}>
+                              {role}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className={`text-sm font-black font-mono ${
+                            realtimeStock === 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'
+                          }`}>
+                            {realtimeStock !== null ? realtimeStock : (product.stockQty ?? '...')}
+                          </span>
+                          {stockBreakdown && (indQty !== totalQty || role === 'PARENT') && (
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                              (Indiv: {indQty})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md ml-0.5 ${
+                        realtimeStock === 0
+                          ? 'text-red-700 dark:text-red-300 bg-red-200/60 dark:bg-red-900/60'
+                          : 'text-emerald-700 dark:text-emerald-300 bg-emerald-200/60 dark:bg-emerald-900/60'
+                      }`}>
+                        Realtime
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {/* Edit Product Button */}
                 <button
@@ -1447,6 +1556,15 @@ export default function ProductViewScreen({ sku }: ProductViewScreenProps) {
           </div>
         </div>
       </div>
+
+      <StockBreakdownModal
+        isOpen={showBreakdownModal}
+        onClose={() => setShowBreakdownModal(false)}
+        breakdown={stockBreakdown}
+        productName={product?.baseProductName}
+        productCode={product?.defaultSku}
+        fallbackQty={realtimeStock ?? product?.stockQty ?? 0}
+      />
     </div>
   );
 }

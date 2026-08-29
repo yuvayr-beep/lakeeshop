@@ -35,6 +35,7 @@ export const mockMenuData: MenuModule[] = [
     title: 'Dashboard',
     screens: [
       { code: 'DASH_OPS', title: 'Operations Dashboard', href: '/admin/dashboard/operations', actions: ['READ'] },
+      { code: 'DASH_SSE', title: 'SSE Dashboard Preview', href: '/preview_sse_dashboard.html?token=erp-init-2025', actions: ['READ'] },
       // { code: 'DASH_ACC', title: 'Accounts Dashboard', href: '/admin/dashboard/accounts', actions: ['READ'] },
       // { code: 'DASH_OWN', title: 'Owner Dashboard', href: '/admin/dashboard/owner', actions: ['READ'] },
     ],

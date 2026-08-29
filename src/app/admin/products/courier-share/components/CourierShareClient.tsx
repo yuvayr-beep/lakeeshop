@@ -18,23 +18,23 @@ export default function CourierShareClient() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
 
-  if (selectedClient) {
-    return (
-      <CourierProductSharingScreen
-        client={selectedClient}
-        onBack={() => setSelectedClient(null)}
-        clientsList={clients}
-      />
-    );
-  }
-
   return (
-    <CourierListScreen
-      onSelectClient={setSelectedClient}
-      clients={clients}
-      setClients={setClients}
-      loading={loading}
-      setLoading={setLoading}
-    />
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      {selectedClient ? (
+        <CourierProductSharingScreen
+          client={selectedClient}
+          onBack={() => setSelectedClient(null)}
+          clientsList={clients}
+        />
+      ) : (
+        <CourierListScreen
+          onSelectClient={setSelectedClient}
+          clients={clients}
+          setClients={setClients}
+          loading={loading}
+          setLoading={setLoading}
+        />
+      )}
+    </div>
   );
 }

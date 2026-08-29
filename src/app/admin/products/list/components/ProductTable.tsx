@@ -3,6 +3,25 @@ import React, { useState } from 'react';
 import { ArrowUp, ArrowDown, ArrowUpDown, Edit2, Eye, EyeOff, ChevronLeft, ChevronRight, X, Image as ImageIcon } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { Product } from '../data/mockProducts';
+import StockBreakdownModal from '../../components/StockBreakdownModal';
+
+export interface HierarchicalStockItem {
+  productId: number;
+  productCode?: string;
+  productName?: string;
+  relationRole?: string;
+  availableQty: number;
+}
+
+export interface HierarchicalStockBreakdownDto {
+  productId: number;
+  productCode?: string;
+  productName?: string;
+  relationRole?: string;
+  individualQty: number;
+  totalQty: number;
+  breakdown?: HierarchicalStockItem[];
+}
 
 interface ProductTableProps {
   products: Product[];
@@ -20,7 +39,8 @@ interface ProductTableProps {
   totalPages: number;
   onPageChange: (p: number) => void;
   onPerPageChange: (n: number) => void;
-  stockMap?: Record<string, number>;
+  stockMap?: Record<string | number, number>;
+  stockBreakdownMap?: Record<string | number, HierarchicalStockBreakdownDto>;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'muted' | 'danger' }> = {
@@ -120,10 +140,11 @@ function ImageCarouselModal({ images, productName, open, onClose }: ImageCarouse
 export default function ProductTable({
   products, allProducts, selectedIds, onSelectionChange,
   sortCol, sortDir, onSort, onEdit, onView,
-  page, perPage, total, totalPages, onPageChange, onPerPageChange, stockMap,
+  page, perPage, total, totalPages, onPageChange, onPerPageChange, stockMap, stockBreakdownMap,
 }: ProductTableProps) {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedStockBreakdownProduct, setSelectedStockBreakdownProduct] = useState<Product | null>(null);
 
   const allPageIds = products.map((p) => p.id);
   const allSelected = allPageIds.length > 0 && allPageIds.every((id) => selectedIds.includes(id));
@@ -264,22 +285,61 @@ export default function ProductTable({
                     </div>
                   </td>
                   <td className="px-3 py-3 text-xs whitespace-nowrap text-center border-b border-slate-100 dark:border-slate-800">
-                    {stockMap && stockMap[p.id] === undefined ? (
-                      <span className="text-xs text-slate-400 animate-pulse">Loading...</span>
+                    {(stockMap && stockMap[p.id] === undefined && (!stockBreakdownMap || !stockBreakdownMap[p.id])) ? (
+                      <span className="text-xs text-slate-400 animate-pulse flex items-center justify-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                        Loading...
+                      </span>
                     ) : (
                       (() => {
-                        const count = stockMap && stockMap[p.id] !== undefined ? stockMap[p.id] : (p.stockQty ?? 0);
-                        if (count === 0) {
-                          return (
-                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
-                              0
-                            </span>
-                          );
+                        const breakdown = stockBreakdownMap?.[p.id];
+                        const count = breakdown ? breakdown.totalQty : (stockMap && stockMap[p.id] !== undefined ? stockMap[p.id] : (p.stockQty ?? 0));
+                        const indQty = breakdown ? breakdown.individualQty : count;
+                        const role = breakdown?.relationRole;
+                        const items = breakdown?.breakdown || [];
+
+                        const tooltipLines = [];
+                        if (breakdown) {
+                          tooltipLines.push(`Role: ${role || 'N/A'}`);
+                          tooltipLines.push(`Individual Qty: ${indQty}`);
+                          tooltipLines.push(`Total Qty: ${count}`);
+                          if (items.length > 0) {
+                            tooltipLines.push('Breakdown:');
+                            items.forEach((it: HierarchicalStockItem) => {
+                              tooltipLines.push(` - ${it.productName || it.productCode || it.productId} (${it.relationRole || 'ITEM'}): ${it.availableQty}`);
+                            });
+                          }
+                        } else {
+                          tooltipLines.push(`Stock: ${count}`);
                         }
+
                         return (
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">
-                            {count}
-                          </span>
+                          <div 
+                            onClick={() => setSelectedStockBreakdownProduct(p)}
+                            className="flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:scale-105 transition-transform group/stock" 
+                            title={tooltipLines.join('\n') + '\nClick to view full stock breakdown'}
+                          >
+                            <div className="inline-flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Live SSE Stream Active" />
+                              <span className={`font-bold tabular-nums text-sm ${count === 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                                {count}
+                              </span>
+                              {role && role !== 'INDEPENDENT' && (
+                                <span className={`px-1.5 py-0.5 text-[9px] font-black rounded uppercase tracking-wider ${
+                                  role === 'PARENT' 
+                                    ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800' 
+                                    : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                                }`}>
+                                  {role}
+                                </span>
+                              )}
+                            </div>
+                            {breakdown && (indQty !== count || role === 'PARENT') && (
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                                Indiv: {indQty}
+                              </span>
+                            )}
+                          </div>
                         );
                       })()
                     )}
@@ -411,6 +471,15 @@ export default function ProductTable({
           </button>
         </div>
       </div>
+
+      <StockBreakdownModal
+        isOpen={!!selectedStockBreakdownProduct}
+        onClose={() => setSelectedStockBreakdownProduct(null)}
+        breakdown={selectedStockBreakdownProduct ? (stockBreakdownMap?.[selectedStockBreakdownProduct.id] || null) : null}
+        productName={selectedStockBreakdownProduct?.name}
+        productCode={selectedStockBreakdownProduct?.sku || (selectedStockBreakdownProduct as any)?.defaultSku}
+        fallbackQty={selectedStockBreakdownProduct ? (stockMap?.[selectedStockBreakdownProduct.id] ?? selectedStockBreakdownProduct.stockQty ?? 0) : 0}
+      />
     </div>
   );
 }

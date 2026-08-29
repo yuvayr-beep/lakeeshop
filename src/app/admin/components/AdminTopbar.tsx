@@ -57,7 +57,7 @@ export default function AdminTopbar({
   const [loggingOut, setLoggingOut] = useState(false);
 
   // Realtime SSE Header Aggregates Hook
-  const { headerAggregates: sseData, isConnected: sseConnected } = useHeaderAggregates('/api/proxy');
+  const { headerAggregates: sseData, isConnected: sseConnected } = useHeaderAggregates('https://v2.lakeetech.com');
 
   const profileRef = useRef<HTMLDivElement>(null);
 

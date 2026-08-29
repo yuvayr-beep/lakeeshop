@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 
 export interface HeaderAggregatesData {
   totalPendingStockAssign?: number;
@@ -13,76 +12,139 @@ export interface HeaderAggregatesData {
   activeHolds?: number;
   failedTallySyncs?: number;
   lastComputedAt?: string;
+  clientOrderCounts?: Record<string, number>;
 }
 
-export function useHeaderAggregates(baseUrl: string = '/api/proxy', token: string | null = null) {
+export function useHeaderAggregates(baseUrl: string = 'https://v2.lakeetech.com', token: string | null = null) {
   const [headerAggregates, setHeaderAggregates] = useState<HeaderAggregatesData | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null);
-
+    let isSubscribed = true;
+    let retryTimer: NodeJS.Timeout | null = null;
     const controller = new AbortController();
 
-    async function connectSSE() {
+    async function startSSEStream() {
+      const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null) || 'erp-init-2025';
+      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      const targetUrl = `${cleanBase}/order/sse/header-aggregates`;
+
+      console.log('[Header Bell SSE Stream] Connecting to:', targetUrl);
+
       try {
-        const streamUrl = `${baseUrl}/order/sse/header-aggregates`;
-        const headers: Record<string, string> = {
-          Accept: 'text/event-stream',
-        };
-        if (authToken) {
-          headers['Authorization'] = `Bearer ${authToken}`;
+        const response = await fetch(targetUrl, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Accept': 'text/event-stream',
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          if (isSubscribed) {
+            setError(`HTTP ${response.status}`);
+            setIsConnected(false);
+            // Schedule reconnect if non-200
+            retryTimer = setTimeout(() => {
+              if (isSubscribed) startSSEStream();
+            }, 8000);
+          }
+          return;
         }
 
-        console.log('[Header Bell API Request] GET /order/sse/header-aggregates', { streamUrl, headers });
+        if (isSubscribed) {
+          setIsConnected(true);
+          setError(null);
+        }
 
-        await fetchEventSource(streamUrl, {
-          method: 'GET',
-          headers,
-          signal: controller.signal,
+        if (!response.body) return;
 
-          onopen(response) {
-            if (response.ok) {
-              setIsConnected(true);
-              setError(null);
-              return Promise.resolve();
-            } else {
-              setError(`HTTP Error ${response.status}`);
-              setIsConnected(false);
-              return Promise.reject(new Error(`Stream HTTP ${response.status}`));
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (isSubscribed) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep partial line in buffer
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data:')) {
+              const jsonStr = trimmed.substring(5).trim();
+              try {
+                const data = JSON.parse(jsonStr);
+                console.log('[Header Bell SSE Data Received]:', data);
+                if (isSubscribed) {
+                  setHeaderAggregates((prev) => ({ ...prev, ...data }));
+                  setIsConnected(true);
+                }
+              } catch (e) {
+                console.log('[Header Bell SSE Raw Data]:', jsonStr);
+              }
             }
-          },
-
-          onmessage(event) {
-            if (event.event === 'comment' || !event.data) return;
-
-            try {
-              const data = JSON.parse(event.data);
-              console.log('[Header Bell API Response Data]:', data);
-              setHeaderAggregates(data);
-              setIsConnected(true);
-            } catch (err) {
-              console.error('Error parsing header aggregates SSE payload:', err);
-            }
-          },
-
-          onerror(err) {
-            console.error('SSE Connection Error:', err);
-            setIsConnected(false);
-            setError(err.message || 'Connection lost');
-          },
-        });
+          }
+        }
       } catch (err: any) {
-        if (!controller.signal.aborted) {
-          setError(err.message);
+        if (!controller.signal.aborted && isSubscribed) {
+          console.error('[Header Bell SSE Error]:', err);
+          setIsConnected(false);
+          setError(err.message || 'Stream error');
+          retryTimer = setTimeout(() => {
+            if (isSubscribed) startSSEStream();
+          }, 5000);
         }
       }
     }
 
-    connectSSE();
+    // Also fetch dashboard metrics for client order breakdown
+    async function fetchDashboardMetrics() {
+      const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null) || 'erp-init-2025';
+      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      const today = new Date().toISOString().split('T')[0];
+      const metricsUrl = `${cleanBase}/order/sse/dashboard-metrics?date=${today}`;
+
+      try {
+        const response = await fetch(metricsUrl, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Accept': 'text/event-stream',
+          },
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          const text = await response.text();
+          const lines = text.split('\n');
+          for (const line of lines) {
+            if (line.trim().startsWith('data:')) {
+              try {
+                const data = JSON.parse(line.trim().substring(5));
+                if (isSubscribed && data) {
+                  setHeaderAggregates((prev) => ({
+                    ...prev,
+                    clientOrderCounts: data.clientOrderCounts,
+                    lastComputedAt: data.lastComputedAt,
+                  }));
+                }
+              } catch (e) { /* ignore parse err */ }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[Dashboard Metrics Fetch Warning]:', e);
+      }
+    }
+
+    startSSEStream();
+    fetchDashboardMetrics();
 
     return () => {
+      isSubscribed = false;
+      if (retryTimer) clearTimeout(retryTimer);
       controller.abort();
       setIsConnected(false);
     };

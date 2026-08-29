@@ -133,64 +133,44 @@ export default function HandlingTypeManagementClient() {
   };
 
   return (
-    <div className="space-y-6 font-sans">
-      {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Sparkles size={20} className="text-blue-600 dark:text-blue-400" />
-            Handling Type Master
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage product handling types, codes, display names, and descriptions.
-          </p>
+    <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden font-sans">
+      {/* Single-line Search and Action Toolbar */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-3 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="flex items-center gap-2.5 w-full md:flex-1 min-w-0">
+          <div className="relative flex-1 min-w-0">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search handling type code, name, description…"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full h-10 pl-9 pr-4 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-955/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all font-medium"
+            />
+          </div>
+          <button
+            onClick={fetchHandlingTypes}
+            className="flex items-center justify-center w-10 h-10 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm shrink-0"
+            title="Refresh List"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          {/* Template and Excel upload commented out (same as color master) */}
-          {/*
-          <button className="flex items-center gap-2 px-3 py-2 border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 rounded-xl text-slate-700 dark:text-slate-350 text-xs font-semibold shadow-sm">
-            Template
-          </button>
-          <button className="flex items-center gap-2 px-3 py-2 border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-900 rounded-xl text-slate-700 dark:text-slate-350 text-xs font-semibold shadow-sm">
-            Upload
-          </button>
-          */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleCreateClick}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow"
+            className="flex items-center gap-2 h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow whitespace-nowrap shrink-0"
           >
             <Plus size={14} /> Create Handling Type
           </button>
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative w-full md:flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search handling type code, name, description…"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full h-10 pl-9 pr-4 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-955/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all font-medium"
-          />
-        </div>
-        <button
-          onClick={fetchHandlingTypes}
-          className="flex items-center justify-center p-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm"
-          title="Refresh List"
-        >
-          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-        </button>
-      </div>
-
-      {/* Main Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+      {/* Main Table Container */}
+      <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm flex flex-col overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-500">
             <RefreshCw size={36} className="animate-spin text-blue-600 mb-3" />
@@ -214,10 +194,10 @@ export default function HandlingTypeManagementClient() {
             <p className="text-xs text-slate-500 mt-1">Try relaxing your search terms above.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto scrollbar-thin">
+          <div className="flex-1 overflow-auto scrollbar-thin">
             <table className="w-full text-left border-collapse table-fixed min-w-[800px]">
-              <thead>
-                <tr className="border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-955/25">
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950">
+                <tr className="border-b border-slate-150 dark:border-slate-800/80">
                   <th className="w-16 py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center select-none">#</th>
                   <th className="w-48 py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Handling Code</th>
                   <th className="w-64 py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Display Name</th>

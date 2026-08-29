@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Plus, Edit3, Trash2, Download, Upload, RefreshCw, Search, Loader2, 
-  ChevronLeft, ChevronRight, FolderOpen, AlertCircle, ChevronDown, Sparkles
+  ChevronLeft, ChevronRight, FolderOpen, AlertCircle, ChevronDown, Sparkles,
+  FileText, Check
 } from 'lucide-react';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
@@ -34,6 +35,9 @@ export default function HsnManagementClient() {
   const [editingHsn, setEditingHsn] = useState<Hsn | null>(null);
   const [exporting, setExporting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showUploadArea, setShowUploadArea] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   // Accordion Expand State for Timeline History
   const [expandedHsnCodes, setExpandedHsnCodes] = useState<string[]>([]);
@@ -244,14 +248,37 @@ export default function HsnManagementClient() {
     }
   };
 
-  // Upload handling
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      if (extension === 'xlsx' || extension === 'xls') {
+        setSelectedFile(file);
+      } else {
+        toast.error('Invalid file type. Please upload an Excel file (.xlsx or .xls)');
+      }
+    }
+  };
+
+  const handleUploadExcel = async () => {
+    if (!selectedFile) return;
     setUploading(true);
-    const toastId = toast.loading('Uploading…');
+    const toastId = toast.loading('Uploading HSN excel file...');
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', selectedFile);
     try {
       const { data } = await axiosInstance.post<string>('/prod/hsn/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -260,7 +287,7 @@ export default function HsnManagementClient() {
       });
       const lines = parseNdjson(data);
       toast.dismiss(toastId);
-      
+
       let successCount = 0;
       let failCount = 0;
       lines.forEach((line) => {
@@ -275,84 +302,163 @@ export default function HsnManagementClient() {
       if (lines.length > 0) {
         toast.info(`Import completed: ${successCount} succeeded, ${failCount} failed.`);
       }
+      setSelectedFile(null);
+      setShowUploadArea(false);
       fetchHsnList();
     } catch (err: any) {
       console.error(err);
       toast.error('Upload failed', { id: toastId });
     } finally {
       setUploading(false);
-      (e.target as HTMLInputElement).value = '';
     }
   };
 
   return (
-    <div className="space-y-6 font-sans">
-      {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Edit3 size={20} className="text-blue-600 dark:text-blue-400" />
-            HSN Master
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage HSN codes, view rate version timeline history, and upload sheets.
-          </p>
+    <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden font-sans">
+      {/* Single-line Search and Action Toolbar */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-3 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="flex items-center gap-2.5 w-full md:flex-1 min-w-0">
+          <div className="relative flex-1 min-w-0">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search HSN code, description…"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full h-10 pl-9 pr-4 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all font-medium"
+            />
+          </div>
+          <button
+            onClick={fetchHsnList}
+            className="flex items-center justify-center w-10 h-10 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm shrink-0"
+            title="Refresh List"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleExportExcel}
             disabled={exporting || hsnList.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow disabled:opacity-50"
+            className="flex items-center gap-1.5 h-10 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow disabled:opacity-50 whitespace-nowrap shrink-0"
           >
-            <Download size={14} /> Export Excel
+            <Download size={13} /> Export
           </button>
           <button
-            onClick={handleDownloadTemplate}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-250 dark:border-slate-700 shadow-sm transition-colors"
+            onClick={() => setShowUploadArea(!showUploadArea)}
+            className={`flex items-center gap-1.5 h-10 px-3 text-xs font-bold rounded-xl shadow-sm transition-all whitespace-nowrap shrink-0 ${
+              showUploadArea
+                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/50'
+            }`}
           >
-            <Download size={14} /> Template
+            <Upload size={13} /> Upload
           </button>
-          <label className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-250 dark:border-slate-700 shadow-sm cursor-pointer transition-colors">
-            <Upload size={14} /> Upload
-            <input type="file" accept=".xlsx" className="hidden" onChange={handleUpload} disabled={uploading} />
-          </label>
           <button
             onClick={handleCreateClick}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow"
+            className="flex items-center gap-1.5 h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow whitespace-nowrap shrink-0"
           >
             <Plus size={14} /> Create HSN
           </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-        {/* Search */}
-        <div className="relative w-full md:flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search HSN code, description…"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full h-10 pl-9 pr-4 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all font-medium"
-          />
-        </div>
-        <button
-          onClick={fetchHsnList}
-          className="flex items-center justify-center p-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm"
-          title="Refresh List"
-        >
-          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-        </button>
-      </div>
+      {/* Upload Files Expandable Area */}
+      {showUploadArea && (
+        <div className="shrink-0 bg-slate-50 dark:bg-slate-950/10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6 transition-all animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                Bulk HSN Upload via Excel Upload
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Download the sample Excel template, fill in the HSN details, and upload it below.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowUploadArea(false);
+                setSelectedFile(null);
+              }}
+              className="px-2.5 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-850 rounded-lg transition-all"
+            >
+              Cancel
+            </button>
+          </div>
 
-      {/* Main Content (Table) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex flex-col items-center justify-center p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
+            <label
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              className={`flex flex-col items-center justify-center w-full max-w-lg h-36 border-2 border-dashed rounded-xl cursor-pointer transition-all p-4 group ${
+                dragActive
+                  ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10 shadow-inner'
+                  : 'border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 bg-slate-50/50 hover:bg-slate-100/55 dark:bg-slate-950/20 dark:hover:bg-slate-950/40'
+              }`}
+            >
+              <div className="flex flex-col items-center justify-center space-y-2 text-center pointer-events-none">
+                <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl group-hover:scale-110 transition-transform shadow-sm">
+                  <FileText size={20} />
+                </div>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {selectedFile ? (
+                    <span className="text-blue-600 font-bold">{selectedFile.name}</span>
+                  ) : (
+                    <span>
+                      Drag your file here or <span className="text-blue-600 hover:underline">Browse</span>
+                    </span>
+                  )}
+                </p>
+                <p className="text-[10px] text-slate-400">File format: .xls & .xlsx</p>
+              </div>
+              <input
+                type="file"
+                accept=".xls,.xlsx"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setSelectedFile(e.target.files[0]);
+                  }
+                }}
+              />
+            </label>
+
+            <div className="flex items-center gap-3 mt-5">
+              <button
+                onClick={handleDownloadTemplate}
+                className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-650 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-750 transition-colors shadow-sm"
+              >
+                <Upload size={12} className="rotate-180" />
+                Download Sample Excel
+              </button>
+
+              {selectedFile && (
+                <button
+                  onClick={handleUploadExcel}
+                  disabled={uploading}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all"
+                >
+                  {uploading ? (
+                    <RefreshCw size={12} className="animate-spin" />
+                  ) : (
+                    <Check size={12} />
+                  )}
+                  {uploading ? 'Uploading...' : 'Submit Upload'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content (Table Container) */}
+      <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm flex flex-col overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-500">
             <RefreshCw size={36} className="animate-spin text-blue-600 mb-3" />
@@ -376,10 +482,10 @@ export default function HsnManagementClient() {
             <p className="text-xs text-slate-500 mt-1">Try relaxing your search terms above.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto scrollbar-thin">
+          <div className="flex-1 overflow-auto scrollbar-thin">
             <table className="w-full text-left border-collapse table-fixed min-w-[900px]">
-              <thead>
-                <tr className="border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/25">
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950">
+                <tr className="border-b border-slate-150 dark:border-slate-800/80">
                   <th className="w-12 py-2 px-4 text-center"></th>
                   <th className="w-16 py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center select-none">#</th>
                   <th className="w-36 py-2 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">HSN Code</th>

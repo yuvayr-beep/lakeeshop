@@ -132,24 +132,11 @@ export default function CourierListScreen({
   const total = filteredClients.length;
 
   return (
-    <div className="space-y-6">
-      {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Briefcase size={20} className="text-blue-600 dark:text-blue-400" />
-            Supplier Product Sharing
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Select a supplier to view and manage shared products, pricing structures, and history.
-          </p>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+    <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
+      {/* Single Line Filter and Search Bar */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-3 shadow-sm flex items-center gap-2.5">
         {/* Search */}
-        <div className="relative w-full md:flex-1">
+        <div className="relative flex-1 min-w-0">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
@@ -164,7 +151,7 @@ export default function CourierListScreen({
         </div>
         <button
           onClick={fetchClients}
-          className="flex items-center justify-center p-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm"
+          className="flex items-center justify-center w-10 h-10 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm shrink-0"
           title="Refresh List"
         >
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
@@ -172,7 +159,7 @@ export default function CourierListScreen({
       </div>
 
       {/* Table Section */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+      <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm flex flex-col overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-500">
             <RefreshCw size={36} className="animate-spin text-blue-600 mb-3" />
@@ -196,10 +183,10 @@ export default function CourierListScreen({
             <p className="text-xs text-slate-500 mt-1">Try relaxing your search terms above.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto scrollbar-thin">
+          <div className="flex-1 overflow-auto scrollbar-thin">
             <table className="w-full text-left border-collapse table-fixed min-w-[700px]">
-              <thead>
-                <tr className="border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/25">
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950">
+                <tr className="border-b border-slate-150 dark:border-slate-800/80">
                   <th className="w-16 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none text-center">S.No</th>
                   <th className="w-24 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Logo</th>
                   <th className="w-48 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Supplier Code</th>
@@ -263,7 +250,7 @@ export default function CourierListScreen({
 
         {/* Footer pagination info */}
         {!loading && filteredClients.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-250 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+          <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-250 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
             <div className="flex items-center gap-3">
               <span className="text-xs text-black dark:text-slate-400 tabular-nums">
                 Showing {start}–{end} of {total} suppliers

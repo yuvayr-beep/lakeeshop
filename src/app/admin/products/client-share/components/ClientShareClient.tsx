@@ -18,23 +18,23 @@ export default function ClientShareClient() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
 
-  if (selectedClient) {
-    return (
-      <ClientProductSharingScreen
-        client={selectedClient}
-        onBack={() => setSelectedClient(null)}
-        clientsList={clients}
-      />
-    );
-  }
-
   return (
-    <ClientListScreen
-      onSelectClient={setSelectedClient}
-      clients={clients}
-      setClients={setClients}
-      loading={loading}
-      setLoading={setLoading}
-    />
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      {selectedClient ? (
+        <ClientProductSharingScreen
+          client={selectedClient}
+          onBack={() => setSelectedClient(null)}
+          clientsList={clients}
+        />
+      ) : (
+        <ClientListScreen
+          onSelectClient={setSelectedClient}
+          clients={clients}
+          setClients={setClients}
+          loading={loading}
+          setLoading={setLoading}
+        />
+      )}
+    </div>
   );
 }

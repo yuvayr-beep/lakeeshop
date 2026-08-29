@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Order SSE Dashboard Preview</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; padding: 24px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #334155; }
+        .title-box h1 { font-size: 24px; font-weight: 700; color: #f8fafc; }
+        .title-box p { font-size: 14px; color: #94a3b8; margin-top: 4px; }
+        .badge { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #1e293b; border-radius: 9999px; border: 1px solid #334155; font-size: 13px; font-weight: 600; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background-color: #ef4444; }
+        .dot.active { background-color: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; border-left: 5px solid #3b82f6; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-2px); }
+        .card-title { font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-value { font-size: 32px; font-weight: 800; color: #f8fafc; margin-top: 8px; }
+        
+        .section-title { font-size: 18px; font-weight: 700; color: #f8fafc; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .client-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+        .client-card { background: #1e293b; padding: 14px 18px; border-radius: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        .client-name { font-size: 13px; color: #cbd5e1; font-weight: 600; }
+        .client-count { font-size: 20px; font-weight: 700; color: #38bdf8; }
+        
+        .log-box { background: #020617; border: 1px solid #1e293b; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 12px; color: #4ade80; height: 160px; overflow-y: auto; margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title-box">
+            <h1>Lakee ERP - Live Order Dashboard</h1>
+            <p>Real-time WebFlux SSE Stream connected to v2.lakeetech.com</p>
+        </div>
+        <div class="badge">
+            <div id="statusDot" class="dot"></div>
+            <span id="statusText">CONNECTING TO SSE...</span>
+        </div>
+    </div>
+
+    <!-- Header Aggregates Cards -->
+    <div class="grid">
+        <div class="card" style="border-left-color: #eab308;">
+            <div class="card-title">Pending Stock Assign</div>
+            <div id="valPendingStock" class="card-value">---</div>
+        </div>
+        <div class="card" style="border-left-color: #3b82f6;">
+            <div class="card-title">Pending Courier Assign</div>
+            <div id="valPendingCourier" class="card-value">---</div>
+        </div>
+        <div class="card" style="border-left-color: #a855f7;">
+            <div class="card-title">Pending Outscan</div>
+            <div id="valPendingOutscan" class="card-value">---</div>
+        </div>
+        <div class="card" style="border-left-color: #06b6d4;">
+            <div class="card-title">Pending Delivery</div>
+            <div id="valPendingDelivery" class="card-value">---</div>
+        </div>
+        <div class="card" style="border-left-color: #ef4444;">
+            <div class="card-title">Active Holds</div>
+            <div id="valActiveHolds" class="card-value">---</div>
+        </div>
+    </div>
+
+    <!-- Client Orders Section -->
+    <div class="section-title">
+        <span>Live Client Breakdown</span>
+        <span id="lastUpdated" style="font-size: 12px; color: #94a3b8; font-weight: normal;"></span>
+    </div>
+    <div id="clientGrid" class="client-grid">
+        <!-- Client cards populated live -->
+    </div>
+
+    <!-- Event Log Box -->
+    <div class="section-title" style="margin-top: 24px;"><span>Real-time Event Payload Stream</span></div>
+    <div id="logBox" class="log-box">Initializing SSE stream listener...</div>
+
+    <script>
+        const BASE_URL = "https://v2.lakeetech.com";
+        const urlParams = new URLSearchParams(window.location.search);
+        const TOKEN = urlParams.get('token') || "erp-init-2025";
+
+        function logMsg(msg) {
+            const box = document.getElementById("logBox");
+            const time = new Date().toLocaleTimeString();
+            box.innerHTML = `[${time}] ${msg}<br>` + box.innerHTML;
+        }
+
+        async function startSSE() {
+            logMsg(`Opening header aggregates SSE stream with token: ${TOKEN}...`);
+            
+            // Connect to header aggregates endpoint
+            try {
+                const response = await fetch(`${BASE_URL}/order/sse/header-aggregates`, {
+                    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'text/event-stream' }
+                });
+
+                if (!response.ok) {
+                    document.getElementById("statusText").innerText = `HTTP ${response.status} ERROR`;
+                    logMsg(`Connection error: HTTP ${response.status}`);
+                    return;
+                }
+
+                document.getElementById("statusDot").classList.add("active");
+                document.getElementById("statusText").innerText = "LIVE SSE CONNECTED";
+                logMsg("Header Aggregates SSE Stream connected successfully!");
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop(); // keep partial line
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith("data:")) {
+                            const jsonStr = trimmed.substring(5).trim();
+                            try {
+                                const data = JSON.parse(jsonStr);
+                                updateHeaderUI(data);
+                                logMsg(`Received Header Payload: ${JSON.stringify(data)}`);
+                            } catch (e) {
+                                logMsg(`Payload: ${jsonStr}`);
+                            }
+                        } else if (trimmed.startsWith(":")) {
+                            logMsg(`Stream Comment: ${trimmed}`);
+                        }
+                    }
+                }
+            } catch (err) {
+                logMsg(`Fetch error: ${err.message}`);
+            }
+        }
+
+        async function fetchDashboardMetrics() {
+            try {
+                const response = await fetch(`${BASE_URL}/order/sse/dashboard-metrics?date=2026-08-27`, {
+                    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'text/event-stream' }
+                });
+                const text = await response.text();
+                const lines = text.split("\n");
+                for (const line of lines) {
+                    if (line.trim().startsWith("data:")) {
+                        const data = JSON.parse(line.trim().substring(5));
+                        updateClientGrid(data.clientOrderCounts);
+                        document.getElementById("lastUpdated").innerText = `Last Updated: ${new Date(data.lastComputedAt).toLocaleTimeString()}`;
+                    }
+                }
+            } catch (e) {
+                logMsg(`Metrics fetch error: ${e.message}`);
+            }
+        }
+
+        function updateHeaderUI(data) {
+            if (data.totalPendingStockAssign !== undefined) document.getElementById("valPendingStock").innerText = data.totalPendingStockAssign.toLocaleString();
+            if (data.pendingCourierAssign !== undefined) document.getElementById("valPendingCourier").innerText = data.pendingCourierAssign.toLocaleString();
+            if (data.pendingOutscan !== undefined) document.getElementById("valPendingOutscan").innerText = data.pendingOutscan.toLocaleString();
+            if (data.pendingDelivery !== undefined) document.getElementById("valPendingDelivery").innerText = data.pendingDelivery.toLocaleString();
+            if (data.activeHolds !== undefined) document.getElementById("valActiveHolds").innerText = data.activeHolds.toLocaleString();
+        }
+
+        function updateClientGrid(clientCounts) {
+            if (!clientCounts) return;
+            const grid = document.getElementById("clientGrid");
+            grid.innerHTML = "";
+            Object.entries(clientCounts).forEach(([client, count]) => {
+                const card = document.createElement("div");
+                card.className = "client-card";
+                card.innerHTML = `<span class="client-name">${client}</span><span class="client-count">${count.toLocaleString()}</span>`;
+                grid.appendChild(card);
+            });
+        }
+
+        startSSE();
+        fetchDashboardMetrics();
+    </script>
+</body>
+</html>

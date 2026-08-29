@@ -635,7 +635,7 @@ export default function ClientProductSharingScreen({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
       {/* Breadcrumb & Navigation */}
       <div className="flex items-center gap-3">
         <button
@@ -681,7 +681,7 @@ export default function ClientProductSharingScreen({
       </div>
 
       {mainTab === 'shared' ? (
-        <div className="space-y-4">
+        <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
 
           {/* Sub tabs and top Actions */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -978,7 +978,7 @@ export default function ClientProductSharingScreen({
           )}
 
           {/* Table Container */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm flex flex-col overflow-hidden">
             {loading && shares.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-slate-500">
                 <RefreshCw size={36} className="animate-spin text-blue-600 mb-3" />
@@ -991,7 +991,7 @@ export default function ClientProductSharingScreen({
                 <p className="text-xs text-slate-500 mt-1">Start by clicking "Create Share" button.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto scrollbar-thin">
+              <div className="flex-1 overflow-auto scrollbar-thin">
                 <table className="w-full text-left border-collapse table-fixed min-w-[1400px]">
                   <thead>
                     <tr className="border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/25">
@@ -1133,7 +1133,7 @@ export default function ClientProductSharingScreen({
 
             {/* Pagination Controls */}
             {!loading && shares.length > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+              <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-slate-500">Rows per page:</span>
                   <select

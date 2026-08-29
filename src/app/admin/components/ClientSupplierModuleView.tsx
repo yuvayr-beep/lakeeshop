@@ -3134,7 +3134,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                     Client Code <span className="text-red-500">*</span>
@@ -3161,7 +3161,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                   />
                 </div>
 
-                <div className="space-y-1 md:col-span-2">
+                <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                     Legal Name <span className="text-red-500">*</span>
                   </label>
@@ -3173,7 +3173,9 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
                 <div className="space-y-1 md:col-span-2">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Logo URL</label>
                   <div className="flex items-center gap-3">
@@ -3229,7 +3231,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Supplier Code</label>
                   <input 
@@ -3250,7 +3252,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                   />
                 </div>
 
-                <div className="space-y-1 md:col-span-2">
+                <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Legal Name</label>
                   <input 
                     type="text" 
@@ -3259,7 +3261,9 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Supplier Category</label>
                   <select 
@@ -3284,7 +3288,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                   />
                 </div>
 
-                <div className="space-y-1 md:col-span-2">
+                <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Website URL</label>
                   <input 
                     type="url" 
@@ -3293,7 +3297,9 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-5">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Lead Days</label>
                   <input 
@@ -3334,8 +3340,10 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                 </div>
+              </div>
 
-                <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-6 pt-2 flex-wrap">
+                <div className="flex items-center gap-2">
                   <input 
                     type="checkbox" 
                     id="editSupplierUsesOwnProductCode"
@@ -3348,7 +3356,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                   </label>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2">
+                <div className="flex items-center gap-2">
                   <input 
                     type="checkbox" 
                     id="editSupplierPreferredSupplier"
@@ -3360,6 +3368,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     Preferred Supplier
                   </label>
                 </div>
+              </div>
 
                 <div className="space-y-1 md:col-span-2">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Remarks</label>
@@ -3370,7 +3379,6 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors resize-none"
                   />
                 </div>
-              </div>
             </form>
           );
         }
@@ -7111,82 +7119,67 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
     }
 
     return (
-      <AdminLayout>
-        <div className="space-y-4">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Supplier Management</h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                {sortedSuppliers.length} suppliers · {suppliers.filter(s => s.status === 1).length} active
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
+      <AdminLayout
+        pageTitle="Supplier Management"
+        pageSubtitle={`${sortedSuppliers.length} suppliers · ${suppliers.filter(s => s.status === 1).length} active`}
+        pageIcon={<Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+        screenFit={true}
+      >
+        <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden font-sans">
+          {/* Single-line Search and Action Toolbar */}
+          <div className="shrink-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-3 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+            <div className="flex items-center gap-2.5 w-full md:flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search by supplier code, name, or legal name..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full h-10 pl-9 pr-4 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-955 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all font-medium font-sans"
+                />
+              </div>
               <button
                 onClick={fetchSuppliers}
                 disabled={loadingSuppliers}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300 disabled:opacity-60"
+                className="flex items-center justify-center w-10 h-10 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm shrink-0"
+                title="Refresh List"
               >
-                <RefreshCw size={13} className={loadingSuppliers ? 'animate-spin' : ''} />
-                {loadingSuppliers ? 'Loading' : 'Refresh'}
+                <RefreshCw size={15} className={loadingSuppliers ? 'animate-spin' : ''} />
               </button>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {selectedSupplierIds.length > 0 && (
+                <button
+                  onClick={handleDeleteSelectedSuppliers}
+                  className="flex items-center gap-2 h-10 px-4 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm transition-all whitespace-nowrap"
+                >
+                  <Trash2 size={14} />
+                  Delete Selected ({selectedSupplierIds.length})
+                </button>
+              )}
               <button
                 onClick={() => {
                   setEditingSupplier(null);
                   setModalOpen(true);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-150"
+                className="flex items-center gap-2 h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow whitespace-nowrap shrink-0"
               >
-                <Plus size={14} />
-                Create Supplier
+                <Plus size={14} /> Create Supplier
               </button>
             </div>
           </div>
 
-          {/* Search bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by supplier code, name, or legal name..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full h-9 pl-8 pr-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
-              />
-            </div>
-          </div>
-
-          {/* Bulk action bar */}
-          {selectedSupplierIds.length > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/40 rounded-xl px-4 py-3 flex items-center gap-4">
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{selectedSupplierIds.length} selected</span>
-              <div className="flex items-center gap-2 ml-auto flex-wrap">
-                <button
-                  onClick={handleDeleteSelectedSuppliers}
-                  className="px-3 py-1.5 text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-lg hover:opacity-80 transition-opacity"
-                >
-                  Delete Selected
-                </button>
-                <button
-                  onClick={() => setSelectedSupplierIds([])}
-                  className="px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Table Container */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[960px]">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60">
+          <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse table-fixed min-w-[960px]">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950">
+                  <tr className="border-b border-slate-150 dark:border-slate-800/80">
                     <th className="px-3 py-3 w-10">
                       <input
                         type="checkbox"
@@ -7307,20 +7300,20 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                             </Badge>
                           </td>
                           <td className="px-3 py-3">
-                            <div className="hidden group-hover:flex items-center justify-center gap-1">
+                            <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => dispatch(selectSupplier(s))}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-blue-600 transition-colors"
+                                className="group/btn p-1 text-slate-400 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors"
                                 title="Edit Supplier"
                               >
-                                <Edit2 size={13} />
+                                <Edit2 size={14} className="transition-transform duration-200 ease-out group-hover/btn:scale-125" />
                               </button>
                               <button
                                 onClick={() => handleDeleteSupplier(s.id)}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition-colors"
+                                className="group/btn p-1 text-slate-400 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors"
                                 title="Delete Supplier"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={14} className="transition-transform duration-200 ease-out group-hover/btn:scale-125" />
                               </button>
                             </div>
                           </td>
@@ -7334,7 +7327,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
 
             {/* Pagination Footer */}
             {sortedSuppliers.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+              <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-black dark:text-slate-400 tabular-nums">
                     Showing {start}–{end} of {sortedSuppliers.length} suppliers
@@ -7431,82 +7424,67 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
     }
 
     return (
-      <AdminLayout>
-        <div className="space-y-4">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Client Management</h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                {sortedClients.length} clients · {clients.filter(c => c.status === 1).length} active
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
+      <AdminLayout
+        pageTitle="Client Management"
+        pageSubtitle={`${sortedClients.length} clients · ${clients.filter(c => c.status === 1).length} active`}
+        pageIcon={<Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+        screenFit={true}
+      >
+        <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden font-sans">
+          {/* Single-line Search and Action Toolbar */}
+          <div className="shrink-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-3 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+            <div className="flex items-center gap-2.5 w-full md:flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search by client code, name, or legal name..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full h-10 pl-9 pr-4 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-955 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all font-medium font-sans"
+                />
+              </div>
               <button
                 onClick={fetchClients}
                 disabled={loadingClients}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300 disabled:opacity-60"
+                className="flex items-center justify-center w-10 h-10 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm shrink-0"
+                title="Refresh List"
               >
-                <RefreshCw size={13} className={loadingClients ? 'animate-spin' : ''} />
-                {loadingClients ? 'Loading' : 'Refresh'}
+                <RefreshCw size={15} className={loadingClients ? 'animate-spin' : ''} />
               </button>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {selectedClientIds.length > 0 && (
+                <button
+                  onClick={handleDeleteSelected}
+                  className="flex items-center gap-2 h-10 px-4 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm transition-all whitespace-nowrap"
+                >
+                  <Trash2 size={14} />
+                  Delete Selected ({selectedClientIds.length})
+                </button>
+              )}
               <button
                 onClick={() => {
                   setEditingClient(null);
                   setModalOpen(true);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-150"
+                className="flex items-center gap-2 h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow whitespace-nowrap shrink-0"
               >
-                <Plus size={14} />
-                Create Client
+                <Plus size={14} /> Create Client
               </button>
             </div>
           </div>
 
-          {/* Search bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by client code, name, or legal name..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full h-9 pl-8 pr-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
-              />
-            </div>
-          </div>
-
-          {/* Bulk action bar */}
-          {selectedClientIds.length > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/40 rounded-xl px-4 py-3 flex items-center gap-4">
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{selectedClientIds.length} selected</span>
-              <div className="flex items-center gap-2 ml-auto flex-wrap">
-                <button
-                  onClick={handleDeleteSelected}
-                  className="px-3 py-1.5 text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-lg hover:opacity-80 transition-opacity"
-                >
-                  Delete Selected
-                </button>
-                <button
-                  onClick={() => setSelectedClientIds([])}
-                  className="px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Table Container */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[960px]">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60">
+          <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse table-fixed min-w-[960px]">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950">
+                  <tr className="border-b border-slate-150 dark:border-slate-800/80">
                     <th className="px-3 py-3 w-10">
                       <input
                         type="checkbox"
@@ -7617,20 +7595,20 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                             </Badge>
                           </td>
                           <td className="px-3 py-3">
-                            <div className="hidden group-hover:flex items-center justify-center gap-1">
+                            <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => dispatch(selectClient(c))}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-blue-600 transition-colors"
+                                className="group/btn p-1 text-slate-400 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors"
                                 title="Edit Client"
                               >
-                                <Edit2 size={13} />
+                                <Edit2 size={14} className="transition-transform duration-200 ease-out group-hover/btn:scale-125" />
                               </button>
                               <button
                                 onClick={() => handleDeleteClient(c.id)}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition-colors"
+                                className="group/btn p-1 text-slate-400 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors"
                                 title="Delete Client"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={14} className="transition-transform duration-200 ease-out group-hover/btn:scale-125" />
                               </button>
                             </div>
                           </td>
@@ -7644,7 +7622,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
 
             {/* Pagination Footer */}
             {sortedClients.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+              <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-black dark:text-slate-400 tabular-nums">
                     Showing {start}–{end} of {sortedClients.length} clients
@@ -7725,133 +7703,127 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   }
 
   // --- RENDERING TABS AND MASTER-DETAIL VIEW ---
+  const activeEntityName = type === 'client'
+    ? selectedClient?.clientName
+    : selectedSupplier?.name;
+
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Module Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">{type}s</span>
-              <span className="w-1 h-1 rounded-full bg-slate-350 dark:bg-slate-750" />
-              <span className="text-xs text-slate-400">{activeTabDetails.title}</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-800 dark:text-white mt-1 capitalize">
-              {type === 'client' ? 'Client' : 'Supplier'} {activeTabDetails.title}
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              {activeTabDetails.desc}
-            </p>
-          </div>
-
-          {/* Active entity banner/stats */}
-          {type === 'client' ? (
-            selectedClientId ? (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-xl shadow-sm">
-                  {selectedClient?.logoUrl ? (
-                    <img
-                      src={selectedClient.logoUrl}
-                      alt={selectedClient.clientName}
-                      className="h-8 w-auto max-w-[80px] object-contain flex-shrink-0"
-                    />
-                  ) : (
-                    <span className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  )}
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Active Client: {selectedClient?.clientName} ({selectedClient?.clientCode})
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    dispatch(clearSelectedClient());
-                    router.push('/admin/clients/profile');
-                  }}
-                  className="px-3.5 py-2 border border-slate-250 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors shadow-sm"
-                >
-                  Change Client
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xl shadow-sm">
-                <span className="flex-shrink-0 w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  No Active Client Selected
-                </span>
-              </div>
-            )
-          ) : (
-            selectedSupplierId ? (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-xl shadow-sm">
-                  <span className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Active Supplier: {selectedSupplier?.name} ({selectedSupplier?.supplierCode})
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    dispatch(clearSelectedSupplier());
-                    router.push('/admin/suppliers/profile');
-                  }}
-                  className="px-3.5 py-2 border border-slate-250 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors shadow-sm"
-                >
-                  Change Supplier
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xl shadow-sm">
-                <span className="flex-shrink-0 w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  No Active Supplier Selected
-                </span>
-              </div>
-            )
-          )}
-        </div>
-
+    <AdminLayout
+      pageTitle={activeEntityName ? `${activeEntityName} · ${activeTabDetails.title}` : `${type === 'client' ? 'Client' : 'Supplier'} ${activeTabDetails.title}`}
+      pageSubtitle={activeTabDetails.desc}
+      pageIcon={<activeTabDetails.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+    >
+      <div className="space-y-6 font-sans">
         {shouldShowEmptyDetailsPrompt ? (
           // Warning prompt to select a client first
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-12 shadow-sm flex flex-col items-center justify-center text-center max-w-xl mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center mb-4">
               <User size={28} className="text-amber-600 dark:text-amber-500" />
             </div>
-            <h3 className="text-base font-bold text-slate-800 dark:text-white mb-1.5">No Client Selected</h3>
+            <h3 className="text-base font-bold text-slate-800 dark:text-white mb-1.5">
+              No {type === 'client' ? 'Client' : 'Supplier'} Selected
+            </h3>
             <p className="text-sm text-slate-400 max-w-xs mb-6">
-              You must select a client from the Client Profile page to view and manage their {activeTabDetails.title}.
+              You must select a {type} from the {type === 'client' ? 'Client' : 'Supplier'} Profile page to view and manage their {activeTabDetails.title.toLowerCase()}.
             </p>
             <button
-              onClick={() => router.push('/admin/clients/profile')}
+              onClick={() => router.push(`/admin/${type}s/profile`)}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-150 flex items-center gap-1.5"
             >
-              Go to Clients List
+              Go to {type === 'client' ? 'Clients' : 'Suppliers'} List
             </button>
           </div>
         ) : (
           // Render the Master Detail layout for the selected client / supplier
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-            {/* Tab Sidebar Selector */}
-            <div className="lg:col-span-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-3 space-y-1 shadow-sm">
-              {activeTabs.map((item) => {
-                const Icon = item.icon;
-                const isSelected = item.code === tab;
-                return (
-                  <Link
-                    key={item.code}
-                    href={`/admin/${type}s/${item.code}`}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-xs font-bold transition-all duration-150 ${
-                      isSelected
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/50 hover:text-slate-800 dark:hover:text-white'
-                    }`}
-                  >
-                    <Icon size={16} className={isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'} />
-                    <div className="text-left">
-                      <span>{item.title}</span>
+            {/* Tab Sidebar Selector (Div 1) */}
+            <div className="lg:col-span-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-3.5 space-y-3 shadow-sm flex flex-col">
+              {/* Active Client / Supplier Card inside Div 1 */}
+              {type === 'client' && selectedClientId ? (
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2.5 shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {selectedClient?.logoUrl ? (
+                      <img
+                        src={selectedClient.logoUrl}
+                        alt={selectedClient.clientName}
+                        className="h-8 w-auto max-w-[65px] object-contain flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400">
+                        <User size={16} />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Active Client</span>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                        {selectedClient?.clientName}
+                      </p>
+                      <p className="text-[11px] font-mono text-blue-600 dark:text-blue-400 font-semibold truncate">
+                        {selectedClient?.clientCode}
+                      </p>
                     </div>
-                  </Link>
-                );
-              })}
+                  </div>
+                  <button
+                    onClick={() => {
+                      dispatch(clearSelectedClient());
+                      router.push('/admin/clients/profile');
+                    }}
+                    className="w-full py-2 px-3 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors shadow-2xs text-center"
+                  >
+                    Change Client
+                  </button>
+                </div>
+              ) : type === 'supplier' && selectedSupplierId ? (
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2.5 shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400">
+                      <Building2 size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Active Supplier</span>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                        {selectedSupplier?.name}
+                      </p>
+                      <p className="text-[11px] font-mono text-blue-600 dark:text-blue-400 font-semibold truncate">
+                        {selectedSupplier?.supplierCode}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      dispatch(clearSelectedSupplier());
+                      router.push('/admin/suppliers/profile');
+                    }}
+                    className="w-full py-2 px-3 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors shadow-2xs text-center"
+                  >
+                    Change Supplier
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Navigation Tabs List */}
+              <div className="space-y-1 shrink-0">
+                {activeTabs.map((item) => {
+                  const Icon = item.icon;
+                  const isSelected = item.code === tab;
+                  return (
+                    <Link
+                      key={item.code}
+                      href={`/admin/${type}s/${item.code}`}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl text-xs font-bold transition-all duration-150 ${
+                        isSelected
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/50 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                    >
+                      <Icon size={16} className={isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'} />
+                      <div className="text-left">
+                        <span>{item.title}</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Tab View Container */}

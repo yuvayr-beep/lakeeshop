@@ -197,7 +197,7 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-350">
                 Supplier Code <span className="text-red-500">*</span>
@@ -227,7 +227,7 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
               />
             </div>
 
-            <div className="space-y-1 md:col-span-2">
+            <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-350">
                 Legal Name <span className="text-red-500">*</span>
               </label>
@@ -240,7 +240,9 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
                 className="w-full h-10 px-3 text-sm bg-slate-50/50 focus:bg-white dark:bg-slate-950/20 dark:focus:bg-slate-900 border border-slate-300 hover:border-slate-400 focus:border-blue-500 dark:border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-855 dark:text-slate-200 transition-all"
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-355">
                 Supplier Category
@@ -271,7 +273,7 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
               />
             </div>
 
-            <div className="space-y-1 md:col-span-2">
+            <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-355">
                 Website URL
               </label>
@@ -283,7 +285,9 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
                 className="w-full h-10 px-3 text-sm bg-slate-50/50 focus:bg-white dark:bg-slate-950/20 dark:focus:bg-slate-900 border border-slate-300 hover:border-slate-400 focus:border-blue-500 dark:border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-855 dark:text-slate-200 transition-all"
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-355">
                 Lead Days
@@ -337,8 +341,10 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
                 className="w-full h-10 px-3 text-sm bg-slate-50/50 focus:bg-white dark:bg-slate-950/20 dark:focus:bg-slate-900 border border-slate-300 hover:border-slate-400 focus:border-blue-500 dark:border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-855 dark:text-slate-200 transition-all"
               />
             </div>
+          </div>
 
-            <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-6 pt-2 flex-wrap">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="usesOwnProductCode"
@@ -351,7 +357,7 @@ export default function SupplierModal({ open, onClose, onSuccess, supplier }: Su
               </label>
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="preferredSupplier"

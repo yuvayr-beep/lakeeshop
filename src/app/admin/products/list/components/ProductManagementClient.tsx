@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, Filter, Download, Upload, RefreshCw, Package, AlertCircle, Zap, ChevronDown, LayoutGrid, List } from 'lucide-react';
-import ProductTable from './ProductTable';
+import ProductTable, { HierarchicalStockBreakdownDto } from './ProductTable';
 import ProductGrid from './ProductGrid';
 import ProductFilters from './ProductFilters';
 import EmptyState from '@/components/ui/EmptyState';
@@ -503,7 +503,49 @@ const fetchProductData = async (
 export default function ProductManagementClient() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
-  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [stockMap, setStockMap] = useState<Record<string | number, number>>({});
+  const [stockBreakdownMap, setStockBreakdownMap] = useState<Record<string | number, HierarchicalStockBreakdownDto>>({});
+
+  const parseStockData = (parsedJson: any, targetProductId: number): HierarchicalStockBreakdownDto | null => {
+    if (parsedJson === undefined || parsedJson === null) return null;
+
+    const rawObj = (parsedJson && typeof parsedJson === 'object' && 'data' in parsedJson && typeof parsedJson.data === 'object' && parsedJson.data !== null)
+      ? parsedJson.data
+      : parsedJson;
+
+    if (typeof rawObj === 'number') {
+      return {
+        productId: targetProductId,
+        individualQty: rawObj,
+        totalQty: rawObj,
+      };
+    }
+
+    if (typeof parsedJson === 'number') {
+      return {
+        productId: targetProductId,
+        individualQty: parsedJson,
+        totalQty: parsedJson,
+      };
+    }
+
+    if (rawObj && typeof rawObj === 'object' && ('individualQty' in rawObj || 'totalQty' in rawObj || 'availableQty' in rawObj)) {
+      const individualQty = typeof rawObj.individualQty === 'number' ? rawObj.individualQty : (typeof rawObj.availableQty === 'number' ? rawObj.availableQty : 0);
+      const totalQty = typeof rawObj.totalQty === 'number' ? rawObj.totalQty : individualQty;
+
+      return {
+        productId: Number(rawObj.productId || targetProductId),
+        productCode: rawObj.productCode,
+        productName: rawObj.productName,
+        relationRole: rawObj.relationRole || 'INDEPENDENT',
+        individualQty,
+        totalQty,
+        breakdown: Array.isArray(rawObj.breakdown) ? rawObj.breakdown : [],
+      };
+    }
+
+    return null;
+  };
   const [totalServerCount, setTotalServerCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1122,47 +1164,6 @@ export default function ProductManagementClient() {
     fetchCategories();
   }, [fetchProducts, fetchStatuses, fetchOfflineStatuses, fetchBrands, fetchProductTypes, fetchCategories]);
 
-  useEffect(() => {
-    if (!products || products.length === 0) return;
-
-    let isMounted = true;
-    const idsToFetch = products
-      .map((p) => p.id)
-      .filter((id) => id && stockMap[id] === undefined);
-
-    if (idsToFetch.length === 0) return;
-
-    const fetchStocks = async () => {
-      const newStockMap: Record<string, number> = {};
-      await Promise.all(
-        idsToFetch.map(async (id) => {
-          try {
-            const res = await axiosInstance.get(`/stock/availability/${id}`);
-            if (res.data && typeof res.data.data === 'number') {
-              newStockMap[id] = res.data.data;
-            } else if (typeof res.data === 'number') {
-              newStockMap[id] = res.data;
-            } else {
-              newStockMap[id] = 0;
-            }
-          } catch {
-            newStockMap[id] = 0;
-          }
-        })
-      );
-      if (isMounted) {
-        setStockMap((prev) => ({ ...prev, ...newStockMap }));
-      }
-    };
-
-    fetchStocks();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [products]);
-
-
   const filtered = useMemo(() => {
     let data = [...products];
 
@@ -1185,6 +1186,116 @@ export default function ProductManagementClient() {
     }
     return filtered;
   }, [filtered, page, perPage]);
+
+  useEffect(() => {
+    if (!paginated || paginated.length === 0) return;
+
+    let isSubscribed = true;
+    const controller = new AbortController();
+    const retryTimers: Record<number, NodeJS.Timeout> = {};
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://v2.lakeetech.com';
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const authToken = (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null) || 'erp-init-2025';
+
+    paginated.forEach((p) => {
+      if (!p.id) return;
+      const productId = Number(p.id);
+      const targetUrl = `${cleanBase}/stock/availability/${productId}/stream`;
+
+      async function listenStream() {
+        console.log(`[Live Stock SSE Request] Product ID ${productId} -> Connecting to: ${targetUrl}`, {
+          productId,
+          url: targetUrl,
+          headers: { Authorization: `Bearer ${authToken.substring(0, 10)}...`, Accept: 'text/event-stream' }
+        });
+
+        try {
+          // Initial REST endpoint GET fallback
+          try {
+            console.log(`[Live Stock REST Request] GET /stock/availability/${productId}`);
+            const res = await axiosInstance.get(`/stock/availability/${productId}`);
+            console.log(`[Live Stock REST Response] Product ID ${productId} Data:`, res.data);
+            const initialDto = parseStockData(res.data, productId);
+            if (initialDto && isSubscribed) {
+              setStockBreakdownMap((prev) => ({ ...prev, [p.id]: initialDto }));
+              setStockMap((prev) => ({ ...prev, [p.id]: initialDto.totalQty }));
+            }
+          } catch (restErr) {
+            console.warn(`[Live Stock REST Response Error] Product ID ${productId}:`, restErr);
+          }
+
+          const response = await fetch(targetUrl, {
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Accept': 'text/event-stream',
+            },
+            signal: controller.signal,
+          });
+
+          console.log(`[Live Stock SSE Connection Response] Product ID ${productId} -> Status: ${response.status} ${response.statusText}`);
+
+          if (!response.ok) {
+            if (isSubscribed) {
+              console.warn(`[Live Stock SSE Stream Error Response] Product ID ${productId} HTTP ${response.status} -> Retrying in 8s...`);
+              retryTimers[productId] = setTimeout(() => {
+                if (isSubscribed) listenStream();
+              }, 8000);
+            }
+            return;
+          }
+
+          if (!response.body) return;
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let buffer = '';
+
+          while (isSubscribed) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('data:')) {
+                const jsonStr = trimmed.substring(5).trim();
+                try {
+                  const data = JSON.parse(jsonStr);
+                  console.log(`[Live Stock SSE Stream Response Data] Product ID ${productId}:`, data);
+                  const dto = parseStockData(data, productId);
+                  if (dto && isSubscribed) {
+                    setStockBreakdownMap((prev) => ({ ...prev, [p.id]: dto }));
+                    setStockMap((prev) => ({ ...prev, [p.id]: dto.totalQty }));
+                  }
+                } catch (e) {
+                  console.log(`[Live Stock SSE Stream Raw Response String] Product ID ${productId}:`, jsonStr);
+                }
+              }
+            }
+          }
+        } catch (err: any) {
+          if (!controller.signal.aborted && isSubscribed) {
+            console.error(`[Live Stock SSE Stream Exception] Product ID ${productId}:`, err);
+            retryTimers[productId] = setTimeout(() => {
+              if (isSubscribed) listenStream();
+            }, 5000);
+          }
+        }
+      }
+
+      listenStream();
+    });
+
+    return () => {
+      isSubscribed = false;
+      Object.values(retryTimers).forEach((t) => clearTimeout(t));
+      controller.abort();
+    };
+  }, [paginated]);
 
   const hasAdvanceFilter = useMemo(() => {
     return Object.values(filters || {}).some(
@@ -1522,6 +1633,7 @@ export default function ProductManagementClient() {
               onPageChange={setPage}
               onPerPageChange={(n) => { setPerPage(n); setPage(1); }}
               stockMap={stockMap}
+              stockBreakdownMap={stockBreakdownMap}
             />
           ) : (
             <ProductGrid
@@ -1537,6 +1649,7 @@ export default function ProductManagementClient() {
               onPageChange={setPage}
               onPerPageChange={(n) => { setPerPage(n); setPage(1); }}
               stockMap={stockMap}
+              stockBreakdownMap={stockBreakdownMap}
             />
           )}
 
