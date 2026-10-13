@@ -50,6 +50,7 @@ export const mockMenuData: MenuModule[] = [
     title: 'Products',
     screens: [
       { code: 'PROD', title: 'Products', href: '/admin/products/list', actions: ['READ', 'WRITE'] },
+      { code: 'EXPLORER', title: 'Media Explorer', href: '/admin/products/explorer', actions: ['READ', 'WRITE'] },
       { code: 'PCAT', title: 'Product Category', href: '/admin/products/category', actions: ['READ', 'WRITE'] },
       { code: 'BRAND', title: 'Brand', href: '/admin/products/brand', actions: ['READ', 'WRITE'] },
       { code: 'CSHAR', title: 'Client Share', href: '/admin/products/client-share', actions: ['READ', 'WRITE'] },
@@ -191,7 +192,7 @@ export const mockMenuData: MenuModule[] = [
           { code: 'STK_REP_ADJ', title: 'Adjustment Report', href: '/admin/stock/reports/adjustments', actions: ['READ', 'WRITE'] },
           { code: 'STK_REP_INV', title: 'Supplier Invoice Report', href: '/admin/stock/reports/supplier-invoices', actions: ['READ', 'WRITE'] },
           { code: 'STK_REP_ADHC', title: 'Ad-hoc Report', href: '/admin/stock/reports/adhoc', actions: ['READ', 'WRITE'] },
-          { code: 'STK_REP_EXP', title: 'Export Job Status & Download Tracking', href: '/admin/stock/reports/export-jobs', actions: ['READ', 'WRITE'] },
+          // { code: 'STK_REP_EXP', title: 'Export Job Status & Download Tracking', href: '/admin/stock/reports/export-jobs', actions: ['READ', 'WRITE'] },
         ]
       },
       {
@@ -231,6 +232,56 @@ export const mockMenuData: MenuModule[] = [
         title: 'Stock Assignment',
         href: '/admin/orders/stock-assignment',
         actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'ORD_PREORDER_MGMT',
+        title: 'Pre-Order Management',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'ORD_PRE_CONVERT',
+            title: 'Convert to Pre-Order',
+            href: '/admin/orders/pre-order/convert',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_PRE_SHORTAGE',
+            title: 'Record Warehouse Shortage',
+            href: '/admin/orders/pre-order/shortage',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_PRE_ACTIVE',
+            title: 'Active Pre-Order Queue',
+            href: '/admin/orders/pre-order/active-queue',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_PRE_AUDIT',
+            title: 'Pre-Order Audit & History',
+            href: '/admin/orders/pre-order/audit-history',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_PRE_RELEASE',
+            title: 'Pre-Order Release',
+            href: '/admin/orders/pre-order/release',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_PRE_MASTER',
+            title: 'Master',
+            actions: ['READ', 'WRITE'],
+            subScreens: [
+              {
+                code: 'ORD_PRE_M_SHORTAGE_REASONS',
+                title: 'Pre-Order Shortage Reasons',
+                href: '/admin/orders/pre-order/master/shortage-reasons',
+                actions: ['READ', 'WRITE']
+              }
+            ]
+          }
+        ]
       },
       {
         code: 'ORD_COURIER_ASSIGN_GROUP',
@@ -345,6 +396,25 @@ export const mockMenuData: MenuModule[] = [
         ]
       },
       {
+        code: 'ORD_RTO',
+        title: 'RTO',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'ORD_RTO_INTAKE',
+            title: 'Courier Return Intake',
+            href: '/admin/orders/rto/return-intake',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'ORD_RTO_CLAIMS',
+            title: 'Courier Claims Ledger',
+            href: '/admin/orders/rto/claims-ledger',
+            actions: ['READ', 'WRITE']
+          }
+        ]
+      },
+      {
         code: 'ORD_MASTER_CONFIG',
         title: 'Master Configuration',
         actions: ['READ', 'WRITE'],
@@ -374,12 +444,6 @@ export const mockMenuData: MenuModule[] = [
             actions: ['READ', 'WRITE']
           },
           {
-            code: 'ORD_PRE_AWB_MASTER',
-            title: 'Pre-AWB Master',
-            href: '/admin/orders/master-config/pre-awb-master',
-            actions: ['READ', 'WRITE']
-          },
-          {
             code: 'ORD_INVOICE_GROUP',
             title: 'Invoice Group',
             href: '/admin/orders/master-config/invoice-group',
@@ -396,6 +460,60 @@ export const mockMenuData: MenuModule[] = [
             code: 'ORD_SPLIT_SURFACE_CONFIG',
             title: 'Split & Surface Config',
             href: '/admin/orders/product-config/split-surface',
+            actions: ['READ', 'WRITE']
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 11,
+    code: 'PREORDER',
+    module: 'PREORDER_MOD',
+    description: 'Pre-Order Management Module',
+    icon: 'Clock',
+    sortOrder: 0,
+    title: 'Pre-Order Management',
+    screens: [
+      {
+        code: 'ORD_PRE_CONVERT',
+        title: 'Convert to Pre-Order',
+        href: '/admin/orders/pre-order/convert',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'ORD_PRE_SHORTAGE',
+        title: 'Record Warehouse Shortage',
+        href: '/admin/orders/pre-order/shortage',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'ORD_PRE_ACTIVE',
+        title: 'Active Pre-Order Queue',
+        href: '/admin/orders/pre-order/active-queue',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'ORD_PRE_AUDIT',
+        title: 'Pre-Order Audit & History',
+        href: '/admin/orders/pre-order/audit-history',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'ORD_PRE_RELEASE',
+        title: 'Pre-Order Release',
+        href: '/admin/orders/pre-order/release',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'ORD_PRE_MASTER',
+        title: 'Master',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'ORD_PRE_M_SHORTAGE_REASONS',
+            title: 'Pre-Order Shortage Reasons',
+            href: '/admin/orders/pre-order/master/shortage-reasons',
             actions: ['READ', 'WRITE']
           }
         ]
@@ -430,9 +548,21 @@ export const mockMenuData: MenuModule[] = [
         actions: ['READ', 'WRITE']
       },
       {
-        code: 'COUR_AWB',
-        title: 'AWB Allocation & Pre-Allotted Pools',
-        href: '/admin/courier/awb',
+        code: 'COUR_ACTUALS',
+        title: 'Courier Actuals',
+        href: '/admin/courier/actuals',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_PROPOSED_AVG',
+        title: 'Proposed Average Prices',
+        href: '/admin/courier/proposed-average-prices',
+        actions: ['READ', 'WRITE']
+      },
+      {
+        code: 'COUR_PRE_AWB_MASTER',
+        title: 'Pre Allotted AWB',
+        href: '/admin/orders/master-config/pre-awb-master',
         actions: ['READ', 'WRITE']
       },
       {
@@ -466,20 +596,6 @@ export const mockMenuData: MenuModule[] = [
         actions: ['READ', 'WRITE']
       },
       {
-        code: 'COUR_MASTER',
-        title: 'Master',
-        actions: ['READ', 'WRITE'],
-        subScreens: [
-          { code: 'COUR_M_PIN', title: 'Master Pincodes', href: '/admin/courier/master/pincodes', actions: ['READ', 'WRITE'] },
-          { code: 'COUR_M_RATES', title: 'Courier Rate Cards', href: '/admin/courier/master/rates', actions: ['READ', 'WRITE'] },
-          { code: 'COUR_M_ZONES', title: 'Zone Matrix Configuration', href: '/admin/courier/master/zones', actions: ['READ', 'WRITE'] },
-          { code: 'COUR_M_ACTUALS', title: 'Actual Weight Audit', href: '/admin/courier/master/actuals', actions: ['READ', 'WRITE'] },
-          { code: 'COUR_M_AVG_PRICE', title: 'Proposed Average Prices', href: '/admin/courier/master/proposed-average-prices', actions: ['READ', 'WRITE'] },
-          { code: 'COUR_M_PIN_BLOCK', title: 'Pincode Block & Unblock', href: '/admin/courier/master/pincode-block', actions: ['READ', 'WRITE'] },
-          { code: 'COUR_M_SYNC', title: 'Outbox Sync Delta', href: '/admin/courier/master/sync-delta', actions: ['READ', 'WRITE'] },
-        ]
-      },
-      {
         code: 'COUR_WEBHOOKS',
         title: 'Webhooks & Carrier Integrations',
         href: '/admin/courier/webhooks',
@@ -507,14 +623,57 @@ export const mockMenuData: MenuModule[] = [
     title: 'User & Security',
     screens: [
       {
-        code: 'USER_ROLES_GROUP',
-        title: 'Roles',
+        code: 'USER_CONFIG_GROUP',
+        title: 'Users Config',
         actions: ['READ', 'WRITE'],
         subScreens: [
           {
+            code: 'USER_CONFIG_USERS',
+            title: 'Users',
+            href: '/admin/user/users',
+            actions: ['READ', 'WRITE']
+          }
+        ]
+      },
+      {
+        code: 'USER_ROLES_GROUP',
+        title: 'Roles & Permissions',
+        actions: ['READ', 'WRITE'],
+        subScreens: [
+          {
+            code: 'USER_ROLES_HUB',
+            title: 'Security Hub Overview',
+            href: '/admin/user/roles',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'USER_ROLES_LIST',
+            title: 'Role Management',
+            href: '/admin/user/roles/list',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'USER_ROLE_MAPPINGS',
+            title: 'User-Role Mappings',
+            href: '/admin/user/roles/user-roles',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'USER_PERM_MATRIX',
+            title: 'Permission Matrix',
+            href: '/admin/user/roles/matrix',
+            actions: ['READ', 'WRITE']
+          },
+          {
             code: 'USER_SCREENS',
-            title: 'Screens',
+            title: 'Screens Catalog',
             href: '/admin/user/roles/screens',
+            actions: ['READ', 'WRITE']
+          },
+          {
+            code: 'USER_OVERRIDES_CACHE',
+            title: 'Overrides & Redis Cache',
+            href: '/admin/user/permissions/overrides',
             actions: ['READ', 'WRITE']
           }
         ]

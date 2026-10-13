@@ -41,6 +41,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
   const [legalName, setLegalName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [fulfillmentMode, setFulfillmentMode] = useState('STANDARD_COURIER');
 
   // Business Unit States
   const [unitCode, setUnitCode] = useState('');
@@ -51,6 +52,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
   const [hasOwnProductCode, setHasOwnProductCode] = useState(true);
   const [hasMultiProductOrder, setHasMultiProductOrder] = useState(true);
   const [hasProgram, setHasProgram] = useState(true);
+  const [billingType, setBillingType] = useState('B2B');
 
   const [saving, setSaving] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -71,6 +73,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
         setLegalName(client.legalName || '');
         setLogoUrl(client.logoUrl || '');
         setRemarks(client.remarks || '');
+        setFulfillmentMode((client as any).fulfillmentMode || 'STANDARD_COURIER');
 
         // Default business unit fields first
         setUnitCode('');
@@ -81,6 +84,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
         setHasOwnProductCode(true);
         setHasMultiProductOrder(true);
         setHasProgram(true);
+        setBillingType('B2B');
 
         // Fetch full client details to get business units
         const fetchDetails = async () => {
@@ -98,6 +102,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
               setHasOwnProductCode(bu.hasOwnProductCode ?? true);
               setHasMultiProductOrder(bu.hasMultiProductOrder ?? true);
               setHasProgram(bu.hasProgram ?? true);
+              setBillingType(bu.billingType || 'B2B');
             }
           } catch (err) {
             console.error('Failed to fetch business units', err);
@@ -113,6 +118,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
         setLegalName('');
         setLogoUrl('');
         setRemarks('');
+        setFulfillmentMode('STANDARD_COURIER');
 
         setUnitCode('');
         setUnitName('');
@@ -122,6 +128,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
         setHasOwnProductCode(true);
         setHasMultiProductOrder(true);
         setHasProgram(true);
+        setBillingType('B2B');
       }
     }
   }, [open, client]);
@@ -160,6 +167,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
       legalName: legalName.trim(),
       logoUrl: logoUrl.trim() || null,
       remarks: remarks.trim() || null,
+      fulfillmentMode: fulfillmentMode || 'STANDARD_COURIER',
       businessUnits: [
         {
           unitCode: unitCode.trim(),
@@ -170,6 +178,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
           hasOwnProductCode: !!hasOwnProductCode,
           hasMultiProductOrder: !!hasMultiProductOrder,
           hasProgram: !!hasProgram,
+          billingType: billingType || 'B2B',
         }
       ]
     };
@@ -248,7 +257,7 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         Client Code <span className="text-red-500">*</span>
@@ -289,6 +298,21 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
                         placeholder="e.g. HDFC Bank Ltd"
                         className="w-full h-10 px-3 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
                       />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Fulfillment Mode
+                      </label>
+                      <select
+                        value={fulfillmentMode}
+                        onChange={(e) => setFulfillmentMode(e.target.value)}
+                        className="w-full h-10 px-3 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all cursor-pointer"
+                      >
+                        <option value="STANDARD_COURIER">STANDARD_COURIER</option>
+                        <option value="EXTERNAL_AWB_DIRECT">EXTERNAL_AWB_DIRECT</option>
+                        <option value="BULK_DELIVERY_CHALLAN">BULK_DELIVERY_CHALLAN</option>
+                      </select>
                     </div>
                   </div>
 
@@ -345,18 +369,35 @@ export default function ClientModal({ open, onClose, onSuccess, client }: Client
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Unit Legal Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={unitLegalName}
-                      onChange={(e) => setUnitLegalName(e.target.value)}
-                      placeholder="e.g. HDFC Bank Ltd Unit"
-                      className="w-full h-10 px-3 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Unit Legal Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={unitLegalName}
+                        onChange={(e) => setUnitLegalName(e.target.value)}
+                        placeholder="e.g. HDFC Bank Ltd Unit"
+                        className="w-full h-10 px-3 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Billing Type
+                      </label>
+                      <select
+                        value={billingType}
+                        onChange={(e) => setBillingType(e.target.value)}
+                        className="w-full h-10 px-3 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all cursor-pointer"
+                      >
+                        <option value="">Select</option>
+                        <option value="B2B">B2B</option>
+                        <option value="B2C">B2C</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-1">

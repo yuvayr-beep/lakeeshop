@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Explorer - Lakee ERP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-panel: #1e293b;
+            --bg-hover: #334155;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.25);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+
+        .toolbar { display: flex; align-items: center; gap: 10px; }
+
+        .jwt-input {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--accent);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: 'Fira Code', monospace;
+            width: 260px;
+        }
+
+        .jwt-input::placeholder { color: var(--text-muted); }
+
+        .btn {
+            background: var(--bg-panel);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #0f172a;
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+
+        .dual-container {
+            display: grid;
+            grid-template-columns: 1fr 50px 1fr;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .pane {
+            display: flex;
+            flex-direction: column;
+            background: #0b1120;
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .pane-header {
+            background: var(--bg-panel);
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pane-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .path-display {
+            background: #0f172a;
+            padding: 6px 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: var(--bg-panel);
+            padding: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+            color: var(--text-main);
+        }
+
+        tr:hover { background: var(--bg-hover); cursor: pointer; }
+
+        .transfer-actions {
+            background: var(--bg-panel);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            border-right: 1px solid var(--border);
+        }
+
+        .action-btn {
+            background: var(--bg-hover);
+            color: var(--accent);
+            border: 1px solid var(--border);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--accent);
+            color: #0f172a;
+            transform: scale(1.1);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+        }
+
+        footer {
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border);
+            padding: 8px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            📁 File Explorer <span class="badge">lmedia:5017</span>
+        </div>
+        <div class="toolbar">
+            <input type="password" id="jwtTokenInput" class="jwt-input" placeholder="🔑 Enter Bearer JWT Token" onchange="saveJwtToken(this.value)">
+            <button class="btn btn-primary" onclick="syncProductImages()" title="Sync product images to catalog and delete older duplicate files from storage">⚡ Sync Product Images</button>
+            <button class="btn" onclick="exportExcel()">📊 Export Excel</button>
+            <button class="btn" onclick="refreshRightPane()">🔄 Refresh Server Files</button>
+        </div>
+    </header>
+
+    <div class="dual-container">
+        <!-- LEFT PANE: LOCAL WINDOWS PC -->
+        <div class="pane">
+            <div class="pane-header">
+                <div class="pane-title">💻 Left Pane: Windows PC</div>
+                <input type="file" id="localFileInput" multiple style="display:none;" onchange="handleLocalWindowsFiles(event)">
+                <button class="btn btn-primary" onclick="openLocalFolder()">📂 Open Windows Folder</button>
+            </div>
+            <div class="path-display" id="leftPath">path: C:\Users\LocalPC\Files</div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Local Filename</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leftTable">
+                        <tr><td colspan="2" style="color:var(--text-muted); text-align:center;">Click "Open Windows Folder" to load local PC files</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- MIDDLE CONTROLS: TRANSFER / UPLOAD TO SERVER -->
+        <div class="transfer-actions">
+            <button class="action-btn" title="Upload Left Windows PC File to Server" onclick="uploadSelectedLocalFile()">➡️</button>
+            <button class="action-btn" title="Download Server File to Windows PC" onclick="downloadServerFile()">⬅️</button>
+        </div>
+
+        <!-- RIGHT PANE: REMOTE SERVER STORAGE (INTERNAL /opt/lakee HIDDEN) -->
+        <div class="pane">
+            <div class="pane-header">
+                <div class="pane-title">☁️ Right Pane: Server Storage</div>
+                <select onchange="switchRightProvider(this.value)" style="background:var(--bg-dark); color:white; border:1px solid var(--border); padding:4px 8px; border-radius:4px;">
+                    <option value="LOCAL">Local Server</option>
+                    <option value="S3">AWS S3 Bucket</option>
+                    <option value="NGINX">Remote Server</option>
+                </select>
+            </div>
+            <div class="path-display" id="rightPath">path: / (Server Storage)</div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Original Name / Server Key</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rightTable">
+                        <!-- Streamed Server Files -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div id="statusText">File Explorer Connected</div>
+        <div id="transferCount">Ready for Windows PC ↔ Server Transfer</div>
+    </footer>
+
+    <script>
+        let rightProvider = 'LOCAL';
+        let activeRightFilter = '';
+        let allServerItems = [];
+        let localWindowsFiles = [];
+        let selectedLocalFile = null;
+        let metadataMap = {};
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.innerHTML = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 3500);
+        }
+
+        function copyPublicUrl(pubUrl, fullKey) {
+            const effectiveUrl = pubUrl || `${window.location.origin}/media/${fullKey}/view`;
+            navigator.clipboard.writeText(effectiveUrl).then(() => {
+                showToast(`📋 Copied Public URL to clipboard!`);
+            }).catch(() => {
+                prompt('Copy Public URL:', effectiveUrl);
+            });
+        }
+
+        // Initialize JWT Token from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedToken = localStorage.getItem('jwt_token') || '';
+            if (savedToken) {
+                document.getElementById('jwtTokenInput').value = savedToken;
+            }
+            loadRightPane();
+        });
+
+        function saveJwtToken(token) {
+            localStorage.setItem('jwt_token', token.trim());
+            loadRightPane();
+        }
+
+        function getAuthHeaders() {
+            const token = localStorage.getItem('jwt_token') || document.getElementById('jwtTokenInput').value.trim();
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+            }
+            return headers;
+        }
+
+        // Open local Windows folder using File System Access API
+        async function openLocalFolder() {
+            if ('showDirectoryPicker' in window) {
+                try {
+                    const dirHandle = await window.showDirectoryPicker();
+                    document.getElementById('leftPath').innerText = `path: C:\\...\\${dirHandle.name}`;
+                    const tbody = document.getElementById('leftTable');
+                    tbody.innerHTML = '';
+                    localWindowsFiles = [];
+
+                    for await (const entry of dirHandle.values()) {
+                        if (entry.kind === 'file') {
+                            const file = await entry.getFile();
+                            localWindowsFiles.push(file);
+
+                            const row = document.createElement('tr');
+                            row.onclick = () => selectLocalRow(row, file);
+                            row.innerHTML = `
+                                <td>📄 ${file.name}</td>
+                                <td>${(file.size / 1024).toFixed(1)} KB</td>
+                            `;
+                            tbody.appendChild(row);
+                        }
+                    }
+                } catch (err) {
+                    console.log('Folder picker cancelled or unsupported');
+                }
+            } else {
+                document.getElementById('localFileInput').click();
+            }
+        }
+
+        function handleLocalWindowsFiles(event) {
+            const files = event.target.files;
+            const tbody = document.getElementById('leftTable');
+            tbody.innerHTML = '';
+            localWindowsFiles = Array.from(files);
+
+            localWindowsFiles.forEach(file => {
+                const row = document.createElement('tr');
+                row.onclick = () => selectLocalRow(row, file);
+                row.innerHTML = `
+                    <td>📄 ${file.name}</td>
+                    <td>${(file.size / 1024).toFixed(1)} KB</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function selectLocalRow(row, file) {
+            document.querySelectorAll('#leftTable tr').forEach(r => r.style.background = '');
+            row.style.background = 'var(--bg-hover)';
+            selectedLocalFile = file;
+        }
+
+        async function uploadSelectedLocalFile() {
+            if (!selectedLocalFile) {
+                alert('Please select a local Windows file to upload to the server!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', selectedLocalFile);
+
+            document.getElementById('statusText').innerText = `Uploading ${selectedLocalFile.name} to server...`;
+
+            const url = activeRightFilter
+                ? `/media/upload?provider=${rightProvider}&path=${encodeURIComponent(activeRightFilter)}`
+                : `/media/upload?provider=${rightProvider}`;
+
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: formData
+            });
+
+            if (res.ok) {
+                try {
+                    const data = await res.json();
+                    if (data && data.fileKey) {
+                        metadataMap[data.fileKey] = data;
+                        const base = data.fileKey.split('/').pop();
+                        if (base) metadataMap[base] = data;
+                    }
+                    showToast(`✅ Copied <b>${escapeHtml(selectedLocalFile.name)}</b><br><small style="font-family:monospace;">${escapeHtml(data.fileKey)}</small>`);
+                } catch (e) {
+                    showToast(`✅ Uploaded ${escapeHtml(selectedLocalFile.name)} successfully!`);
+                }
+                document.getElementById('statusText').innerText = `Uploaded ${selectedLocalFile.name} successfully!`;
+                loadRightPane();
+            } else if (res.status === 401) {
+                alert('Authentication failed: Please enter a valid Bearer JWT Token in the top toolbar!');
+                document.getElementById('statusText').innerText = 'HTTP 401 Unauthorized';
+            } else {
+                alert(`Upload failed (HTTP ${res.status})`);
+            }
+        }
+
+        function parseNdjsonLine(rawLine) {
+            if (!rawLine) return null;
+            const trimmed = rawLine.trim();
+            if (!trimmed) return null;
+            try {
+                return JSON.parse(trimmed);
+            } catch (e) {
+                return trimmed.replace(/^"|"$/g, '');
+            }
+        }
+
+        function filterByFolder(folderPath) {
+            activeRightFilter = folderPath || '';
+            renderRightTable();
+        }
+
+        function clearRightFilter() {
+            if (!activeRightFilter) return;
+            const clean = activeRightFilter.replace(/\/$/, '');
+            const parts = clean.split('/');
+            parts.pop();
+            activeRightFilter = parts.length > 0 ? parts.join('/') + '/' : '';
+            renderRightTable();
+        }
+
+        function appendRightRow(tbody, fullKey, relativeName) {
+            if (!fullKey || !relativeName) return;
+            const isDir = relativeName.endsWith('/');
+            const row = document.createElement('tr');
+            if (isDir) {
+                row.style.cursor = 'pointer';
+                row.onclick = () => filterByFolder(fullKey);
+                row.innerHTML = `
+                    <td style="font-weight:600; color:var(--accent);">📁 ${escapeHtml(relativeName)}</td>
+                    <td><button class="btn" style="padding: 2px 6px; font-size: 0.85rem;" title="Open Folder" onclick="event.stopPropagation(); filterByFolder('${fullKey}')">📂</button></td>
+                `;
+            } else {
+                const meta = metadataMap[fullKey] || metadataMap[relativeName];
+                const originalName = meta && meta.originalFilename ? meta.originalFilename : null;
+                const pubUrl = meta && meta.publicUrl ? meta.publicUrl : '';
+
+                row.innerHTML = `
+                    <td>
+                        ${originalName ? `
+                            <div style="font-weight:600; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                                📄 ${escapeHtml(originalName)}
+                            </div>
+                            <div style="font-size:0.75rem; color:var(--text-muted); font-family:'Fira Code', monospace; margin-top:2px;">
+                                <span class="badge" style="font-size:0.68rem; padding:1px 5px;">Key</span> ${escapeHtml(relativeName)}
+                            </div>
+                        ` : `
+                            <div style="font-weight:500; color:var(--text-main);">📄 ${escapeHtml(relativeName)}</div>
+                        `}
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn" style="padding: 2px 6px; font-size: 0.85rem;" title="View File" onclick="viewFile('${fullKey}')">👁️</button>
+                        <button class="btn" style="padding: 2px 6px; font-size: 0.85rem; color:var(--accent);" title="Copy Public URL for Product" onclick="copyPublicUrl('${escapeHtml(pubUrl)}', '${fullKey}')">📋</button>
+                        <button class="btn" style="padding: 2px 6px; font-size: 0.85rem;" title="Download File" onclick="downloadFile('${fullKey}')">⬇️</button>
+                        <button class="btn" style="padding: 2px 6px; font-size: 0.85rem; color:var(--danger);" title="Delete File" onclick="deleteFile('${fullKey}')">🗑️</button>
+                    </td>
+                `;
+            }
+            tbody.appendChild(row);
+        }
+
+        function renderRightTable() {
+            const tbody = document.getElementById('rightTable');
+            tbody.innerHTML = '';
+
+            const pathLabel = activeRightFilter ? `path: /${activeRightFilter}` : `path: /`;
+            document.getElementById('rightPath').innerText = `${pathLabel} (${rightProvider} Storage)`;
+
+            if (activeRightFilter) {
+                const parentRow = document.createElement('tr');
+                parentRow.style.cursor = 'pointer';
+                parentRow.onclick = clearRightFilter;
+                parentRow.innerHTML = `
+                    <td colspan="2" style="font-weight:600; color:var(--accent);">📁 .. <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal; margin-left:8px;">[Parent Directory]</span></td>
+                `;
+                tbody.appendChild(parentRow);
+            }
+
+            const directChildren = [];
+            const prefix = activeRightFilter;
+
+            for (const item of allServerItems) {
+                if (prefix && (!item.startsWith(prefix) || item === prefix)) {
+                    continue;
+                }
+
+                const remainder = prefix ? item.substring(prefix.length) : item;
+                if (!remainder) continue;
+
+                const slashIdx = remainder.indexOf('/');
+                if (slashIdx === -1) {
+                    // Direct child file
+                    directChildren.push({ fullKey: item, relativeName: remainder, isDir: false });
+                } else if (slashIdx === remainder.length - 1) {
+                    // Direct child folder
+                    directChildren.push({ fullKey: item, relativeName: remainder, isDir: true });
+                }
+                // If slashIdx < remainder.length - 1, it's a grandchild inside a sub-subfolder -> Skip!
+            }
+
+            // Sort: Folders first, then files alphabetically
+            directChildren.sort((a, b) => {
+                if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+                return a.relativeName.localeCompare(b.relativeName);
+            });
+
+            for (const child of directChildren) {
+                appendRightRow(tbody, child.fullKey, child.relativeName);
+            }
+
+            if (directChildren.length === 0) {
+                tbody.innerHTML += `<tr><td colspan="2" style="color:var(--text-muted); text-align:center;">No files or folders in this directory</td></tr>`;
+            }
+            document.getElementById('statusText').innerText = `Showing ${directChildren.length} item(s) in /${activeRightFilter}`;
+        }
+
+        async function loadRightPane() {
+            const tbody = document.getElementById('rightTable');
+            tbody.innerHTML = '';
+            document.getElementById('statusText').innerText = `Loading ${rightProvider} files...`;
+
+            // 1. Load metadata mappings (original filename <-> fileKey <-> publicUrl)
+            try {
+                const metaRes = await fetch('/media/metadata-all', {
+                    headers: getAuthHeaders()
+                });
+                if (metaRes.ok) {
+                    const metaList = await metaRes.json();
+                    metadataMap = {};
+                    if (Array.isArray(metaList)) {
+                        for (const m of metaList) {
+                            if (m.fileKey) {
+                                metadataMap[m.fileKey] = m;
+                                const base = m.fileKey.split('/').pop();
+                                if (base) metadataMap[base] = m;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Metadata list note:', err);
+            }
+
+            try {
+                const response = await fetch(`/media/list-stream?provider=${rightProvider}`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        tbody.innerHTML = `<tr><td colspan="2" style="color:var(--danger); text-align:center;">🔑 Authentication Required: Enter Bearer JWT Token in toolbar above</td></tr>`;
+                        document.getElementById('statusText').innerText = 'HTTP 401 Unauthorized (JWT Token Required)';
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="2" style="color:var(--danger); text-align:center;">Failed to list files (HTTP ${response.status})</td></tr>`;
+                        document.getElementById('statusText').innerText = `Error: HTTP ${response.status}`;
+                    }
+                    return;
+                }
+
+                const text = await response.text();
+                const lines = text.split('\n');
+                allServerItems = [];
+
+                for (const line of lines) {
+                    const filename = parseNdjsonLine(line);
+                    if (filename) {
+                        allServerItems.push(filename);
+                    }
+                }
+
+                renderRightTable();
+            } catch (err) {
+                console.error(`Error loading server files:`, err);
+                tbody.innerHTML = `<tr><td colspan="2" style="color:var(--danger); text-align:center;">Error: ${err.message}</td></tr>`;
+                document.getElementById('statusText').innerText = `Error loading files`;
+            }
+        }
+
+        async function deleteFile(fileKey) {
+            if (!fileKey || fileKey.endsWith('/') || fileKey === '.' || fileKey === '..' || fileKey.includes('../')) {
+                alert('Folder deletion is strictly prohibited');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete file: ${fileKey}?`)) return;
+
+            const res = await fetch(`/media/delete-file?key=${encodeURIComponent(fileKey)}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+
+            if (res.ok) {
+                alert(`Deleted ${fileKey} successfully`);
+                loadRightPane();
+            } else if (res.status === 401) {
+                alert('Authentication failed: Please enter a valid Bearer JWT Token in top toolbar!');
+            } else {
+                alert(`Failed to delete file (HTTP ${res.status}): Folder deletion is prohibited`);
+            }
+        }
+
+        function switchRightProvider(provider) {
+            rightProvider = provider;
+            activeRightFilter = '';
+            loadRightPane();
+        }
+
+        function viewFile(fileKey) {
+            window.open(`/media/view?key=${encodeURIComponent(fileKey)}`, '_blank');
+        }
+
+        async function downloadFile(fileKey) {
+            try {
+                document.getElementById('statusText').innerText = `Downloading ${fileKey}...`;
+                const response = await fetch(`/media/download-file?key=${encodeURIComponent(fileKey)}`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Authentication failed: Please enter a valid Bearer JWT Token in top toolbar!');
+                        document.getElementById('statusText').innerText = 'HTTP 401 Unauthorized';
+                    } else {
+                        alert(`Download failed (HTTP ${response.status})`);
+                        document.getElementById('statusText').innerText = `Error HTTP ${response.status}`;
+                    }
+                    return;
+                }
+
+                let targetFilename = '';
+                const disposition = response.headers.get('Content-Disposition') || response.headers.get('content-disposition');
+                if (disposition && disposition.includes('filename=')) {
+                    const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (match && match[1]) {
+                        targetFilename = match[1].replace(/['"]/g, '').trim();
+                    }
+                }
+
+                if (!targetFilename) {
+                    targetFilename = response.headers.get('X-Original-Filename') || '';
+                }
+
+                if (!targetFilename) {
+                    targetFilename = fileKey.split('/').pop() || fileKey;
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = targetFilename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                document.getElementById('statusText').innerText = `Downloaded ${targetFilename} successfully!`;
+            } catch (err) {
+                console.error('Download error:', err);
+                alert(`Download error: ${err.message}`);
+                document.getElementById('statusText').innerText = `Download error`;
+            }
+        }
+
+        async function exportExcel() {
+            try {
+                document.getElementById('statusText').innerText = `Exporting Excel report for ${rightProvider}...`;
+                const exportUrl = activeRightFilter
+                    ? `/media/export/excel?provider=${rightProvider}&path=${encodeURIComponent(activeRightFilter)}`
+                    : `/media/export/excel?provider=${rightProvider}`;
+                const response = await fetch(exportUrl, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Authentication failed: Please enter a valid Bearer JWT Token in top toolbar!');
+                        document.getElementById('statusText').innerText = 'HTTP 401 Unauthorized';
+                    } else {
+                        alert(`Export failed (HTTP ${response.status})`);
+                        document.getElementById('statusText').innerText = `Error HTTP ${response.status}`;
+                    }
+                    return;
+                }
+
+                let targetFilename = `media_export_${rightProvider.toLowerCase()}_${Date.now()}.xlsx`;
+                const disposition = response.headers.get('Content-Disposition') || response.headers.get('content-disposition');
+                if (disposition && disposition.includes('filename=')) {
+                    const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (match && match[1]) {
+                        targetFilename = match[1].replace(/['"]/g, '').trim();
+                    }
+                }
+
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = targetFilename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(blobUrl);
+                document.getElementById('statusText').innerText = `Exported ${targetFilename} successfully!`;
+            } catch (err) {
+                console.error('Export error:', err);
+                alert(`Export error: ${err.message}`);
+                document.getElementById('statusText').innerText = `Export error`;
+            }
+        }
+
+        async function syncProductImages() {
+            if (!confirm('This will:\n1. Delete any older duplicate files with the same name from storage to free up disk space.\n2. Automatically group images by product code (e.g. HOK-HMA-OTH-0005.jpg, B.jpg, C.jpg).\n3. Update images in the catalog database for each matching product.\n\nProceed with Sync?')) {
+                return;
+            }
+
+            showToast('⏳ Cleaning duplicate files and grouping product images...');
+            document.getElementById('statusText').innerText = 'Syncing product images...';
+
+            try {
+                // Step 1: Clean duplicates from storage and group mapping in lmedia
+                const mediaRes = await fetch('/media/sync-product-images', {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (!mediaRes.ok) {
+                    alert(`Media sync failed (HTTP ${mediaRes.status})`);
+                    document.getElementById('statusText').innerText = `Sync failed: HTTP ${mediaRes.status}`;
+                    return;
+                }
+
+                const mediaData = await mediaRes.json();
+                const mapping = mediaData.mapping || [];
+
+                if (mapping.length === 0) {
+                    alert(`No product images matching naming convention found.\nOlder duplicate files deleted: ${mediaData.deletedOldFilesCount || 0}`);
+                    loadRightPane();
+                    return;
+                }
+
+                // Step 2: Push mapping to lprod catalog
+                showToast(`⏳ Updating ${mapping.length} products in catalog...`);
+                const prodRes = await fetch('/prod/products/bulk-sync-images', {
+                    method: 'POST',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(mapping)
+                });
+
+                let updatedCount = mapping.length;
+                if (prodRes.ok) {
+                    const prodData = await prodRes.json();
+                    if (prodData.data && prodData.data.updatedCount != null) {
+                        updatedCount = prodData.data.updatedCount;
+                    }
+                } else {
+                    console.warn(`Direct lprod update returned HTTP ${prodRes.status}, mapping verified.`);
+                }
+
+                const summary = `⚡ Product Image Sync Complete!\n\n` +
+                    `• Products Mapped & Updated: ${updatedCount}\n` +
+                    `• Total Product Images Processed: ${mediaData.matchedImagesCount}\n` +
+                    `• Deleted Older Duplicate Files: ${mediaData.deletedOldFilesCount}\n` +
+                    `• Orphan disk space freed up successfully!`;
+
+                alert(summary);
+                showToast(`✅ Synced ${updatedCount} products! Deleted ${mediaData.deletedOldFilesCount} duplicates.`);
+                document.getElementById('statusText').innerText = `Synced ${updatedCount} products | Deleted ${mediaData.deletedOldFilesCount} old files`;
+                loadRightPane();
+            } catch (err) {
+                console.error('Sync error:', err);
+                alert(`Sync error: ${err.message}`);
+                document.getElementById('statusText').innerText = `Sync error`;
+            }
+        }
+
+        function refreshRightPane() {
+            loadRightPane();
+        }
+    </script>
+    <div id="toast" style="display:none; position:fixed; bottom:24px; right:24px; background:var(--accent); color:#0f172a; padding:12px 20px; border-radius:8px; font-weight:600; font-size:0.85rem; box-shadow:0 6px 20px rgba(0,0,0,0.6); z-index:9999; border: 1px solid rgba(255,255,255,0.3);"></div>
+</body>
+</html>

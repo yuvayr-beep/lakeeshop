@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { lockSession, unlockSession } from '@/redux/slices/authSlice';
 import LockScreenModal from '@/components/auth/LockScreenModal';
@@ -17,6 +17,7 @@ export default function IdleLockProvider({
   children,
   timeoutMinutes = 10,
 }: IdleLockProviderProps) {
+  const [mounted, setMounted] = useState(false);
   const dispatch = useAppDispatch();
   const { isAuthenticated, isLocked } = useAppSelector((state) => state.auth);
 
@@ -184,10 +185,14 @@ export default function IdleLockProvider({
     };
   }, [isAuthenticated, isLocked, timeoutMs, resetTimer, lockPortal, dispatch]);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <>
       {children}
-      {isAuthenticated && isLocked && <LockScreenModal />}
+      {mounted && isAuthenticated && isLocked && <LockScreenModal />}
     </>
   );
 }

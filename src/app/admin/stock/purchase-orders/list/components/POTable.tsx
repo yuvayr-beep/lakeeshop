@@ -101,37 +101,26 @@ export default function POTable({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[1000px]">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60">
-              <th className="px-3 py-3 w-10">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  ref={(el) => {
-                    if (el) el.indeterminate = someSelected && !allSelected;
-                  }}
-                  onChange={toggleAll}
-                  className="w-4 h-4 rounded border-slate-300 accent-[var(--primary)] cursor-pointer"
-                />
-              </th>
-              <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-left w-12">S.No</th>
-              <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-left">PO Number</th>
-              <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-left">PO Date</th>
-              <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-left">Warehouse</th>
-              <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-left">Supplier Name</th>
-              <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-left">SKU/QTY</th>
-              <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-center">Auto PO</th>
-              <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-center">Status</th>
-              <th className="px-3 py-3 text-xs font-semibold text-black dark:text-slate-400 text-center w-48">Actions</th>
+    <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-auto scrollbar-thin">
+        <table className="w-full text-sm min-w-[1000px] text-left border-collapse">
+          <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-2xs">
+            <tr>
+              <th className="px-3 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 text-center w-12">S.No</th>
+              <th className="px-3 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 text-left">PO Number</th>
+              <th className="px-3 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 text-left">PO Date</th>
+              <th className="px-3 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 text-left">Warehouse</th>
+              <th className="px-3 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 text-left">Supplier Name</th>
+              <th className="px-3 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 text-left">SKU/QTY</th>
+              <th className="px-3 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 text-center">Auto PO</th>
+              <th className="px-3 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 text-center">Status</th>
+              <th className="px-3 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 text-center w-48">Actions</th>
             </tr>
           </thead>
           <tbody>
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-slate-400 dark:text-slate-500">
+                <td colSpan={9} className="px-3 py-8 text-center text-slate-400 dark:text-slate-500">
                   No Purchase Orders found for the selected criteria.
                 </td>
               </tr>
@@ -152,15 +141,7 @@ export default function POTable({
                         : 'bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-800/40'
                     }`}
                   >
-                    <td className="px-3 py-3">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleOne(po.id)}
-                        className="w-4 h-4 rounded border-slate-300 accent-[var(--primary)] cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-3 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">{sNo}</td>
+                    <td className="px-3 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-center font-mono">{sNo}</td>
                     <td className="px-3 py-3 font-mono text-xs text-[var(--primary)] font-semibold whitespace-nowrap">
                       {po.poNumber}
                     </td>
@@ -243,17 +224,17 @@ export default function POTable({
 
       {/* Pagination Footer */}
       {orders.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+        <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40">
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+            <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums font-medium">
               Showing {start}–{end} of {total} orders
             </span>
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Per page:</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Per page:</span>
               <select
                 value={perPage}
                 onChange={(e) => onPerPageChange(Number(e.target.value))}
-                className="h-7 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--primary)] text-slate-700 dark:text-slate-350"
+                className="h-7 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--primary)] text-slate-700 dark:text-slate-350 cursor-pointer font-medium"
               >
                 {PER_PAGE_OPTIONS.map((opt) => (
                   <option key={`per-page-${opt}`} value={opt}>

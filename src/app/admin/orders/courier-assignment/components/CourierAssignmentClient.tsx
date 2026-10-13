@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Truck, RefreshCw, CheckCircle2, AlertCircle, Loader2, Download,
-  Boxes, Package, ShieldCheck, CheckSquare
+  Boxes, Package, ShieldCheck, CheckSquare, Sparkles
 } from 'lucide-react';
 import { 
   courierAssignmentService, 
@@ -120,7 +120,7 @@ export default function CourierAssignmentClient() {
   // ---------------------------------------------------------------------------
   // 5. SUBMIT SELECTED BATCHES
   // ---------------------------------------------------------------------------
-  const handleExecuteCourierAssignment = async () => {
+  const handleConfirmSubmit = async () => {
     if (selectedBatchIds.length === 0) return;
 
     setSubmitting(true);
@@ -129,22 +129,18 @@ export default function CourierAssignmentClient() {
     launchTruckStep();
 
     try {
-      const selectedBatchesData = batches.filter((b) => selectedBatchIds.includes(b.orderBatchId));
-      const payload = selectedBatchesData.map((b) => ({
-        id: b.orderBatchId,
-        orderBatchNumber: b.orderBatchNumber,
-      }));
-
       setProgressPercent(45);
       setStatusMessageText('Assigning Courier Partners & Generating Shipping Labels...');
       launchTruckStep();
 
-      const response = await courierAssignmentService.assignCourierBatch(payload);
+      const response = await courierAssignmentService.submitCourierAssignmentBatch({
+        batchIds: selectedBatchIds,
+      });
 
       if (Array.isArray(response?.data)) {
         const errorReasons = response.data
-          .filter((item) => item.status === 'FAILED' || item.reason)
-          .map((item) => `${item.orderBatchNumber || 'Batch'}: ${item.reason}`);
+          .filter((item: any) => item.status === 'FAILED' || item.reason)
+          .map((item: any) => `${item.orderBatchNo || item.orderBatchNumber || 'Batch'}: ${item.reason}`);
 
         if (errorReasons.length > 0) {
           setSubmitting(false);

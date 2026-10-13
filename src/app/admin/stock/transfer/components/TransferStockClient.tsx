@@ -505,18 +505,7 @@ export default function TransferStockClient() {
   }
 
   return (
-    <div className="space-y-6 flex-1 p-6">
-      {/* Header section */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Boxes size={22} className="text-[var(--primary)] animate-pulse" />
-          Transfer Stock
-        </h1>
-        <p className="text-xs text-slate-700 dark:text-slate-400 mt-1">
-          Move inventory units between storage zones, racks, shelves, and bins. Supports unit-level scan validations or bulk quantity transfers.
-        </p>
-      </div>
-
+    <div className="space-y-6 w-full">
       {/* Mode Switcher Tabs */}
       <div className="flex justify-start">
         <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl flex gap-1 border border-slate-200 dark:border-slate-750">

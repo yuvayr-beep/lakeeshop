@@ -8,13 +8,35 @@ Manages primary courier partner accounts (e.g., Bluedart, Delhivery, Ecom Expres
 Endpoints:
 - GET /courier (List all configured courier partners)
 - GET /courier/{id} (Retrieve courier details by ID)
-- POST /courier (Register a new courier partner)
+- POST /courier (Register a new courier partner - includes `vendorNo` Customer/Vendor Code and partner attributes)
 - PUT /courier/{id} (Update courier details)
 - DELETE /courier/{id} (Deactivate/delete a courier partner)
 
+Sample JSON Payload (`POST /courier`):
+```json
+{
+  "courierCode": "BDDP",
+  "courierName": "BlueDart Express",
+  "description": "BlueDart Express Courier Integration",
+  "trackingUrlTemplate": "https://www.bluedart.com/tracking?awb={awb}",
+  "vendorNo": "211002",
+  "businessName": "BLUEDART EXPRESS LTD",
+  "originCityCode": "MAA",
+  "originBranchCode": "EGM",
+  "emailId": "KrishnaJ@bluedart.com",
+  "ccEmailIds": "DineshA@bluedart.com,orders@lakeeshop.com",
+  "attributes": {
+    "clientId": "BLUEDART_CLIENT_ID",
+    "clientSecret": "BLUEDART_CLIENT_SECRET",
+    "licenceKey": "BLUEDART_LICENCE_KEY",
+    "loginId": "BLUEDART_LOGIN_ID"
+  }
+}
+```
+
 
 2. Courier Services & Modes Setup
-Configures specific service types (e.g. Surface, Air, COD, Prepaid) offered by each courier partner.
+Configures specific service types offered by each courier partner, using standardized `CourierServiceType` enum (`DP`, `SURFACE`, `BOTH`).
 Endpoints:
 - GET /courier/services (List all courier services)
 - GET /courier/services/courier/{courierId} (List services supported by a specific courier)
@@ -23,26 +45,47 @@ Endpoints:
 - PUT /courier/services/{id} (Update courier service details)
 - DELETE /courier/services/{id} (Deactivate/delete a courier service)
 
+Sample JSON Payload (`POST /courier/services`):
+```json
+{
+  "courierId": 1,
+  "serviceCode": "BD_UNIFIED",
+  "serviceName": "BlueDart Unified Air & Surface",
+  "serviceType": "BOTH"
+}
+```
+*(Standard Enum values for `serviceType`: `DP`, `SURFACE`, `BOTH`)*
+
 
 3. Pincode Serviceability Configurations
-Defines which geographic pincodes are serviceable by specific courier services, including zone classifications.
+Defines which geographic pincodes are serviceable by specific courier services, including zone classifications and query filtering.
 Endpoints:
-- GET /courier/serviceable-pincodes/template/download?courierId={courierId} (Download pre-formatted Excel upload template for specific courier containing sample rows & helper sheets)
-- POST /courier/serviceable-pincodes/upload?mode={mode} (Bulk upload courier serviceable pincodes spreadsheet file - UPSERT or OVERWRITE mode)
-- POST /courier/serviceable-pincodes/json-upload?mode={mode} (Bulk upload courier serviceable pincodes via JSON array matching Excel columns - UPSERT or OVERWRITE mode)
-- GET /courier/serviceable-pincodes (Query serviceable pincodes with filters: courierId, serviceId, shipMode, pincode, limit, offset)
+- GET /courier/serviceable-pincodes/template/download (Download pre-formatted Excel upload template containing sample rows & helper sheets for Active Couriers, Mapped Courier Services, Configured Zones, and Ship Modes. Accepts optional `courierId` query parameter e.g., `?courierId=1`)
+- POST /courier/serviceable-pincodes/upload (Bulk upload courier serviceable pincodes spreadsheet - UPSERT or OVERWRITE mode)
+- POST /courier/serviceable-pincodes/json-upload (Bulk upload courier serviceable pincodes via JSON array matching Excel columns - UPSERT or OVERWRITE mode)
+- GET /courier/serviceable-pincodes (Query serviceable pincodes with filters: `courierId`, `serviceId`, `serviceCode`, `shipMode`, `pincode`, `limit`, `offset`)
+- GET /courier/serviceable-pincodes/list (Query paginated list of serviceable pincodes with zone & block details. Filters: `courierId`, `serviceCode`, `shipMode`, `pincode`, `status`, `page`, `size`)
+- GET /courier/serviceable-pincodes/download (Download streaming Excel spreadsheet of serviceable pincodes with columns: `Pincode`, `Courier Code`, `Courier Name`, `Service Code`, `Service Name`, `Ship Mode`, `Zone Code`, `Zone Name`, `City Name`, `Status`, `Block Remarks`. Filters: `courierId`, `serviceCode`, `shipMode`, `pincode`, `status`)
 - GET /courier/serviceable-pincodes/{id} (Retrieve serviceable pincode details)
 - POST /courier/serviceable-pincodes (Create a new single pincode serviceability mapping)
 - PUT /courier/serviceable-pincodes/{id} (Update pincode serviceability settings)
 - DELETE /courier/serviceable-pincodes/{id} (Deactivate/remove pincode serviceability)
-- POST /courier/pincodes/block-unblock (Bulk block or unblock pincodes for specific couriers)
+- POST /courier/serviceable-pincodes/block-unblock (Bulk block or unblock pincodes for specific couriers)
+- POST /courier/serviceable-pincodes/block-info (Query block status details for pincodes)
+
+Sample Query Filters (`GET /courier/serviceable-pincodes`):
+- `GET /courier/serviceable-pincodes?courierId=1&shipMode=SURFACE&limit=50`
+- `GET /courier/serviceable-pincodes?serviceCode=BD_SURFACE`
+- `GET /courier/serviceable-pincodes?pincode=600&shipMode=DP`
+- `GET /courier/serviceable-pincodes?serviceId=10`
 
 Sample JSON Payloads:
-- **Bulk Upload Pincodes via JSON (`POST /courier/pincodes/json-upload?mode=UPSERT`)** *(Matches Excel Columns)*:
+- **Bulk Upload Pincodes via JSON (`POST /courier/serviceable-pincodes/json-upload?mode=UPSERT`)**:
 ```json
 [
   {
     "courierCode": "BD",
+    "serviceCode": "BD_SURFACE",
     "shipMode": "SURFACE",
     "zoneCode": "ZONE_A",
     "pincode": "110001",
@@ -54,7 +97,8 @@ Sample JSON Payloads:
   },
   {
     "courierCode": "DELHIVERY",
-    "shipMode": "AIR",
+    "serviceCode": "DLRY_EXPRESS",
+    "shipMode": "DP",
     "zoneCode": "METRO",
     "pincode": "400001",
     "cityName": "Mumbai",
@@ -77,7 +121,7 @@ Sample JSON Payloads:
   "active": true
 }
 ```
-- **Bulk Pincode Block/Unblock (`POST /courier/pincodes/block-unblock`)**:
+- **Bulk Pincode Block/Unblock (`POST /courier/serviceable-pincodes/block-unblock`)**:
 ```json
 {
   "courierId": 2,
@@ -94,7 +138,7 @@ Sample JSON Payloads:
 
 
 4. Client & Product Courier Blocklists (Exclusions)
-Allows blocking specific courier partners from being assigned to certain clients or products (e.g., preventing high-value products from being shipped via standard postal service).
+Allows blocking specific courier partners or services from being assigned to certain clients or products (e.g., preventing high-value products from being shipped via standard postal service).
 Endpoints:
 - Client Exclusions:
   - GET /courier/exclusions/client/all (List all active client-courier block configurations)
@@ -109,7 +153,7 @@ Endpoints:
 
 
 5. Courier Allocation Engine (Internal Selection)
-Core rules-based routing engine that determines eligible carriers and rates for package dispatch.
+Core rules-based routing engine that determines eligible carriers and rates for package dispatch based on `shipMode` (`DP`, `SURFACE`, `BOTH`).
 Endpoints:
 - POST /courier/internal/assign (Internal service call: Trigger manual courier assignment for single execution)
 - POST /courier/internal/assign-batch (Internal service call: Trigger auto-courier rate selection and assignment for execution batches)
@@ -188,20 +232,12 @@ Endpoints:
 
 
 12. Master Setup & Configurations
-Endpoints for importing base logistics tables (zones, postal registers, carrier rates, weight adjustments) and querying outbox synchronization deltas.
+Endpoints for importing base logistics tables (zones, carrier rates, actual weight audits).
 Endpoints:
-- POST /courier/pincodes/upload (Bulk upload master pincode records)
-- GET /courier/pincodes/list (Query master pincode list)
-- GET /courier/pincodes/download (Download complete master pincode database)
-- GET /courier/pincodes/internal/sync-delta (Delta sync endpoint for pincodes)
-- GET /courier/services/internal/sync-delta-outbox (Delta outbox query for internal service synchronization)
-- GET /courier/serviceable-pincodes/internal/sync-delta-outbox (Delta outbox query for internal pincode sync)
 - POST /courier/rates/upload (Bulk upload courier shipping rate cards)
 - POST /courier/zones/upload (Bulk upload courier zone matrix configuration)
-- POST /courier/actuals/upload (Upload actual weight spreadsheet from courier partners for audit reconciliation)
+- POST /courier/actuals/upload (Upload actual weight spreadsheet from courier partners for audit reconciliation - https://erp.lakee1508operation.com/modules/UploadPLCourier.php)
 - GET /courier/proposed-average-prices (Retrieve average shipping cost calculations)
-- POST /courier/pincodes/block-info (Query blocking status details for pincodes)
-- POST /courier/pincodes/block-unblock (Bulk block or unblock pincodes for specific couriers)
 
 
 13. Webhooks & Carrier Integrations
@@ -214,16 +250,16 @@ Endpoints:
 Lcourier Service
 ├── 🚚 Courier Partner Directory
 │   ├── GET /courier (List courier partners)
-│   ├── POST /courier (Register courier)
+│   ├── POST /courier (Register courier - includes vendorNo)
 │   └── DELETE /courier/{id} (Deactivate courier)
 │
 ├── ⚙️ Courier Services & Modes
 │   ├── GET /courier/services (List services)
-│   └── POST /courier/services (Add service)
+│   └── POST /courier/services (Add service - DP, SURFACE, BOTH)
 │
 ├── 📍 Pincode Serviceability Setup
-│   ├── POST /courier/pincodes/upload (Bulk upload serviceable pincodes spreadsheet)
-│   ├── GET /courier/serviceable-pincodes (List serviceable areas)
+│   ├── POST /courier/serviceable-pincodes/upload (Bulk upload serviceable pincodes spreadsheet)
+│   ├── GET /courier/serviceable-pincodes (List & filter serviceable areas: courierId, serviceId, shipMode, pincode)
 │   └── POST /courier/serviceable-pincodes (Add single serviceable pincode)
 │
 ├── 🚫 Blocking & Exclusions (Blocklists)
@@ -266,12 +302,10 @@ Lcourier Service
 │   └── GET /order/execution/share_to_courier (Handover manifest report - **hosted in lorder**)
 │
 ├── 📥 Master Setup & Configurations
-│   ├── POST /courier/pincodes/upload
-│   ├── POST /courier/rates/upload
-│   ├── POST /courier/zones/upload
+│   ├── POST /courier/rates/upload (Rate card upload)
+│   ├── POST /courier/zones/upload (Zone matrix upload)
 │   ├── POST /courier/actuals/upload (Courier actual weight sheet upload)
-│   ├── GET /courier/services/internal/sync-delta-outbox (Sync service outbox delta)
-│   └── GET /courier/serviceable-pincodes/internal/sync-delta-outbox (Sync pincode outbox delta)
+│   └── GET /courier/proposed-average-prices (Retrieve average shipping cost calculations)
 │
 └── 🔔 Webhooks & Carrier Integrations
     ├── POST /api/v1/webhook/bluedart (Callback webhook for Bluedart tracking status updates)

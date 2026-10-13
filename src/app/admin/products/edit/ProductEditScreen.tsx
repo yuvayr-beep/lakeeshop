@@ -8,6 +8,7 @@ import {
 import ProductDataTabs, { defaultProductDataState, ProductDataState } from '../create/components/ProductDataTabs';
 import { ProductImageBox, ProductGalleryBox, CategoriesBox, BrandBox, ProductTypeBox } from '../create/components/ProductSidebar';
 import axiosInstance from '@/lib/axios';
+import { getMediaViewUrl } from '@/services/mediaApi';
 
 type Notif = { type: 'success' | 'error'; msg: string } | null;
 
@@ -165,8 +166,10 @@ export default function ProductEditScreen({ productId }: ProductEditScreenProps)
         
         if (data.images && data.images.length > 0) {
           const sorted = [...data.images].sort((a: any, b: any) => (a.priority || 0) - (b.priority || 0));
-          setMainImage(sorted[0].url || null);
-          setGalleryImages(sorted.slice(1).map((img: any) => img.url));
+          const primaryUrl = getMediaViewUrl(sorted[0]);
+          setMainImage(primaryUrl || null);
+          const galleryUrls = sorted.slice(1).map((img: any) => getMediaViewUrl(img)).filter(Boolean);
+          setGalleryImages(galleryUrls);
         } else {
           setMainImage(null);
           setGalleryImages([]);

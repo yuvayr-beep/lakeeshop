@@ -134,17 +134,23 @@ export default function ClientProductShareModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Sync passed client list or fetch clients
+  // Sync passed client list or fetch clients (sorted A to Z)
   useEffect(() => {
     if (clientsList && clientsList.length > 0) {
-      setClients(clientsList);
+      const sorted = [...clientsList].sort((a, b) =>
+        (a.clientName || '').localeCompare(b.clientName || '', undefined, { numeric: true, sensitivity: 'base' })
+      );
+      setClients(sorted);
     } else if (open) {
       setLoadingClients(true);
       axiosInstance
         .get('/client', { headers: { Accept: 'application/x-ndjson' } })
         .then(({ data }) => {
           const parsed = parseNdjson(data) as Client[];
-          setClients(parsed);
+          const sorted = parsed.sort((a, b) =>
+            (a.clientName || '').localeCompare(b.clientName || '', undefined, { numeric: true, sensitivity: 'base' })
+          );
+          setClients(sorted);
         })
         .catch((err) => console.error('Failed to load clients:', err))
         .finally(() => setLoadingClients(false));

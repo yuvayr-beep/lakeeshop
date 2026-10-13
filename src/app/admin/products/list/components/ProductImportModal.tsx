@@ -57,6 +57,7 @@ export default function ProductImportModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
+  const [resultsFilter, setResultsFilter] = useState<'all' | 'failed' | 'success'>('failed');
 
   // Custom edit template fields
   const [fields, setFields] = useState<string[]>([]);
@@ -71,6 +72,7 @@ export default function ProductImportModal({
     setMode(initialMode);
     setSelectedFile(null);
     setResults(null);
+    setResultsFilter('failed');
     setPrepopulateType('with-data');
     setSkuInputText('');
     setFieldSearchQuery('');
@@ -235,6 +237,41 @@ export default function ProductImportModal({
     }
   };
 
+  // Safe NDJSON and JSON parser helper
+  const parseNdjsonSafe = (rawData: any): any[] => {
+    if (!rawData) return [];
+    if (Array.isArray(rawData)) return rawData;
+    if (typeof rawData === 'object') {
+      if (Array.isArray(rawData.data)) return rawData.data;
+      return [rawData];
+    }
+    if (typeof rawData === 'string') {
+      const trimmed = rawData.trim();
+      if (!trimmed) return [];
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) return parsed;
+          if (Array.isArray(parsed?.data)) return parsed.data;
+          return [parsed];
+        } catch {}
+      }
+      return trimmed
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return null;
+          }
+        })
+        .filter((item): item is any => item !== null);
+    }
+    return [];
+  };
+
   // Submit excel file upload
   const handleUpload = async () => {
     if (!selectedFile) return;
@@ -251,24 +288,18 @@ export default function ProductImportModal({
           'Content-Type': 'multipart/form-data',
           Accept: 'application/x-ndjson'
         },
+        responseType: 'text',
+        transformResponse: [(data) => data],
         timeout: 600000 // 10 minutes timeout for large batch uploads (e.g., 21,000 records)
       });
 
       // Parse ndjson or JSON response
-      const data = response.data;
-      let parsedLines: any[] = [];
-      if (typeof data === 'string') {
-        parsedLines = data.split('\n')
-          .map((l) => l.trim())
-          .filter(Boolean)
-          .map((l) => JSON.parse(l));
-      } else {
-        parsedLines = Array.isArray(data) ? data : [data];
-      }
+      const parsedLines = parseNdjsonSafe(response.data);
 
       setResults(parsedLines);
       const successCount = parsedLines.filter((x) => x.success).length;
       const failCount = parsedLines.filter((x) => !x.success).length;
+      setResultsFilter(failCount > 0 ? 'failed' : 'all');
 
       if (successCount > 0 && failCount === 0) {
         toast.success(`Successfully processed ${successCount} rows!`, { id: toastId });
@@ -278,11 +309,27 @@ export default function ProductImportModal({
         toast.error(`Failed to process all ${failCount} rows.`, { id: toastId });
       }
 
-      // Trigger product list refresh
-      onSuccess();
+      // Trigger product list refresh if any succeeded
+      if (successCount > 0) {
+        onSuccess();
+      }
     } catch (err: any) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Failed to upload spreadsheet', { id: toastId });
+      console.error('Upload error details:', err);
+      // Attempt to extract NDJSON rows from error response (e.g., HTTP 400 or 422 with validation errors)
+      const errData = err.response?.data;
+      const parsedFromErr = parseNdjsonSafe(errData);
+
+      if (parsedFromErr.length > 0) {
+        setResults(parsedFromErr);
+        const failCount = parsedFromErr.filter((x) => !x.success).length;
+        setResultsFilter('failed');
+        toast.error(`Upload completed with ${failCount} failed rows. Download the failed list below.`, { id: toastId });
+      } else {
+        const errorMsg = typeof errData === 'string' && errData.length < 200
+          ? errData
+          : err.response?.data?.message || err.message || 'Failed to upload spreadsheet';
+        toast.error(errorMsg, { id: toastId });
+      }
     } finally {
       setUploading(false);
     }
@@ -302,38 +349,56 @@ export default function ProductImportModal({
     });
   };
 
-  const handleExportErrorsExcel = async () => {
+  // Download ONLY failed records in Excel (.xlsx)
+  const handleDownloadFailedExcel = async () => {
     if (!results || results.length === 0) {
       toast.error('No import results to export');
       return;
     }
 
-    const errorRows = results.filter((r) => !r.success);
-    const dataToExport = errorRows.length > 0 ? errorRows : results;
+    const failedRows = results.filter((r) => !r.success);
+    if (failedRows.length === 0) {
+      toast.info('No failed records found to download.');
+      return;
+    }
 
-    const toastId = toast.loading('Exporting error report to Excel...');
+    const toastId = toast.loading(`Generating Excel file for ${failedRows.length} failed products...`);
     try {
-      const headers = ['Row / SKU', 'Product Name', 'Status', 'Error Details / Message'];
-      const rows = dataToExport.map((row, idx) => [
-        row.sku || `Row ${idx + 1}`,
-        row.productName || '',
-        row.success ? 'Success' : 'Failed',
-        row.message || row.error || (row.success ? 'Successfully processed' : 'Failed')
-      ]);
+      const headers = ['Row Number', 'SKU', 'Product Name', 'Failure Reason / Error Message', 'Status'];
+      const rows = failedRows.map((row, idx) => {
+        let rowNum = String(idx + 1);
+        let reason = row.message || row.error || 'Failed';
+
+        // Extract Row N from message if present e.g. "Row 2: Invalid HSN Code: 08062010"
+        const match = reason.match(/^Row\s+(\d+):\s*(.*)$/i);
+        if (match) {
+          rowNum = match[1];
+          reason = match[2];
+        }
+
+        return [
+          rowNum,
+          row.sku || '-',
+          row.productName || '-',
+          reason,
+          'Failed'
+        ];
+      });
 
       const XLSX = await loadSheetJS();
       const worksheetData = [headers, ...rows];
       const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
 
       worksheet['!cols'] = [
+        { wch: 14 },
         { wch: 25 },
-        { wch: 35 },
-        { wch: 12 },
-        { wch: 60 }
+        { wch: 45 },
+        { wch: 55 },
+        { wch: 12 }
       ];
 
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Import Errors');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Failed Products');
 
       const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([excelBuffer], {
@@ -343,39 +408,49 @@ export default function ProductImportModal({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `import_errors_${mode}_${Date.now()}.xlsx`);
+      link.setAttribute('download', `failed_products_${mode}_${Date.now()}.xlsx`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast.success(`Exported ${dataToExport.length} rows to Excel`, { id: toastId });
+      toast.success(`Successfully downloaded ${failedRows.length} failed products in Excel!`, { id: toastId });
     } catch (err: any) {
-      console.error('Failed to export errors using SheetJS, falling back to CSV:', err);
+      console.error('Failed to export failed rows using SheetJS, falling back to CSV:', err);
       try {
-        const headers = ['Row / SKU', 'Product Name', 'Status', 'Error Details / Message'];
+        const headers = ['Row Number', 'SKU', 'Product Name', 'Failure Reason / Error Message', 'Status'];
         const csvRows = [headers.join(',')];
-        dataToExport.forEach((row, idx) => {
-          const sku = `"${(row.sku || `Row ${idx + 1}`).replace(/"/g, '""')}"`;
-          const name = `"${(row.productName || '').replace(/"/g, '""')}"`;
-          const status = `"${row.success ? 'Success' : 'Failed'}"`;
-          const msg = `"${(row.message || row.error || (row.success ? 'Success' : 'Failed')).replace(/"/g, '""')}"`;
-          csvRows.push([sku, name, status, msg].join(','));
+        failedRows.forEach((row, idx) => {
+          let rowNum = String(idx + 1);
+          let reason = row.message || row.error || 'Failed';
+          const match = reason.match(/^Row\s+(\d+):\s*(.*)$/i);
+          if (match) {
+            rowNum = match[1];
+            reason = match[2];
+          }
+          const sku = `"${(row.sku || '-').replace(/"/g, '""')}"`;
+          const name = `"${(row.productName || '-').replace(/"/g, '""')}"`;
+          const cleanReason = `"${reason.replace(/"/g, '""')}"`;
+          csvRows.push([rowNum, sku, name, cleanReason, 'Failed'].join(','));
         });
         const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `import_errors_${mode}_${Date.now()}.csv`);
+        link.setAttribute('download', `failed_products_${mode}_${Date.now()}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        toast.success(`Exported ${dataToExport.length} rows to CSV`, { id: toastId });
+        toast.success(`Downloaded ${failedRows.length} failed products in CSV!`, { id: toastId });
       } catch (fallbackErr) {
         toast.error('Failed to export error report', { id: toastId });
       }
     }
+  };
+
+  const handleExportErrorsExcel = async () => {
+    return handleDownloadFailedExcel();
   };
 
   const activeConfig = MODE_CONFIG[mode];
@@ -388,21 +463,41 @@ export default function ProductImportModal({
       {/* Modal Container */}
       <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
           <div>
-            <h2 className="text-base font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-              Bulk Product Upload
-            </h2>
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-base font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                Bulk Product Upload
+              </h2>
+              {results && results.filter((x) => !x.success).length > 0 && (
+                <span className="text-xs bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  {results.filter((x) => !x.success).length} Failed
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Select your import type, download sample Excel file, and upload results.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            {results && results.filter((x) => !x.success).length > 0 && (
+              <button
+                type="button"
+                onClick={handleDownloadFailedExcel}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+              >
+                <Download size={13} />
+                <span>Download Failed Excel</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Modal content body */}
@@ -479,8 +574,143 @@ export default function ProductImportModal({
             </div>
           </div>
 
-          {/* Right panel: Custom field selector (for EDIT mode) or drag & drop zone */}
+          {/* Right panel: Results Output OR Configuration & Upload Zone */}
           <div className="flex-1 flex flex-col space-y-4">
+            {/* Results output list (Displayed prominently at the TOP when results exist) */}
+            {results && (
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 flex flex-col shadow-sm">
+                {/* Header Summary */}
+                <div className="px-4 py-3 bg-slate-50 dark:bg-slate-950/40 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs flex-wrap gap-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-slate-800 dark:text-slate-100 text-xs">
+                      Upload Summary:
+                    </span>
+                    <span className="text-[11px] bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded font-mono font-bold">
+                      {results.length} Processed
+                    </span>
+                    {results.filter((x) => x.success).length > 0 && (
+                      <span className="text-[11px] bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded font-bold">
+                        {results.filter((x) => x.success).length} Succeeded
+                      </span>
+                    )}
+                    {results.filter((x) => !x.success).length > 0 && (
+                      <span className="text-[11px] bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                        <AlertCircle size={12} />
+                        {results.filter((x) => !x.success).length} Failed
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Primary Download Button strictly for Failed Records */}
+                  {results.filter((x) => !x.success).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadFailedExcel}
+                      title="Download Excel spreadsheet of only failed products"
+                      className="px-3 py-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                    >
+                      <Download size={13} />
+                      <span>Download Failed Products ({results.filter((x) => !x.success).length}) Excel</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Sub-Tabs */}
+                <div className="px-3.5 py-2 bg-slate-100/70 dark:bg-slate-850/60 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 text-xs">
+                  <span className="text-slate-500 font-medium text-[11px] mr-1">Filter View:</span>
+                  <button
+                    type="button"
+                    onClick={() => setResultsFilter('failed')}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-colors flex items-center gap-1 ${
+                      resultsFilter === 'failed'
+                        ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <span>Failed</span>
+                    <span className="font-mono text-[10px]">({results.filter((x) => !x.success).length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setResultsFilter('success')}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-colors flex items-center gap-1 ${
+                      resultsFilter === 'success'
+                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <span>Successful</span>
+                    <span className="font-mono text-[10px]">({results.filter((x) => x.success).length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setResultsFilter('all')}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-colors flex items-center gap-1 ${
+                      resultsFilter === 'all'
+                        ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <span>All Rows</span>
+                    <span className="font-mono text-[10px]">({results.length})</span>
+                  </button>
+                </div>
+
+                {/* Result Items List */}
+                <div className="max-h-[260px] overflow-y-auto scrollbar-thin divide-y divide-slate-100 dark:divide-slate-800/80 p-2 space-y-1">
+                  {results
+                    .filter((row) => {
+                      if (resultsFilter === 'failed') return !row.success;
+                      if (resultsFilter === 'success') return row.success;
+                      return true;
+                    })
+                    .map((row, idx) => (
+                      <div
+                        key={`res-row-${idx}`}
+                        className={`flex items-start justify-between py-2 px-2.5 rounded-lg text-xs gap-3 ${
+                          row.success
+                            ? 'hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10'
+                            : 'bg-red-50/40 dark:bg-red-950/10 hover:bg-red-50/70 dark:hover:bg-red-950/20'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          {row.success ? (
+                            <div className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <Check size={10} strokeWidth={3} />
+                            </div>
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <AlertCircle size={10} strokeWidth={3} />
+                            </div>
+                          )}
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                {row.sku || 'Row ' + (idx + 1)}
+                              </span>
+                              {row.productName && (
+                                <span className="text-slate-600 dark:text-slate-400 truncate max-w-[280px]">
+                                  {row.productName}
+                                </span>
+                              )}
+                            </div>
+                            <span className={`text-[11px] mt-0.5 ${
+                              row.success
+                                ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                                : 'text-red-600 dark:text-red-400 font-semibold'
+                            }`}>
+                              {row.message || row.error || (row.success ? 'Successfully updated' : 'Failed to update')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
             {mode === 'edit' && fields.length > 0 && (
               <div className="space-y-4">
                 {/* Prepopulate Settings & SKU Filter */}
@@ -679,66 +909,48 @@ export default function ProductImportModal({
                 </div>
               )}
             </div>
+          </div>
+        </div>
 
-            {/* Results output list */}
-            {results && (
-              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 flex flex-col max-h-[260px]">
-                <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-700 dark:text-slate-350">
-                      Import Processing Summary
-                    </span>
-                    {results.filter((x) => !x.success).length > 0 && (
-                      <span className="text-[10px] bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded font-bold flex items-center gap-1">
-                        <AlertCircle size={10} />
-                        {results.filter((x) => !x.success).length} Errors
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded font-mono font-bold">
-                      {results.length} Rows Processed
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleExportErrorsExcel}
-                      title="Download Import Errors Excel Report"
-                      className="p-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
-                    >
-                      <Download size={13} className="text-emerald-600 dark:text-emerald-400" />
-                      <span className="text-[11px]">Errors Excel</span>
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto scrollbar-thin divide-y divide-slate-100 dark:divide-slate-850 p-2 space-y-1">
-                  {results.map((row, idx) => (
-                    <div key={`res-row-${idx}`} className="flex items-center justify-between py-1.5 px-2 text-[11px]">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {row.success ? (
-                          <div className="w-4 h-4 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                            <Check size={10} strokeWidth={3} />
-                          </div>
-                        ) : (
-                          <div className="w-4 h-4 rounded-full bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center flex-shrink-0">
-                            <AlertCircle size={10} strokeWidth={3} />
-                          </div>
-                        )}
-                        <span className="font-mono text-slate-700 dark:text-slate-300 truncate max-w-[150px]">
-                          {row.sku || 'Row ' + (idx + 1)}
-                        </span>
-                        <span className="text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
-                          {row.productName || ''}
-                        </span>
-                      </div>
-                      <span className={`font-semibold ${row.success ? 'text-emerald-600' : 'text-red-500'}`}>
-                        {row.message || (row.success ? 'Success' : 'Failed')}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+        {/* Modal Sticky Footer with Prominent Actions */}
+        <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-between gap-3 sticky bottom-0 z-10">
+          <div className="flex items-center gap-2 text-xs">
+            {results && results.filter((x) => !x.success).length > 0 ? (
+              <span className="text-red-600 dark:text-red-400 font-semibold flex items-center gap-1.5">
+                <AlertCircle size={15} className="flex-shrink-0" />
+                <span>
+                  <strong>{results.filter((x) => !x.success).length} of {results.length} rows failed</strong> during import.
+                </span>
+              </span>
+            ) : results && results.length > 0 ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                <Check size={15} className="flex-shrink-0" />
+                <span>All {results.length} rows imported successfully!</span>
+              </span>
+            ) : (
+              <span className="text-slate-500 dark:text-slate-400">
+                Supports Excel (.xlsx, .xls) files.
+              </span>
             )}
+          </div>
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+            {results && results.filter((x) => !x.success).length > 0 && (
+              <button
+                type="button"
+                onClick={handleDownloadFailedExcel}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md"
+              >
+                <Download size={14} />
+                <span>Download {results.filter((x) => !x.success).length} Failed Products (Excel)</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 text-xs font-bold rounded-xl transition-all"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>

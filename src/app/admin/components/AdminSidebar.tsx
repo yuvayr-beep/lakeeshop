@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, ShoppingCart, Package, User, ChevronDown,
-  LogOut, BarChart3, Briefcase, KeyRound, Users, Truck, X, Boxes
+  LogOut, BarChart3, Briefcase, KeyRound, Users, Truck, X, Boxes, Clock
 } from 'lucide-react';
 import { mockMenuData } from '@/constants/menuData';
 import { useAppDispatch } from '@/redux/hooks';
@@ -26,6 +26,7 @@ const iconMap: Record<string, React.ElementType> = {
   Users,
   Truck,
   Boxes,
+  Clock,
 };
 
 interface SidebarProps {
@@ -136,7 +137,8 @@ export default function AdminSidebar({ collapsed, mobileOpen, onMobileClose, onR
             (module.code === 'CLIENT' && pathname?.startsWith('/admin/clients')) ||
             (module.code === 'VENDOR' && pathname?.startsWith('/admin/suppliers')) ||
             (module.code === 'STOCK' && pathname?.startsWith('/admin/stock')) ||
-            (module.code === 'ORDER' && pathname?.startsWith('/admin/orders')) ||
+            (module.code === 'PREORDER' && pathname?.startsWith('/admin/orders/pre-order')) ||
+            (module.code === 'ORDER' && pathname?.startsWith('/admin/orders') && !pathname?.startsWith('/admin/orders/pre-order')) ||
             (module.code === 'COURIER' && pathname?.startsWith('/admin/courier')) ||
             (module.code === 'PRODUCT' && pathname?.startsWith('/admin/products')) ||
             (module.code === 'FINANCE' && pathname?.startsWith('/admin/finance')) ||

@@ -19,4 +19,12 @@ export const imageHosts = [
         protocol: 'https',
         hostname: 'img.rocket.new',
     },
+    {
+        protocol: 'https',
+        hostname: 'v2.lakeetech.com',
+    },
+    {
+        protocol: 'http',
+        hostname: '94.249.213.81',
+    },
 ];

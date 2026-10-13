@@ -177,6 +177,14 @@ export default function ReprintInvoiceClient() {
     }
 
     const batchNos = targetBatches.map((b) => b.batchNo);
+
+    if (format === '1x4') {
+      console.log('=== [Reprint Invoice UI] 1x4 Sheet Reprint Triggered ===');
+      console.log('Target Batches Count:', targetBatches.length);
+      console.log('Target Batches Data:', targetBatches);
+      console.log('Batch Numbers Payload:', batchNos);
+    }
+
     const toastId = toast.loading(`Generating ${formatLabel} for ${batchNos.length} batch(es)...`);
     setPrintingAction(`reprint-${format}-${batchNos.join(',')}`);
 
@@ -184,6 +192,9 @@ export default function ReprintInvoiceClient() {
       await invoicePrintService.reprintInvoiceFormat(batchNos, format);
       toast.success(`${formatLabel} generated successfully!`, { id: toastId });
     } catch (err: any) {
+      if (format === '1x4') {
+        console.error('=== [Reprint Invoice UI] 1x4 Sheet Reprint Failure ===', err);
+      }
       console.error(`Reprint ${format} error:`, err);
       const msg = err?.response?.data?.message || err?.message || `Failed to reprint ${formatLabel}`;
       toast.error(msg, { id: toastId });

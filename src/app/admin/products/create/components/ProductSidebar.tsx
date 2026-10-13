@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { ImagePlus, X, Plus, Upload, ChevronDown } from 'lucide-react';
+import { ImagePlus, X, Plus, Upload, ChevronDown, Loader2, FolderOpen } from 'lucide-react';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
+import { uploadMediaFile, getMediaViewUrl } from '@/services/mediaApi';
 
 const parseNdjson = (raw: any): any[] => {
   if (!raw) return [];
@@ -72,48 +73,143 @@ export function ProductImageBox({ image: propImage, onChange }: ProductImageBoxP
     else setLocalImage(val);
   };
   const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = (file: File) => {
-    if (!file.type.startsWith('image/')) return;
-    setImage(URL.createObjectURL(file));
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file (PNG, JPG, WEBP, etc.)');
+      return;
+    }
+
+    setUploading(true);
+    const toastId = toast.loading(`Uploading ${file.name}...`);
+    try {
+      const res = await uploadMediaFile(file, 'LOCAL');
+      const uploadedUrl = res.publicUrl || res.url || '';
+      if (!uploadedUrl) {
+        throw new Error('Media server did not return a valid URL.');
+      }
+      setImage(uploadedUrl);
+      toast.success('Product image uploaded successfully!', { id: toastId });
+    } catch (err: any) {
+      console.error('Failed to upload product image:', err);
+      toast.error(`Upload failed: ${err.message || 'Server error'}`, { id: toastId });
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
   };
 
   return (
-    <Panel title="Product Image">
-      <input ref={inputRef} type="file" accept="image/*" className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+    <Panel
+      title="Product Image"
+      badge={uploading ? 'Uploading...' : image ? '1 Image' : undefined}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        disabled={uploading}
+        onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+      />
       {image ? (
-        <div className="relative group rounded-lg overflow-hidden aspect-square">
-          <img src={image} alt="Product" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-            <button type="button" onClick={() => inputRef.current?.click()} className="px-3 py-1.5 text-xs font-medium bg-white text-slate-800 rounded-lg hover:bg-slate-100 transition-colors">Change</button>
-            <button type="button" onClick={() => setImage(null)} className="px-3 py-1.5 text-xs font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">Remove</button>
-          </div>
+        <div className="relative group rounded-xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shadow-xs">
+          <img
+            src={getMediaViewUrl(image)}
+            alt="Product preview"
+            className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-200"
+          />
+          {uploading ? (
+            <div className="absolute inset-0 bg-slate-950/70 flex flex-col items-center justify-center gap-2 text-white">
+              <Loader2 size={24} className="animate-spin text-indigo-400" />
+              <span className="text-xs font-semibold">Uploading new image...</span>
+            </div>
+          ) : (
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="px-3 py-1.5 text-xs font-semibold bg-white text-slate-800 rounded-lg hover:bg-slate-100 shadow-sm transition-all cursor-pointer"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                onClick={() => setImage(null)}
+                className="px-3 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 shadow-sm transition-all cursor-pointer"
+              >
+                Remove
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <button
           type="button"
+          disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!uploading) setDragging(true);
+          }}
           onDragLeave={() => setDragging(false)}
           onDrop={(e) => {
-            e.preventDefault(); setDragging(false);
+            e.preventDefault();
+            setDragging(false);
+            if (uploading) return;
             const f = e.dataTransfer.files[0];
             if (f) handleFile(f);
           }}
-          className={`w-full aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all ${dragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-            }`}
+          className={`w-full aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
+            dragging
+              ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20'
+              : 'border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+          } ${uploading ? 'opacity-60 cursor-not-allowed' : ''}`}
         >
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${dragging ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-slate-100 dark:bg-slate-800'}`}>
-            <Upload size={20} className={dragging ? 'text-indigo-600' : 'text-slate-400'} />
+          <div
+            className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              dragging
+                ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+            }`}
+          >
+            {uploading ? (
+              <Loader2 size={22} className="animate-spin text-indigo-600" />
+            ) : (
+              <Upload size={20} className={dragging ? 'text-indigo-600' : 'text-slate-400'} />
+            )}
           </div>
-          <div className="text-center">
-            <p className="text-sm text-slate-600 dark:text-slate-400">Drop image here</p>
-            <p className="text-xs text-slate-400 mt-0.5">or click to browse</p>
+          <div className="text-center px-4">
+            {uploading ? (
+              <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                Uploading to media server...
+              </p>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Drop product image here
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">or click to browse</p>
+                <p className="text-[10px] text-slate-400 mt-1">Supports PNG, JPG, WEBP</p>
+              </>
+            )}
           </div>
         </button>
       )}
+
+      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+        <a
+          href="/admin/products/explorer"
+          target="_blank"
+          rel="noreferrer"
+          className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-medium"
+        >
+          <FolderOpen size={12} />
+          <span>Browse Media Explorer</span>
+        </a>
+      </div>
     </Panel>
   );
 }
@@ -137,39 +233,166 @@ export function ProductGalleryBox({ images: propImages, onChange }: ProductGalle
       setLocalImages(val);
     }
   };
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const urls = Array.from(e.target.files || []).map((f) => URL.createObjectURL(f));
-    setImages((p) => [...p, ...urls]);
+  const handleFiles = async (fileList: FileList | File[]) => {
+    const rawFiles = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
+    if (rawFiles.length === 0) {
+      toast.error('Please select valid image files');
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress({ current: 0, total: rawFiles.length });
+    const toastId = toast.loading(`Uploading 1 of ${rawFiles.length} gallery images...`);
+
+    const newUploadedUrls: string[] = [];
+    let failedCount = 0;
+
+    for (let i = 0; i < rawFiles.length; i++) {
+      const file = rawFiles[i];
+      setUploadProgress({ current: i + 1, total: rawFiles.length });
+      toast.loading(`Uploading ${i + 1} of ${rawFiles.length}: ${file.name}`, { id: toastId });
+
+      try {
+        const res = await uploadMediaFile(file, 'LOCAL');
+        const url = res.publicUrl || res.url || '';
+        if (url) {
+          newUploadedUrls.push(url);
+        } else {
+          failedCount++;
+        }
+      } catch (err) {
+        console.error(`Failed to upload gallery image ${file.name}:`, err);
+        failedCount++;
+      }
+    }
+
+    if (newUploadedUrls.length > 0) {
+      setImages((prev) => [...prev, ...newUploadedUrls]);
+      if (failedCount === 0) {
+        toast.success(`Successfully uploaded ${newUploadedUrls.length} gallery image${newUploadedUrls.length > 1 ? 's' : ''}!`, { id: toastId });
+      } else {
+        toast.warning(
+          `Uploaded ${newUploadedUrls.length} image${newUploadedUrls.length > 1 ? 's' : ''} (${failedCount} failed).`,
+          { id: toastId }
+        );
+      }
+    } else {
+      toast.error('Failed to upload gallery images. Please try again.', { id: toastId });
+    }
+
+    setUploading(false);
+    setUploadProgress(null);
+    if (inputRef.current) inputRef.current.value = '';
   };
 
   return (
-    <Panel title="Gallery" badge={images.length > 0 ? `${images.length}` : undefined}>
-      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
+    <Panel
+      title="Gallery"
+      badge={
+        uploading && uploadProgress
+          ? `${uploadProgress.current}/${uploadProgress.total}`
+          : images.length > 0
+          ? `${images.length}`
+          : undefined
+      }
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        disabled={uploading}
+        onChange={(e) => e.target.files && handleFiles(e.target.files)}
+      />
+
       {images.length > 0 && (
-        <div className="grid grid-cols-3 gap-1.5 mb-3">
+        <div className="grid grid-cols-3 gap-2 mb-3">
           {images.map((img, i) => (
-            <div key={i} className="relative group aspect-square rounded-lg overflow-hidden">
-              <img src={img} alt="" className="w-full h-full object-cover" />
+            <div
+              key={`${img}-${i}`}
+              className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shadow-xs"
+            >
+              <img
+                src={getMediaViewUrl(img)}
+                alt={`Gallery image ${i + 1}`}
+                className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-200"
+              />
               <button
                 type="button"
                 onClick={() => setImages(images.filter((_, idx) => idx !== i))}
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 text-white"
+                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-slate-900/80 hover:bg-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all text-white shadow-sm cursor-pointer"
+                title="Remove image"
               >
-                <X size={10} />
+                <X size={12} strokeWidth={2.5} />
               </button>
+              <span className="absolute bottom-1 left-1.5 px-1.5 py-0.5 rounded bg-black/60 text-[10px] font-mono text-white/90">
+                #{i + 1}
+              </span>
             </div>
           ))}
         </div>
       )}
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="w-full flex items-center justify-center gap-2 h-9 text-xs font-medium text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+
+      {/* Drop area / Add button */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (!uploading) setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          if (uploading) return;
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFiles(e.dataTransfer.files);
+          }
+        }}
+        className={`w-full transition-all ${
+          dragging ? 'rounded-xl border-2 border-dashed border-indigo-500 bg-indigo-50/40 dark:bg-indigo-900/20 p-2' : ''
+        }`}
       >
-        <ImagePlus size={14} /> Add images
-      </button>
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className={`w-full flex items-center justify-center gap-2 h-10 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-xs ${
+            uploading
+              ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+              : 'text-indigo-650 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/60 dark:bg-indigo-950/20 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30'
+          }`}
+        >
+          {uploading ? (
+            <>
+              <Loader2 size={14} className="animate-spin text-indigo-600" />
+              <span>Uploading {uploadProgress?.current} of {uploadProgress?.total}...</span>
+            </>
+          ) : (
+            <>
+              <ImagePlus size={15} />
+              <span>{images.length > 0 ? 'Add more images' : 'Upload gallery images'}</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+        <a
+          href="/admin/products/explorer"
+          target="_blank"
+          rel="noreferrer"
+          className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-medium"
+        >
+          <FolderOpen size={12} />
+          <span>Browse Media Explorer</span>
+        </a>
+      </div>
     </Panel>
   );
 }

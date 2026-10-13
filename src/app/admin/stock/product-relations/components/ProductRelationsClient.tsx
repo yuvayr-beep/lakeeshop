@@ -114,6 +114,48 @@ export default function ProductRelationsClient() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [relationToDelete, setRelationToDelete] = useState<{ childId: number; childName: string } | null>(null);
 
+  // Multi-selection state for batch delete (Remove Row)
+  const [selectedChildIds, setSelectedChildIds] = useState<Set<number>>(new Set());
+  const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
+
+  const toggleSelectChild = (childId: number) => {
+    setSelectedChildIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(childId)) {
+        next.delete(childId);
+      } else {
+        next.add(childId);
+      }
+      return next;
+    });
+  };
+
+  const handleRemoveRowClick = () => {
+    if (selectedChildIds.size === 0) {
+      toast.info('Please select at least one variant row checkbox to remove.');
+      return;
+    }
+    setBatchDeleteConfirmOpen(true);
+  };
+
+  const confirmBatchDeleteRelations = async () => {
+    setBatchDeleteConfirmOpen(false);
+    const ids = Array.from(selectedChildIds);
+    if (ids.length === 0) return;
+
+    const toastId = toast.loading(`Removing ${ids.length} selected variant relation(s)...`);
+    try {
+      await Promise.all(ids.map((id) => axiosInstance.delete(`/stock/products/relations/${id}`)));
+      toast.success(`Successfully removed ${ids.length} variant relation(s)!`, { id: toastId });
+      setSelectedChildIds(new Set());
+      fetchRelations();
+    } catch (err: any) {
+      console.error('Failed to remove selected relationships:', err);
+      toast.error('Failed to remove some variant relationships.', { id: toastId });
+      fetchRelations();
+    }
+  };
+
   // Single Relationship Deletion
   const handleDeleteRelation = (childId: number, childName: string) => {
     setRelationToDelete({ childId, childName });
@@ -356,69 +398,13 @@ export default function ProductRelationsClient() {
   };
 
   return (
-    <div className="space-y-6">
-      
-      {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Boxes size={22} className="text-blue-600 dark:text-blue-400" />
-            Product Relations
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Map parent-variant dependencies, manage sibling items, and track sibling products.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 border-r border-slate-200 dark:border-slate-800 pr-2.5 mr-1">
-            <button
-              onClick={handleExpandAll}
-              className="px-2.5 py-1.5 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
-            >
-              Expand All
-            </button>
-            <button
-              onClick={handleCollapseAll}
-              className="px-2.5 py-1.5 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
-            >
-              Collapse All
-            </button>
-          </div>
-
-          <button
-            onClick={fetchRelations}
-            className="flex items-center justify-center p-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors shadow-sm"
-            title="Refresh List"
-          >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-          </button>
-
-          <button
-            onClick={handleExportExcel}
-            disabled={exportingExcel || relations.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow disabled:opacity-50"
-          >
-            <Download size={15} />
-            Export Excel
-          </button>
-
-          <button
-            onClick={handleCreateClick}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow"
-          >
-            <Plus size={15} />
-            Create Relation
-          </button>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+    <div className="flex-1 flex flex-col min-h-0 space-y-3">
+      {/* Single Line Controls Toolbar */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col xl:flex-row items-center justify-between gap-3 shrink-0">
         
         {/* Search */}
-        <div className="relative w-full md:flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+        <div className="relative w-full xl:w-80">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             placeholder="Search by Parent or Child name, code/SKU..."
@@ -427,52 +413,95 @@ export default function ProductRelationsClient() {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full h-10 pl-9 pr-4 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all font-medium"
+            className="w-full h-9 pl-9 pr-4 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 font-medium transition-all"
           />
         </div>
 
-        {/* Page Size Selection */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <label className="text-xs font-semibold text-slate-550 dark:text-slate-400 whitespace-nowrap">Rows:</label>
-          <select
-            value={itemsPerPage}
-            onChange={(e) => {
-              setItemsPerPage(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="h-10 px-3.5 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 hover:border-slate-300 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
+        {/* Action Toolbar Controls in Single Line */}
+        <div className="flex items-center gap-2 flex-wrap justify-end w-full xl:w-auto">
+          {/* Remove Row Button */}
+          <button
+            type="button"
+            onClick={handleRemoveRowClick}
+            className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all shadow-xs border ${
+              selectedChildIds.size > 0
+                ? 'bg-red-600 text-white border-red-600 hover:bg-red-700 shadow-sm'
+                : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+            }`}
+            title="Remove selected variant relation rows"
           >
-            <option value={10}>10</option>
-            <option value={15}>15</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-          </select>
+            <Trash2 size={14} />
+            <span>Remove Row</span>
+            {selectedChildIds.size > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 text-[9px] font-black bg-white text-red-600 rounded-full">
+                {selectedChildIds.size}
+              </span>
+            )}
+          </button>
+
+          {/* Expand All & Collapse All */}
+          <div className="flex items-center gap-1 border-l border-r border-slate-200 dark:border-slate-800 px-2 my-0.5">
+            <button
+              type="button"
+              onClick={handleExpandAll}
+              className="px-2.5 py-1.5 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
+            >
+              Expand All
+            </button>
+            <button
+              type="button"
+              onClick={handleCollapseAll}
+              className="px-2.5 py-1.5 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
+            >
+              Collapse All
+            </button>
+          </div>
+
+          {/* Refresh List */}
+          <button
+            type="button"
+            onClick={fetchRelations}
+            disabled={loading}
+            className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-700"
+            title="Refresh List"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
+
+          {/* Export Excel */}
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={exportingExcel || relations.length === 0}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+          >
+            {exportingExcel ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            <span>Export Excel</span>
+          </button>
+
+          {/* Create Relation */}
+          <button
+            type="button"
+            onClick={handleCreateClick}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95"
+          >
+            <Plus size={15} />
+            <span>Create Relation</span>
+          </button>
         </div>
       </div>
 
-      {/* Info mode badge */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-          <Sparkles size={12} className="text-blue-500" />
-          <span>Hierarchy list mode</span>
-        </div>
-        <span className="text-[10px] text-slate-400 italic">
-          * Click parent rows or chevrons to display mapping variants
-        </span>
-      </div>
-
-      {/* Main Content (Table) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
-        
+      {/* Main Table Content Container (Fixed Height + Scrollable Row Body) */}
+      <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-500">
-            <RefreshCw size={36} className="animate-spin text-blue-600 mb-3" />
-            <p className="text-sm font-medium">Fetching relation mappings...</p>
+          <div className="flex-1 flex flex-col items-center justify-center py-16 text-slate-500">
+            <RefreshCw size={32} className="animate-spin text-blue-600 mb-3" />
+            <p className="text-xs font-semibold">Fetching relation mappings...</p>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 px-4">
-            <AlertCircle size={36} className="text-red-500 mb-3" />
-            <p className="text-sm font-semibold">{error}</p>
+          <div className="flex-1 flex flex-col items-center justify-center py-16 text-slate-500 dark:text-slate-400 px-4">
+            <AlertCircle size={32} className="text-red-500 mb-3" />
+            <p className="text-xs font-semibold">{error}</p>
             <button
               onClick={fetchRelations}
               className="mt-4 px-4 py-2 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-xs font-bold transition-all"
@@ -481,23 +510,28 @@ export default function ProductRelationsClient() {
             </button>
           </div>
         ) : paginatedRelations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400 px-4">
-            <Boxes size={44} className="text-slate-300 dark:text-slate-750 mb-3" />
-            <p className="text-sm font-medium">No product relations found</p>
-            <p className="text-xs text-slate-500 mt-1">Try searching another term or create a new mapping.</p>
+          <div className="flex-1 flex flex-col items-center justify-center py-16 text-slate-400 px-4">
+            <Boxes size={40} className="text-slate-300 dark:text-slate-750 mb-3" />
+            <p className="text-xs font-semibold">No product relations found</p>
+            <p className="text-[11px] text-slate-500 mt-1">Try searching another term or create a new mapping.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-left border-collapse table-fixed min-w-[900px]">
-              <thead>
-                <tr className="border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/25">
-                  
-                  {/* Chevron expansion cell placeholder */}
-                  <th className="w-12 py-3.5 px-4 text-center"></th>
+          /* Table Scroll Wrapper (Row Body Scroll) */
+          <div className="flex-1 overflow-y-auto overflow-x-auto scrollbar-thin">
+            <table className="w-full text-left border-collapse table-fixed min-w-[850px]">
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-2xs">
+                <tr>
+                  {/* Expansion Chevron Placeholder */}
+                  <th className="w-10 py-3.5 px-3 text-center"></th>
+
+                  {/* S.No Header */}
+                  <th className="w-14 py-3.5 px-2 text-center text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">
+                    S.No
+                  </th>
                   
                   {/* Code */}
                   <th 
-                    className="w-48 py-3.5 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-950/50 transition-colors select-none"
+                    className="w-48 py-3.5 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900 transition-colors select-none"
                     onClick={() => handleSort('parentCode')}
                   >
                     <div className="flex items-center gap-1.5">
@@ -508,7 +542,7 @@ export default function ProductRelationsClient() {
 
                   {/* Name */}
                   <th 
-                    className="py-3.5 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-950/50 transition-colors select-none"
+                    className="py-3.5 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900 transition-colors select-none"
                     onClick={() => handleSort('parentName')}
                   >
                     <div className="flex items-center gap-1.5">
@@ -529,7 +563,7 @@ export default function ProductRelationsClient() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150 dark:divide-slate-800/80">
-                {paginatedRelations.map((parent) => {
+                {paginatedRelations.map((parent, pIndex) => {
                   const isExpanded = expandedRowIds.has(parent.parentId);
                   const hasChildren = parent.children && parent.children.length > 0;
 
@@ -544,7 +578,7 @@ export default function ProductRelationsClient() {
                         onClick={() => toggleRowExpand(parent.parentId)}
                       >
                         {/* Expand Chevron */}
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3.5 px-3 text-center">
                           {hasChildren ? (
                             <button
                               type="button"
@@ -559,6 +593,11 @@ export default function ProductRelationsClient() {
                           ) : (
                             <div className="w-5 h-5 flex-shrink-0" />
                           )}
+                        </td>
+
+                        {/* Parent S.No Cell */}
+                        <td className="py-3.5 px-2 text-center text-xs font-bold text-slate-500 dark:text-slate-400 font-mono" onClick={(e) => e.stopPropagation()}>
+                          {(currentPage - 1) * itemsPerPage + pIndex + 1}
                         </td>
 
                         {/* SKU */}
@@ -580,7 +619,7 @@ export default function ProductRelationsClient() {
                         <td className="py-3.5 px-4 text-xs font-bold text-center">
                           <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] ${
                             hasChildren 
-                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-405'
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400'
                               : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                           }`}>
                             {hasChildren ? `${parent.children.length} variants` : 'No variants'}
@@ -605,13 +644,27 @@ export default function ProductRelationsClient() {
                       {isExpanded && hasChildren && parent.children.map((child) => (
                         <tr 
                           key={`child-${child.productId}`}
-                          className="bg-slate-50/40 dark:bg-slate-900/10 hover:bg-slate-100/50 dark:hover:bg-slate-850/10 transition-colors"
+                          className={`transition-colors ${
+                            selectedChildIds.has(child.productId)
+                              ? 'bg-red-50/30 dark:bg-red-950/20'
+                              : 'bg-slate-50/40 dark:bg-slate-900/10 hover:bg-slate-100/50 dark:hover:bg-slate-850/10'
+                          }`}
                         >
-                          {/* Guides for indentation */}
-                          <td className="py-3 px-4 text-center">
+                          {/* Indentation guide */}
+                          <td className="py-3 px-3 text-center">
                             <div className="flex items-center justify-center">
                               <span className="inline-block border-l border-dashed border-slate-300 dark:border-slate-800 h-8" />
                             </div>
+                          </td>
+
+                          {/* Checkbox for child selection */}
+                          <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedChildIds.has(child.productId)}
+                              onChange={() => toggleSelectChild(child.productId)}
+                              className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
                           </td>
 
                           {/* Child SKU */}
@@ -631,10 +684,10 @@ export default function ProductRelationsClient() {
                             </div>
                           </td>
 
-                          {/* Empty badge placeholder for alignment */}
+                          {/* Empty badge placeholder */}
                           <td className="py-3 px-4 text-center"></td>
 
-                          {/* Child delete action */}
+                          {/* Child Delete Action */}
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
                               <button
@@ -656,7 +709,7 @@ export default function ProductRelationsClient() {
           </div>
         )}
 
-        {/* Footer pagination info */}
+        {/* Pinned Table Pagination Footer */}
         {!loading && filteredRelations.length > 0 && (
           (() => {
             const startVal = filteredRelations.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
@@ -664,20 +717,20 @@ export default function ProductRelationsClient() {
             const totalVal = filteredRelations.length;
 
             return (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 shrink-0">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-black dark:text-slate-400 tabular-nums">
+                  <span className="text-xs text-black dark:text-slate-400 tabular-nums font-medium">
                     Showing {startVal}–{endVal} of {totalVal} parent records
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-black dark:text-slate-400">Per page:</span>
+                    <span className="text-xs text-black dark:text-slate-400 font-medium">Per page:</span>
                     <select
                       value={itemsPerPage}
                       onChange={(e) => {
                         setItemsPerPage(Number(e.target.value));
                         setCurrentPage(1);
                       }}
-                      className="h-7 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-black dark:text-slate-350"
+                      className="h-7 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-black dark:text-slate-350 cursor-pointer font-medium"
                     >
                       <option value={10}>10</option>
                       <option value={15}>15</option>
@@ -723,7 +776,6 @@ export default function ProductRelationsClient() {
             );
           })()
         )}
-
       </div>
 
       {/* Relation Modal Popup */}
@@ -737,7 +789,7 @@ export default function ProductRelationsClient() {
         preselectedParent={preselectedParent}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Single Delete Confirmation Modal */}
       <Modal
         open={deleteConfirmOpen}
         onClose={() => {
@@ -776,6 +828,44 @@ export default function ProductRelationsClient() {
             </p>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium leading-relaxed">
               This action will break the mapping connection for child variant <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-350">{relationToDelete?.childName}</span>.
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Batch Delete Confirmation Modal */}
+      <Modal
+        open={batchDeleteConfirmOpen}
+        onClose={() => setBatchDeleteConfirmOpen(false)}
+        title="Remove Selected Variant Relations"
+        size="sm"
+        footer={
+          <div className="flex gap-2">
+            <button
+              onClick={() => setBatchDeleteConfirmOpen(false)}
+              className="px-4 py-2 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850 text-xs font-bold rounded-xl text-slate-650 dark:text-slate-300 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmBatchDeleteRelations}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm hover:shadow"
+            >
+              Remove ({selectedChildIds.size})
+            </button>
+          </div>
+        }
+      >
+        <div className="flex items-start gap-3 py-1">
+          <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center text-red-600 dark:text-red-400 flex-shrink-0">
+            <AlertCircle size={18} />
+          </div>
+          <div>
+            <p className="text-xs text-slate-800 dark:text-slate-200 font-semibold">
+              Are you sure you want to remove {selectedChildIds.size} selected variant relation(s)?
+            </p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium leading-relaxed">
+              This action will break mapping connections for all checked child variant items.
             </p>
           </div>
         </div>

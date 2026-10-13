@@ -15,7 +15,7 @@ export interface HeaderAggregatesData {
   clientOrderCounts?: Record<string, number>;
 }
 
-export function useHeaderAggregates(baseUrl: string = 'https://v2.lakeetech.com', token: string | null = null) {
+export function useHeaderAggregates(baseUrl: string = '/api/proxy', token: string | null = null) {
   const [headerAggregates, setHeaderAggregates] = useState<HeaderAggregatesData | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,20 +23,31 @@ export function useHeaderAggregates(baseUrl: string = 'https://v2.lakeetech.com'
   useEffect(() => {
     let isSubscribed = true;
     let retryTimer: NodeJS.Timeout | null = null;
-    const controller = new AbortController();
+    let controller = new AbortController();
 
     async function startSSEStream() {
-      const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null) || 'erp-init-2025';
-      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-      const targetUrl = `${cleanBase}/order/sse/header-aggregates`;
+      if (!isSubscribed) return;
 
-      console.log('[Header Bell SSE Stream] Connecting to:', targetUrl);
+      const authToken =
+        token ||
+        (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null) ||
+        'erp-init-2025';
+
+      // Use /api/proxy when in browser unless a custom local base URL is provided
+      let resolvedBase = baseUrl;
+      if (typeof window !== 'undefined') {
+        if (!baseUrl || baseUrl.includes('v2.lakeetech.com')) {
+          resolvedBase = '/api/proxy';
+        }
+      }
+      const cleanBase = resolvedBase.endsWith('/') ? resolvedBase.slice(0, -1) : resolvedBase;
+      const targetUrl = `${cleanBase}/order/sse/header-aggregates`;
 
       try {
         const response = await fetch(targetUrl, {
           headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Accept': 'text/event-stream',
+            Authorization: `Bearer ${authToken}`,
+            Accept: 'text/event-stream',
           },
           signal: controller.signal,
         });
@@ -45,10 +56,10 @@ export function useHeaderAggregates(baseUrl: string = 'https://v2.lakeetech.com'
           if (isSubscribed) {
             setError(`HTTP ${response.status}`);
             setIsConnected(false);
-            // Schedule reconnect if non-200
+            // Schedule reconnect if non-200 with backoff
             retryTimer = setTimeout(() => {
               if (isSubscribed) startSSEStream();
-            }, 8000);
+            }, 10000);
           }
           return;
         }
@@ -78,44 +89,64 @@ export function useHeaderAggregates(baseUrl: string = 'https://v2.lakeetech.com'
               const jsonStr = trimmed.substring(5).trim();
               try {
                 const data = JSON.parse(jsonStr);
-                console.log('[Header Bell SSE Data Received]:', data);
                 if (isSubscribed) {
                   setHeaderAggregates((prev) => ({ ...prev, ...data }));
                   setIsConnected(true);
                 }
               } catch (e) {
-                console.log('[Header Bell SSE Raw Data]:', jsonStr);
+                // Non-JSON SSE ping/keepalive
               }
             }
           }
         }
       } catch (err: any) {
-        if (!controller.signal.aborted && isSubscribed) {
-          console.error('[Header Bell SSE Error]:', err);
+        // Suppress expected abort errors on unmount or tab change
+        if (!isSubscribed || controller.signal.aborted || err.name === 'AbortError') {
+          return;
+        }
+
+        console.warn('[Header Bell SSE Info]: Stream disconnected, reconnecting in 10s...', err.message);
+        if (isSubscribed) {
           setIsConnected(false);
-          setError(err.message || 'Stream error');
+          setError(err.message || 'Stream disconnected');
           retryTimer = setTimeout(() => {
-            if (isSubscribed) startSSEStream();
-          }, 5000);
+            if (isSubscribed) {
+              controller = new AbortController();
+              startSSEStream();
+            }
+          }, 10000);
         }
       }
     }
 
     // Also fetch dashboard metrics for client order breakdown
     async function fetchDashboardMetrics() {
-      const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null) || 'erp-init-2025';
-      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      if (!isSubscribed) return;
+
+      const authToken =
+        token ||
+        (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null) ||
+        'erp-init-2025';
+
+      let resolvedBase = baseUrl;
+      if (typeof window !== 'undefined') {
+        if (!baseUrl || baseUrl.includes('v2.lakeetech.com')) {
+          resolvedBase = '/api/proxy';
+        }
+      }
+      const cleanBase = resolvedBase.endsWith('/') ? resolvedBase.slice(0, -1) : resolvedBase;
       const today = new Date().toISOString().split('T')[0];
       const metricsUrl = `${cleanBase}/order/sse/dashboard-metrics?date=${today}`;
 
       try {
         const response = await fetch(metricsUrl, {
           headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Accept': 'text/event-stream',
+            Authorization: `Bearer ${authToken}`,
+            Accept: 'text/event-stream',
           },
           signal: controller.signal,
         });
+
         if (response.ok) {
           const text = await response.text();
           const lines = text.split('\n');
@@ -130,12 +161,17 @@ export function useHeaderAggregates(baseUrl: string = 'https://v2.lakeetech.com'
                     lastComputedAt: data.lastComputedAt,
                   }));
                 }
-              } catch (e) { /* ignore parse err */ }
+              } catch (e) {
+                /* ignore parse err */
+              }
             }
           }
         }
-      } catch (e) {
-        console.warn('[Dashboard Metrics Fetch Warning]:', e);
+      } catch (e: any) {
+        if (!isSubscribed || controller.signal.aborted || e?.name === 'AbortError') {
+          return;
+        }
+        console.warn('[Dashboard Metrics Fetch Warning]:', e.message);
       }
     }
 
@@ -145,7 +181,9 @@ export function useHeaderAggregates(baseUrl: string = 'https://v2.lakeetech.com'
     return () => {
       isSubscribed = false;
       if (retryTimer) clearTimeout(retryTimer);
-      controller.abort();
+      try {
+        controller.abort();
+      } catch {}
       setIsConnected(false);
     };
   }, [baseUrl, token]);

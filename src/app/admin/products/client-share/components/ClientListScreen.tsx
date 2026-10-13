@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, RefreshCw, Eye, Image as ImageIcon, Briefcase, AlertCircle, FolderOpen } from 'lucide-react';
+import { Search, RefreshCw, Eye, Image as ImageIcon, Briefcase, AlertCircle, FolderOpen, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 
@@ -58,6 +58,10 @@ export default function ClientListScreen({
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [failedLogos, setFailedLogos] = useState<Record<number, boolean>>({});
 
+  // Sort state - default A to Z by Client Name
+  const [sortField, setSortField] = useState<'clientName' | 'clientCode' | 'legalName'>('clientName');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   const fetchClients = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -82,17 +86,36 @@ export default function ClientListScreen({
     }
   }, [clients.length, fetchClients]);
 
-  // Filter clients by search query
+  const handleSort = (field: 'clientName' | 'clientCode' | 'legalName') => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  // Filter clients by search query and sort A to Z by Client Name (or selected field)
   const filteredClients = useMemo(() => {
-    if (!searchQuery.trim()) return clients;
-    const q = searchQuery.toLowerCase();
-    return clients.filter(
-      (c) =>
-        (c.clientName || '').toLowerCase().includes(q) ||
-        (c.clientCode || '').toLowerCase().includes(q) ||
-        (c.legalName || '').toLowerCase().includes(q)
-    );
-  }, [clients, searchQuery]);
+    let list = clients;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (c) =>
+          (c.clientName || '').toLowerCase().includes(q) ||
+          (c.clientCode || '').toLowerCase().includes(q) ||
+          (c.legalName || '').toLowerCase().includes(q)
+      );
+    }
+
+    return [...list].sort((a, b) => {
+      const valA = (a[sortField] || '').toString().trim().toLowerCase();
+      const valB = (b[sortField] || '').toString().trim().toLowerCase();
+      const comp = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+      return sortOrder === 'asc' ? comp : -comp;
+    });
+  }, [clients, searchQuery, sortField, sortOrder]);
 
   // Paginated clients
   const paginated = useMemo(() => {
@@ -181,9 +204,45 @@ export default function ClientListScreen({
                 <tr className="border-b border-slate-150 dark:border-slate-800/80">
                   <th className="w-16 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none text-center">S.No</th>
                   <th className="w-24 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Logo</th>
-                  <th className="w-48 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Client Code</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Client Name</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">Legal Name</th>
+                  <th 
+                    onClick={() => handleSort('clientCode')} 
+                    className="w-48 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none cursor-pointer hover:text-blue-600 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Client Code
+                      {sortField === 'clientCode' ? (
+                        sortOrder === 'asc' ? <ArrowUp size={13} className="text-blue-600" /> : <ArrowDown size={13} className="text-blue-600" />
+                      ) : (
+                        <ArrowUpDown size={13} className="text-slate-300 dark:text-slate-600" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('clientName')} 
+                    className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none cursor-pointer hover:text-blue-600 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Client Name
+                      {sortField === 'clientName' ? (
+                        sortOrder === 'asc' ? <ArrowUp size={13} className="text-blue-600" /> : <ArrowDown size={13} className="text-blue-600" />
+                      ) : (
+                        <ArrowUpDown size={13} className="text-slate-300 dark:text-slate-600" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('legalName')} 
+                    className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none cursor-pointer hover:text-blue-600 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Legal Name
+                      {sortField === 'legalName' ? (
+                        sortOrder === 'asc' ? <ArrowUp size={13} className="text-blue-600" /> : <ArrowDown size={13} className="text-blue-600" />
+                      ) : (
+                        <ArrowUpDown size={13} className="text-slate-300 dark:text-slate-600" />
+                      )}
+                    </div>
+                  </th>
                   <th className="w-28 py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center select-none">Actions</th>
                 </tr>
               </thead>

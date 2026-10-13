@@ -380,56 +380,65 @@ export default function POManagementClient() {
   }, [orders, page, perPage]);
 
   return (
-    <div className="flex-1 space-y-6 p-6">
-      {/* Title Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Purchase Orders</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Manage procurement orders, generate supplier PDFs, and track receive status.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {selectedIds.length > 0 && (
+    <div className="flex-1 flex flex-col min-h-0 space-y-3">
+      {/* Top Control Toolbar (Start Date, End Date, Supplier, Advanced Filters, Refresh, Upload, Create PO) */}
+      <POFilters
+        filters={filters}
+        onChange={setFilters}
+        onReset={handleResetFilters}
+        actionButtons={
+          <>
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleDeleteSelectedTrigger}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-xs transition-all text-xs"
+              >
+                <Trash2 size={14} />
+                <span>Delete Selected</span>
+                <span className="px-1.5 py-0.2 text-[9px] font-black bg-red-600 text-white rounded-full">
+                  {selectedIds.length}
+                </span>
+              </button>
+            )}
+
+            {/* Refresh List */}
             <button
-              onClick={handleDeleteSelectedTrigger}
-              className="flex items-center justify-center gap-2 h-10 px-4 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm transition-all text-xs"
+              onClick={() => fetchPurchaseOrders()}
+              disabled={loading}
+              className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all disabled:opacity-50"
+              title="Refresh List"
             >
-              <Trash2 size={14} />
-              Delete Selected ({selectedIds.length})
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             </button>
-          )}
-          <button
-            onClick={() => fetchPurchaseOrders()}
-            disabled={loading}
-            className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all disabled:opacity-50"
-            title="Refresh List"
-          >
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-          </button>
-          <button
-            onClick={() => setShowUploadArea(!showUploadArea)}
-            className={`flex items-center justify-center gap-2 h-10 px-4 text-xs font-bold rounded-xl shadow-sm transition-all border ${
-              showUploadArea
-                ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] border-[var(--primary)]'
-                : 'bg-[var(--primary-light-bg)] text-[var(--primary)] border border-[var(--primary)]/30'
-            }`}
-          >
-            <Upload size={14} /> Upload
-          </button>
-          <button
-            onClick={() => router.push('/admin/stock/purchase-orders/create')}
-            className="flex items-center justify-center gap-2 h-10 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-sm hover:shadow transition-all duration-200 text-sm"
-          >
-            <Plus size={16} />
-            Create Purchase Order
-          </button>
-        </div>
-      </div>
+
+            {/* Upload Excel */}
+            <button
+              onClick={() => setShowUploadArea(!showUploadArea)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl shadow-xs transition-all border ${
+                showUploadArea
+                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <Upload size={14} />
+              <span>Upload</span>
+            </button>
+
+            {/* Create Purchase Order */}
+            <button
+              onClick={() => router.push('/admin/stock/purchase-orders/create')}
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs"
+            >
+              <Plus size={15} />
+              <span>Create Purchase Order</span>
+            </button>
+          </>
+        }
+      />
 
       {/* Upload Files Expandable Area */}
       {showUploadArea && (
-        <div className="bg-slate-50 dark:bg-slate-950/10 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6 transition-all animate-in slide-in-from-top-4 duration-300">
+        <div className="bg-slate-50 dark:bg-slate-950/10 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6 transition-all animate-in slide-in-from-top-4 duration-300 shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
@@ -507,47 +516,45 @@ export default function POManagementClient() {
         </div>
       )}
 
-      {/* Filters */}
-      <POFilters filters={filters} onChange={setFilters} onReset={handleResetFilters} />
-
-      {/* Main Table Content */}
-      {error && (
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-xl text-sm flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => fetchPurchaseOrders()} className="underline font-medium hover:text-red-800">
-            Retry
-          </button>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="w-10 h-10 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin"></div>
-          <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">Loading purchase orders...</span>
-        </div>
-      ) : (
-        <POTable
-          orders={paginatedOrders}
-          warehouses={warehouses}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          onEdit={handleEdit}
-          onDownloadPdf={handleDownloadPdf}
-          onDownloadExcel={handleDownloadExcel}
-          onSendEmail={handleSendEmail}
-          onCancel={handleCancel}
-          onShowItems={handleShowItems}
-          page={page}
-          perPage={perPage}
-          total={total}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          onPerPageChange={(n) => {
-            setPerPage(n);
-            setPage(1);
-          }}
-        />
-      )}
+      {/* Main Table Content (Fixed Height & Body Scroll) */}
+      <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+        {error ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-red-600 dark:text-red-400">
+            <AlertCircle size={32} className="mb-2" />
+            <p className="text-xs font-semibold">{error}</p>
+            <button onClick={() => fetchPurchaseOrders()} className="mt-3 px-4 py-2 text-xs font-bold bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all">
+              Retry Load
+            </button>
+          </div>
+        ) : loading ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-16 text-slate-500">
+            <RefreshCw size={32} className="animate-spin text-blue-600 mb-3" />
+            <span className="text-xs font-semibold">Loading purchase orders...</span>
+          </div>
+        ) : (
+          <POTable
+            orders={paginatedOrders}
+            warehouses={warehouses}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onEdit={handleEdit}
+            onDownloadPdf={handleDownloadPdf}
+            onDownloadExcel={handleDownloadExcel}
+            onSendEmail={handleSendEmail}
+            onCancel={handleCancel}
+            onShowItems={handleShowItems}
+            page={page}
+            perPage={perPage}
+            total={total}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            onPerPageChange={(n) => {
+              setPerPage(n);
+              setPage(1);
+            }}
+          />
+        )}
+      </div>
 
       {/* Ordered Items Modal */}
       {selectedPoForItems && (

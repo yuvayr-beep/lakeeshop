@@ -6,7 +6,6 @@ import {
   ChevronLeft, ChevronRight, Filter, AlertCircle, 
   Boxes, Package, DollarSign, Tag, CheckCircle2, ArrowUpDown
 } from 'lucide-react';
-import AdminLayout from '@/app/admin/components/AdminLayout';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 
@@ -382,117 +381,77 @@ export default function CurrentStockStatusClient() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 pb-12">
-        
-        {/* =================================================================== */}
-        {/* HEADER SECTION */}
-        {/* =================================================================== */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <BarChart3 size={24} className="text-blue-600 dark:text-blue-400" />
-              Current Stock Status Report
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Live inventory valuation, available quantities, courier costs, and valuation tracking.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={fetchReportData}
-              disabled={loading}
-              className="flex items-center justify-center p-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all shadow-2xs"
-              title="Refresh Report Data"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin text-blue-600' : ''} />
-            </button>
-
-            <button
-              onClick={handleExportExcel}
-              disabled={exporting}
-              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-2xs transition-all hover:shadow-sm"
-            >
-              {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              Export Excel
-            </button>
-          </div>
-        </div>
+    <div className="flex-1 flex flex-col h-full min-h-0 space-y-4">
 
         {/* =================================================================== */}
-        {/* SUMMARY STATISTICS CARDS */}
+        {/* FILTER CONTROL BAR (WITH INLINE SUMMARY STATISTICS) */}
         {/* =================================================================== */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
-              <Boxes size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Products Loaded</p>
-              <h4 className="text-base font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">
-                {stats.totalItems} <span className="text-xs font-normal text-slate-400">({stats.countWithStock} in stock)</span>
-              </h4>
-            </div>
-          </div>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-2xs space-y-3 shrink-0">
+          <div className="border-b border-slate-100 dark:border-slate-800/80 pb-3">
+            {/* Filter Heading + Inline Summary Statistics + Clear Filters */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+              <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-slate-200 dark:border-slate-800">
+                <Filter size={16} className="text-blue-600 dark:text-blue-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                  Filter Stock Reports
+                </h3>
+              </div>
 
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-              <Package size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Available Qty</p>
-              <h4 className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                {stats.totalQty.toLocaleString('en-IN')} units
-              </h4>
-            </div>
-          </div>
+              {/* Stats 1: Products */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Boxes size={14} className="text-blue-600 dark:text-blue-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Products:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100">
+                  {stats.totalItems} <span className="text-[11px] font-normal text-slate-400">({stats.countWithStock} in stock)</span>
+                </span>
+              </div>
 
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
-              <DollarSign size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Original Valuation</p>
-              <h4 className="text-base font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">
-                {formatCurrency(stats.totalOrigVal)}
-              </h4>
-            </div>
-          </div>
+              <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-800 hidden xl:block shrink-0" />
 
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 flex items-center justify-center flex-shrink-0">
-              <Tag size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Latest Valuation</p>
-              <h4 className="text-base font-extrabold text-violet-600 dark:text-violet-400 mt-0.5">
-                {formatCurrency(stats.totalLatestVal)}
-              </h4>
-            </div>
-          </div>
-        </div>
+              {/* Stats 2: Available Qty */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Package size={14} className="text-emerald-600 dark:text-emerald-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Available Qty:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {stats.totalQty.toLocaleString('en-IN')} units
+                </span>
+              </div>
 
-        {/* =================================================================== */}
-        {/* FILTER CONTROL BAR */}
-        {/* =================================================================== */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
-            <div className="flex items-center gap-2">
-              <Filter size={16} className="text-blue-600 dark:text-blue-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">
-                Filter Stock Reports
-              </h3>
-            </div>
+              <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-800 hidden xl:block shrink-0" />
 
-            {(selectedProductId || selectedBrand || viewAll) && (
-              <button
-                onClick={handleClearFilters}
-                className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
-              >
-                <X size={14} /> Clear Filters
-              </button>
-            )}
+              {/* Stats 3: Original Valuation */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <DollarSign size={14} className="text-indigo-600 dark:text-indigo-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Original Valuation:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100">
+                  {formatCurrency(stats.totalOrigVal)}
+                </span>
+              </div>
+
+              <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-800 hidden xl:block shrink-0" />
+
+              {/* Stats 4: Latest Valuation */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Tag size={14} className="text-violet-600 dark:text-violet-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Latest Valuation:</span>
+                <span className="font-bold text-violet-600 dark:text-violet-400">
+                  {formatCurrency(stats.totalLatestVal)}
+                </span>
+              </div>
+
+              {/* Clear Filters Button (Inlined as last item) */}
+              {(selectedProductId || selectedBrand || viewAll) && (
+                <>
+                  <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
+                  <button
+                    onClick={handleClearFilters}
+                    className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1 shrink-0 ml-1"
+                  >
+                    <X size={14} /> Clear Filters
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
@@ -652,32 +611,34 @@ export default function CurrentStockStatusClient() {
               )}
             </div>
 
-            {/* --------------------------------------------------------------- */}
-            {/* 3. ROWS PER PAGE / VIEW MODE SELECTOR */}
-            {/* --------------------------------------------------------------- */}
+
+
+            {/* 3. REFRESH & EXPORT EXCEL ACTIONS */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                View Mode / Rows
+              <label className="text-[11px] font-bold uppercase tracking-wider text-transparent select-none hidden lg:block">
+                Actions
               </label>
-              <select
-                value={viewAll ? 'ALL' : size}
-                onChange={(e) => {
-                  if (e.target.value === 'ALL') {
-                    setViewAll(true);
-                  } else {
-                    setViewAll(false);
-                    setSize(Number(e.target.value));
-                  }
-                  setPage(0);
-                }}
-                className="w-full h-10 px-3 text-xs bg-slate-50/60 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 font-semibold cursor-pointer"
-              >
-                <option value={10}>10 rows (Paginated)</option>
-                <option value={20}>20 rows (Default Paginated)</option>
-                <option value={50}>50 rows (Paginated)</option>
-                <option value={100}>100 rows (Paginated)</option>
-                <option value="ALL">✨ All Products</option>
-              </select>
+              <div className="flex items-center gap-1.5 h-10">
+                <button
+                  type="button"
+                  onClick={fetchReportData}
+                  disabled={loading}
+                  className="flex items-center justify-center h-10 w-10 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all shadow-2xs shrink-0"
+                  title="Refresh Report Data"
+                >
+                  <RefreshCw size={16} className={loading ? 'animate-spin text-blue-600' : ''} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportExcel}
+                  disabled={exporting}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-10 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-2xs transition-all hover:shadow-sm whitespace-nowrap"
+                >
+                  {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  <span>Export Excel (Job)</span>
+                </button>
+              </div>
             </div>
 
           </div>
@@ -686,17 +647,17 @@ export default function CurrentStockStatusClient() {
         {/* =================================================================== */}
         {/* REPORT DATA TABLE SECTION */}
         {/* =================================================================== */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xs overflow-hidden">
+        <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xs overflow-hidden flex flex-col">
           
           {loading ? (
-            <div className="py-24 text-center text-slate-400 space-y-3">
+            <div className="py-24 text-center text-slate-400 space-y-3 flex-1 flex flex-col justify-center">
               <RefreshCw className="animate-spin text-blue-600 mx-auto" size={32} />
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                 {viewAll ? 'Fetching all products...' : 'Fetching stock status report data...'}
               </p>
             </div>
           ) : error ? (
-            <div className="py-20 text-center text-red-500 space-y-3 px-4">
+            <div className="py-20 text-center text-red-500 space-y-3 px-4 flex-1 flex flex-col justify-center">
               <AlertCircle size={36} className="mx-auto text-red-500" />
               <p className="text-xs font-bold text-red-700 dark:text-red-400">{error}</p>
               <button
@@ -707,7 +668,7 @@ export default function CurrentStockStatusClient() {
               </button>
             </div>
           ) : processedData.length === 0 ? (
-            <div className="py-24 text-center text-slate-400 space-y-2">
+            <div className="py-24 text-center text-slate-400 space-y-2 flex-1 flex flex-col justify-center">
               <Boxes size={40} className="mx-auto text-slate-300 dark:text-slate-700" />
               <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
                 No stock status records found
@@ -717,65 +678,65 @@ export default function CurrentStockStatusClient() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-left border-collapse text-xs min-w-[1100px]">
-                <thead>
-                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productId')}>
+            <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse text-xs min-w-full whitespace-nowrap">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-955 border-b border-slate-100 dark:border-slate-800 shadow-2xs">
+                  <tr className="bg-slate-50 dark:bg-slate-955 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                    <th className="py-2.5 px-3 whitespace-nowrap cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productId')}>
                       <div className="flex items-center gap-1">
                         <span>Product ID</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productCode')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productCode')}>
                       <div className="flex items-center gap-1">
                         <span>Code / SKU</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productName')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productName')}>
                       <div className="flex items-center gap-1">
                         <span>Product Name</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('brand')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('brand')}>
                       <div className="flex items-center gap-1">
                         <span>Brand</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('availableQty')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('availableQty')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Available Qty</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('averageCourierPrice')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('averageCourierPrice')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Avg Courier Price</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('originalCost')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('originalCost')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Original Cost</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('originalValue')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('originalValue')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Original Value</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('latestCost')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('latestCost')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Latest Cost</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('latestValue')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('latestValue')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Latest Value</span>
                         <ArrowUpDown size={12} />
@@ -783,19 +744,19 @@ export default function CurrentStockStatusClient() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium whitespace-nowrap">
                   {processedData.map((row) => (
                     <tr
                       key={row.productId}
-                      className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors text-slate-800 dark:text-slate-200"
+                      className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors text-slate-800 dark:text-slate-200 whitespace-nowrap"
                     >
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-500 dark:text-slate-400">
+                      <td className="py-2 px-3 font-mono font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         #{row.productId}
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono text-[11px] font-bold">
+                      <td className="py-2 px-3 font-mono text-[11px] font-bold whitespace-nowrap">
                         {row.productCode ? (
-                          <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+                          <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 whitespace-nowrap">
                             {row.productCode}
                           </span>
                         ) : (
@@ -803,13 +764,13 @@ export default function CurrentStockStatusClient() {
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 font-bold max-w-xs truncate text-slate-900 dark:text-slate-100" title={row.productName}>
+                      <td className="py-2 px-3 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap" title={row.productName}>
                         {row.productName}
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="py-2 px-3 whitespace-nowrap">
                         {row.brand ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/50">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/50 whitespace-nowrap">
                             {row.brand}
                           </span>
                         ) : (
@@ -817,7 +778,7 @@ export default function CurrentStockStatusClient() {
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-2 px-3 text-right whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${
                           row.availableQty > 0 
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/50'
@@ -827,23 +788,23 @@ export default function CurrentStockStatusClient() {
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-4 text-right font-mono text-slate-600 dark:text-slate-300">
+                      <td className="py-2 px-3 text-right font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
                         {formatCurrency(row.averageCourierPrice)}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right font-mono text-slate-600 dark:text-slate-300">
+                      <td className="py-2 px-3 text-right font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
                         {formatCurrency(row.originalCost)}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-800 dark:text-slate-200">
+                      <td className="py-2 px-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                         {formatCurrency(row.originalValue)}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right font-mono text-slate-600 dark:text-slate-300">
+                      <td className="py-2 px-3 text-right font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
                         {formatCurrency(row.latestCost)}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-violet-700 dark:text-violet-300">
+                      <td className="py-2 px-3 text-right font-mono font-bold text-violet-700 dark:text-violet-300 whitespace-nowrap">
                         {formatCurrency(row.latestValue)}
                       </td>
                     </tr>
@@ -856,7 +817,7 @@ export default function CurrentStockStatusClient() {
           {/* =================================================================== */}
           {/* PAGINATION / VIEW FOOTER BAR */}
           {/* =================================================================== */}
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-slate-50/50 dark:bg-slate-950/20">
+          <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-slate-50/50 dark:bg-slate-955/20 shrink-0">
             <div className="text-slate-500 dark:text-slate-400 font-medium">
               {viewAll ? (
                 <span>Showing <span className="font-bold text-blue-600 dark:text-blue-400">All {reportData.length} Products</span></span>
@@ -865,34 +826,59 @@ export default function CurrentStockStatusClient() {
               )}
             </div>
 
-            {!viewAll ? (
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Rows Per Page Selector */}
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((prev) => Math.max(0, prev - 1))}
-                  disabled={page === 0 || loading}
-                  className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Rows per page:</span>
+                <select
+                  value={viewAll ? 'ALL' : size}
+                  onChange={(e) => {
+                    if (e.target.value === 'ALL') {
+                      setViewAll(true);
+                    } else {
+                      setViewAll(false);
+                      setSize(Number(e.target.value));
+                    }
+                    setPage(0);
+                  }}
+                  className="h-8 px-2.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold cursor-pointer text-slate-800 dark:text-slate-200 shadow-2xs"
                 >
-                  <ChevronLeft size={16} /> Previous
-                </button>
-
-                <span className="px-3 py-1 bg-slate-200/60 dark:bg-slate-800 rounded-lg font-bold font-mono text-slate-700 dark:text-slate-300">
-                  Page {page + 1}
-                </span>
-
-                <button
-                  onClick={() => setPage((prev) => prev + 1)}
-                  disabled={!hasNextPage || loading}
-                  className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  Next <ChevronRight size={16} />
-                </button>
+                  <option value={10}>10 rows</option>
+                  <option value={20}>20 rows</option>
+                  <option value={50}>50 rows</option>
+                  <option value={100}>100 rows</option>
+                  <option value="ALL">✨ All Products</option>
+                </select>
               </div>
-            ) : null}
+
+              {!viewAll && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+                    disabled={page === 0 || loading}
+                    className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft size={16} /> Previous
+                  </button>
+
+                  <span className="px-3 py-1 bg-slate-200/60 dark:bg-slate-800 rounded-lg font-bold font-mono text-slate-700 dark:text-slate-300">
+                    Page {page + 1}
+                  </span>
+
+                  <button
+                    onClick={() => setPage((prev) => prev + 1)}
+                    disabled={!hasNextPage || loading}
+                    className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
         </div>
 
       </div>
-    </AdminLayout>
   );
 }

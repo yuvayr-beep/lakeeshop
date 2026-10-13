@@ -101,6 +101,26 @@ export default function ProductMeasurementsGrid({
   const start = total === 0 ? 0 : (page - 1) * perPage + 1;
   const end = Math.min(page * perPage, total);
 
+  const allPageIds = products.map((p) => p.id);
+  const allSelected = allPageIds.length > 0 && allPageIds.every((id) => selectedIds.includes(id));
+  const someSelected = allPageIds.some((id) => selectedIds.includes(id));
+
+  const toggleAll = () => {
+    if (allSelected) {
+      onSelectionChange(selectedIds.filter((id) => !allPageIds.includes(id)));
+    } else {
+      onSelectionChange([...new Set([...selectedIds, ...allPageIds])]);
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter((s) => s !== id));
+    } else {
+      onSelectionChange([...selectedIds, id]);
+    }
+  };
+
   const handleOpenImage = (p: Product, e: React.MouseEvent) => {
     e.stopPropagation();
     if (p.images && p.images.length > 0) {
@@ -121,8 +141,29 @@ export default function ProductMeasurementsGrid({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+      {/* Select All top bar */}
+      <div className="shrink-0 flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+            onChange={toggleAll}
+            className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
+            id="grid-select-all"
+          />
+          <label htmlFor="grid-select-all" className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+            Select all on this page
+          </label>
+        </div>
+        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+          {selectedIds.length} selected
+        </span>
+      </div>
+
+      {/* Grid Body (Scrollable) */}
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {products.map((p) => {
           const selected = selectedIds.includes(p.id);
           const firstImage = p.images && p.images.length > 0 ? p.images[0] : null;
@@ -241,35 +282,35 @@ export default function ProductMeasurementsGrid({
         })}
       </div>
 
-      {/* Pagination Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm text-xs">
-        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-          <span>Rows per page:</span>
-          <select
-            value={perPage}
-            onChange={(e) => onPerPageChange(Number(e.target.value))}
-            className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none text-slate-800 dark:text-slate-200"
-          >
-            {PER_PAGE_OPTIONS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-          <span className="ml-2">
-            Showing <span className="font-semibold text-slate-800 dark:text-slate-200">{total === 0 ? 0 : start}</span> to{' '}
-            <span className="font-semibold text-slate-800 dark:text-slate-200">{end}</span> of{' '}
-            <span className="font-semibold text-slate-800 dark:text-slate-200">{total}</span>
+      {/* Pinned Pagination Footer */}
+      <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-black dark:text-slate-400 tabular-nums font-medium">
+            Showing {total === 0 ? 0 : start}–{end} of {total} products
           </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-black dark:text-slate-400 font-medium">Per page:</span>
+            <select
+              value={perPage}
+              onChange={(e) => onPerPageChange(Number(e.target.value))}
+              className="h-7 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-black dark:text-slate-350 cursor-pointer font-medium"
+            >
+              {PER_PAGE_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="flex items-center gap-1">
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page === 1}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 disabled:opacity-30 disabled:hover:text-slate-400"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-black dark:text-slate-400 transition-colors"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={14} />
           </button>
 
           {pageNumbers.map((pNum, idx) =>
@@ -277,16 +318,16 @@ export default function ProductMeasurementsGrid({
               <button
                 key={pNum}
                 onClick={() => onPageChange(pNum)}
-                className={`w-7 h-7 rounded-lg text-xs font-semibold transition-colors ${
+                className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${
                   pNum === page
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-black dark:text-slate-400'
                 }`}
               >
                 {pNum}
               </button>
             ) : (
-              <span key={`dots-${idx}`} className="px-1 text-slate-400">
+              <span key={`dots-${idx}`} className="px-1 text-xs text-black dark:text-slate-400">
                 ...
               </span>
             )
@@ -295,9 +336,9 @@ export default function ProductMeasurementsGrid({
           <button
             onClick={() => onPageChange(page + 1)}
             disabled={page === totalPages || totalPages === 0}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 disabled:opacity-30 disabled:hover:text-slate-400"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-black dark:text-slate-400 transition-colors"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={14} />
           </button>
         </div>
       </div>

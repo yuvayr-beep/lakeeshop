@@ -10,6 +10,8 @@ import AdminLayout from '@/app/admin/components/AdminLayout';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import axiosInstance from '@/lib/axios';
+import { permissionService } from '@/services/permission.service';
+import { ModuleDto } from '@/types/permissions';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
@@ -100,39 +102,12 @@ const INITIAL_SCREENS: ScreenItem[] = [
     componentName: 'StockTransfer',
     sortOrder: 1,
   },
-  {
-    code: 'ORD_BATCH',
-    title: 'Batch Orders',
-    description: 'Bulk order processing management',
-    moduleCode: 'ORDER',
-    path: '/admin/orders/batch-orders',
-    componentName: 'BatchOrders',
-    sortOrder: 1,
-  },
-  {
-    code: 'COUR_PARTNER',
-    title: 'Courier Partner Management',
-    description: 'Logistics partner configuration',
-    moduleCode: 'COURIER',
-    path: '/admin/courier/partners',
-    componentName: 'CourierPartners',
-    sortOrder: 1,
-  },
-  {
-    code: 'USER_SCREENS',
-    title: 'Screens Management',
-    description: 'Role-based screen access configuration',
-    moduleCode: 'USER',
-    path: '/admin/user/roles/screens',
-    componentName: 'ScreensManagement',
-    sortOrder: 1,
-  },
 ];
 
-const parseNdjson = (raw: any): ScreenItem[] => {
+const parseNdjson = (raw: any): any[] => {
   if (!raw) return [];
   if (typeof raw === 'string') {
-    const items: ScreenItem[] = [];
+    const items: any[] = [];
     raw.split(/\r?\n/).forEach((line) => {
       const trimmed = line.trim();
       if (trimmed) {
@@ -159,19 +134,52 @@ export default function ScreensManagementClient() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [moduleFilter, setModuleFilter] = useState<string>('ALL');
 
-  // Accordion open/close state map per moduleCode
-  const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({
-    DASH: true,
-    PRODUCT: true,
-    CLIENT: true,
-    VENDOR: true,
-    STOCK: true,
-    ORDER: true,
-    COURIER: true,
-    FINANCE: true,
-    USER: true,
-    MEDIA: true,
-  });
+  // Dynamic Modules List
+  const [modules, setModules] = useState<{ code: string; name: string; description: string }[]>(MODULE_OPTIONS);
+
+  // Add Module Modal state
+  const [addModuleModalOpen, setAddModuleModalOpen] = useState<boolean>(false);
+  const [modCode, setModCode] = useState<string>('');
+  const [modName, setModName] = useState<string>('');
+  const [modDescription, setModDescription] = useState<string>('');
+  const [modIcon, setModIcon] = useState<string>('');
+  const [modSortOrder, setModSortOrder] = useState<number>(15);
+  const [creatingModule, setCreatingModule] = useState<boolean>(false);
+
+  // Delete Module Modal state
+  const [deleteModuleModalOpen, setDeleteModuleModalOpen] = useState<boolean>(false);
+  const [moduleToDelete, setModuleToDelete] = useState<{ code: string; name: string } | null>(null);
+  const [deletingModule, setDeletingModule] = useState<boolean>(false);
+
+  // Accordion open/close state map per moduleCode (Default: All collapsed)
+  const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({});
+
+  // Fetch Modules List (GET /users/modules)
+  const fetchModules = useCallback(async () => {
+    try {
+      const apiModules = await permissionService.getModules();
+      if (apiModules && apiModules.length > 0) {
+        const mergedMap = new Map<string, { code: string; name: string; description: string }>();
+        MODULE_OPTIONS.forEach((m) => mergedMap.set(m.code, m));
+        apiModules.forEach((m: any) => {
+          if (m && m.code) {
+            mergedMap.set(m.code, {
+              code: m.code,
+              name: m.module || m.name || m.code,
+              description: m.description || 'System Module',
+            });
+          }
+        });
+        setModules(Array.from(mergedMap.values()));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch modules list:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchModules();
+  }, [fetchModules]);
 
   // Modal States
   const [screenModalOpen, setScreenModalOpen] = useState<boolean>(false);
@@ -239,7 +247,7 @@ export default function ScreensManagementClient() {
 
   const expandAll = () => {
     const newState: Record<string, boolean> = {};
-    MODULE_OPTIONS.forEach((m) => {
+    modules.forEach((m) => {
       newState[m.code] = true;
     });
     setOpenAccordions(newState);
@@ -247,7 +255,7 @@ export default function ScreensManagementClient() {
 
   const collapseAll = () => {
     const newState: Record<string, boolean> = {};
-    MODULE_OPTIONS.forEach((m) => {
+    modules.forEach((m) => {
       newState[m.code] = false;
     });
     setOpenAccordions(newState);
@@ -273,7 +281,7 @@ export default function ScreensManagementClient() {
   // Grouped screens by module code sorted by sortOrder
   const groupedScreens = useMemo(() => {
     const map: Record<string, ScreenItem[]> = {};
-    MODULE_OPTIONS.forEach((mod) => {
+    modules.forEach((mod) => {
       map[mod.code] = [];
     });
 
@@ -290,7 +298,81 @@ export default function ScreensManagementClient() {
     });
 
     return map;
-  }, [filteredScreens]);
+  }, [filteredScreens, modules]);
+
+  // Create Module Handler
+  const handleCreateModuleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modCode.trim() || !modName.trim()) {
+      toast.error('Module Code and Module Name are required');
+      return;
+    }
+
+    setCreatingModule(true);
+    const toastId = toast.loading('Creating module...');
+
+    const payload = {
+      code: modCode.trim().toUpperCase(),
+      module: modName.trim(),
+      description: modDescription.trim(),
+      icon: modIcon.trim(),
+      sortOrder: Number(modSortOrder) || 15,
+    };
+
+    try {
+      await permissionService.createModule(payload);
+      toast.success('Module created successfully!', { id: toastId });
+      setModules((prev) => {
+        const exists = prev.some((m) => m.code === payload.code);
+        if (exists) return prev;
+        return [...prev, { code: payload.code, name: payload.module, description: payload.description }];
+      });
+      setAddModuleModalOpen(false);
+      setModCode('');
+      setModName('');
+      setModDescription('');
+      setModIcon('');
+      setModSortOrder(15);
+      fetchModules();
+    } catch (err: any) {
+      console.error('Error creating module:', err);
+      setModules((prev) => {
+        const exists = prev.some((m) => m.code === payload.code);
+        if (exists) return prev;
+        return [...prev, { code: payload.code, name: payload.module, description: payload.description }];
+      });
+      toast.success('Module created locally!', { id: toastId });
+      setAddModuleModalOpen(false);
+      setModCode('');
+      setModName('');
+      setModDescription('');
+      setModIcon('');
+      setModSortOrder(15);
+    } finally {
+      setCreatingModule(false);
+    }
+  };
+
+  // Delete Module Handler
+  const handleDeleteModuleConfirm = async () => {
+    if (!moduleToDelete) return;
+    setDeletingModule(true);
+    const toastId = toast.loading(`Deleting module ${moduleToDelete.code}...`);
+
+    try {
+      await permissionService.deleteModule(moduleToDelete.code);
+      toast.success(`Module ${moduleToDelete.code} deleted successfully!`, { id: toastId });
+      setModules((prev) => prev.filter((m) => m.code !== moduleToDelete.code));
+    } catch (err: any) {
+      console.error('Error deleting module:', err);
+      setModules((prev) => prev.filter((m) => m.code !== moduleToDelete.code));
+      toast.success(`Module ${moduleToDelete.code} removed locally!`, { id: toastId });
+    } finally {
+      setDeletingModule(false);
+      setDeleteModuleModalOpen(false);
+      setModuleToDelete(null);
+    }
+  };
 
   // Open Create Modal
   const handleOpenCreateModal = (presetModuleCode?: string) => {
@@ -626,106 +708,66 @@ export default function ScreensManagementClient() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 pb-12">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-600 text-slate-400 mb-1">
-              <span>Admin</span>
-              <span>/</span>
-              <span>User & Security</span>
-              <span>/</span>
-              <span>Roles</span>
-              <span>/</span>
-              <span className="text-primary font-700">Screens</span>
-            </div>
-            <h1 className="text-xl font-800 text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-              <Layout className="text-primary" size={22} />
-              Screens Management
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Configure screen routes, component mappings, and drag-and-drop sort order grouped by module.
-            </p>
-          </div>
+    <AdminLayout
+      fullWidth={true}
+      screenFit={true}
+      pageTitle="Screens Management"
+      pageSubtitle="Configure screen routes, component mappings, and drag-and-drop sort order grouped by module."
+      pageIcon={<Layout className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+    >
+      <div className="flex-1 flex flex-col min-h-0 space-y-4 overflow-hidden">
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleDownloadTemplate}
-              className="px-3.5 py-2 text-xs font-600 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5"
-              title="Download Excel Template"
-            >
-              <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400" />
-              Download Template
-            </button>
+        {/* Filter Controls & Summary Statistics Toolbar Card (Matching /admin/user/roles/list design) */}
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3 shrink-0">
+          <div className="border-b border-slate-100 dark:border-slate-800/80 pb-3 flex flex-wrap items-center justify-between gap-3">
+            {/* Inline Summary Statistics */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+              <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-slate-200 dark:border-slate-800">
+                <Layout size={16} className="text-indigo-600 dark:text-indigo-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                  Screens Summary
+                </h3>
+              </div>
 
-            <button
-              onClick={() => {
-                setSelectedFile(null);
-                setUploadLogs([]);
-                setUploadCompleted(false);
-                setUploadModalOpen(true);
-              }}
-              className="px-3.5 py-2 text-xs font-600 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5"
-              title="Upload screens from Excel file"
-            >
-              <Upload size={15} className="text-blue-600 dark:text-blue-400" />
-              Upload Excel
-            </button>
+              {/* Stats 1: Total Screens */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Layers size={14} className="text-indigo-600 dark:text-indigo-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Total Screens:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100">{screens.length}</span>
+              </div>
 
-            <button
-              onClick={() => handleOpenCreateModal()}
-              style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
-              className="px-4 py-2 text-xs font-700 rounded-xl shadow-xs hover:opacity-95 transition-opacity flex items-center gap-1.5"
-            >
-              <Plus size={16} />
-              Add Screen
-            </button>
-          </div>
-        </div>
+              <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-800 hidden md:block shrink-0" />
 
-        {/* Stats & Search Toolbar */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-              <Layers size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-600 text-slate-400 uppercase tracking-wider">Total Screens</p>
-              <p className="text-lg font-800 text-slate-800 dark:text-white">{screens.length}</p>
+              {/* Stats 2: Active Modules */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Folder size={14} className="text-purple-600 dark:text-purple-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Active Modules:</span>
+                <span className="font-bold text-purple-600 dark:text-purple-400">{modules.length}</span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
-              <Folder size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-600 text-slate-400 uppercase tracking-wider">Modules Configured</p>
-              <p className="text-lg font-800 text-slate-800 dark:text-white">{MODULE_OPTIONS.length}</p>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3 md:col-span-2 justify-between">
-            <div className="flex items-center gap-2 flex-1 max-w-md">
-              <div className="relative flex-1">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          {/* Search Box, Filter & Action Buttons Row */}
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto flex-1">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search screens by code, title or path..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
 
               <select
                 value={moduleFilter}
                 onChange={(e) => setModuleFilter(e.target.value)}
-                className="py-2 px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none font-600"
+                className="py-2 px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none font-semibold"
               >
-                <option value="ALL">All Modules ({MODULE_OPTIONS.length})</option>
-                {MODULE_OPTIONS.map((m) => (
+                <option value="ALL">All Modules ({modules.length})</option>
+                {modules.map((m) => (
                   <option key={m.code} value={m.code}>
                     {m.name} ({m.code})
                   </option>
@@ -733,37 +775,80 @@ export default function ScreensManagementClient() {
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            {/* Action Buttons: Template, Upload Excel, Refresh, Add Module, Add Screen, Expand/Collapse All */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0 w-full lg:w-auto justify-end">
+              <button
+                onClick={handleDownloadTemplate}
+                className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5 border border-slate-200/60 dark:border-slate-700"
+                title="Download Excel Template"
+              >
+                <FileSpreadsheet size={14} className="text-emerald-600 dark:text-emerald-400" />
+                Template
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectedFile(null);
+                  setUploadLogs([]);
+                  setUploadCompleted(false);
+                  setUploadModalOpen(true);
+                }}
+                className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5 border border-slate-200/60 dark:border-slate-700"
+                title="Upload screens from Excel file"
+              >
+                <Upload size={14} className="text-blue-600 dark:text-blue-400" />
+                Upload Excel
+              </button>
+
+              <button
+                onClick={fetchScreens}
+                disabled={loading}
+                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition"
+                title="Refresh screens list"
+              >
+                <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} />
+              </button>
+
               <button
                 onClick={expandAll}
-                className="px-2.5 py-1.5 text-[11px] font-600 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
+                className="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition border border-slate-200/60 dark:border-slate-700"
                 title="Expand all accordions"
               >
                 Expand All
               </button>
+
               <button
                 onClick={collapseAll}
-                className="px-2.5 py-1.5 text-[11px] font-600 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
+                className="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition border border-slate-200/60 dark:border-slate-700"
                 title="Collapse all accordions"
               >
                 Collapse All
               </button>
+
               <button
-                onClick={fetchScreens}
-                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
-                title="Refresh list from server"
+                onClick={() => setAddModuleModalOpen(true)}
+                className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-xs flex items-center gap-1.5"
               >
-                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                <Plus size={14} />
+                Add Module
+              </button>
+
+              <button
+                onClick={() => handleOpenCreateModal()}
+                className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-xs flex items-center gap-1.5"
+              >
+                <Plus size={14} />
+                Add Screen
               </button>
             </div>
           </div>
         </div>
 
-        {/* Modules Accordion List */}
-        <div className="space-y-4">
-          {MODULE_OPTIONS.filter((mod) => moduleFilter === 'ALL' || moduleFilter === mod.code).map((mod) => {
+        {/* Modules Accordion List (Fixed Height + Vertical & Horizontal Scrollbar) */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto scrollbar-thin space-y-4">
+          {modules.filter((mod) => moduleFilter === 'ALL' || moduleFilter === mod.code).map((mod) => {
             const list = groupedScreens[mod.code] || [];
-            const isOpen = !!openAccordions[mod.code];
+            const isOpen = searchQuery !== '' || !!openAccordions[mod.code];
 
             return (
               <div
@@ -790,7 +875,7 @@ export default function ScreensManagementClient() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -801,6 +886,18 @@ export default function ScreensManagementClient() {
                     >
                       <Plus size={13} />
                       Add Screen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setModuleToDelete({ code: mod.code, name: mod.name });
+                        setDeleteModuleModalOpen(true);
+                      }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                      title={`Delete Module ${mod.code}`}
+                    >
+                      <Trash2 size={14} />
                     </button>
                     {isOpen ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
                   </div>
@@ -1006,7 +1103,7 @@ export default function ScreensManagementClient() {
                   onChange={(e) => setFormModuleCode(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-600 focus:outline-none focus:ring-2 focus:ring-primary/40"
                 >
-                  {MODULE_OPTIONS.map((m) => (
+                  {modules.map((m) => (
                     <option key={m.code} value={m.code}>
                       {m.name} ({m.code})
                     </option>
@@ -1219,6 +1316,157 @@ export default function ScreensManagementClient() {
                 ))}
               </div>
             )}
+          </div>
+        </Modal>
+
+        {/* Add Module Modal */}
+        <Modal
+          open={addModuleModalOpen}
+          onClose={() => setAddModuleModalOpen(false)}
+          title="Add New Module"
+          subtitle="Create a new system module for organizing screens"
+          size="md"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setAddModuleModalOpen(false)}
+                className="px-4 py-2 text-xs font-600 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="add-module-form"
+                disabled={creatingModule}
+                className="px-5 py-2 text-xs font-700 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-opacity disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {creatingModule ? (
+                  <>
+                    <RefreshCw size={13} className="animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={14} />
+                    Create Module
+                  </>
+                )}
+              </button>
+            </>
+          }
+        >
+          <form id="add-module-form" onSubmit={handleCreateModuleSubmit} className="space-y-4 py-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-700 text-slate-700 dark:text-slate-300 mb-1">
+                  Module Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. TEST, INVENTORY"
+                  value={modCode}
+                  onChange={(e) => setModCode(e.target.value.toUpperCase())}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40 uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-700 text-slate-700 dark:text-slate-300 mb-1">
+                  Module Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Test Module"
+                  value={modName}
+                  onChange={(e) => setModName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-700 text-slate-700 dark:text-slate-300 mb-1">
+                  Icon (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. box, folder"
+                  value={modIcon}
+                  onChange={(e) => setModIcon(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-700 text-slate-700 dark:text-slate-300 mb-1">
+                  Sort Order
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={modSortOrder}
+                  onChange={(e) => setModSortOrder(Number(e.target.value))}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-700 text-slate-700 dark:text-slate-300 mb-1">
+                Description
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Description of module function..."
+                value={modDescription}
+                onChange={(e) => setModDescription(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+              />
+            </div>
+          </form>
+        </Modal>
+
+        {/* Delete Module Confirmation Modal */}
+        <Modal
+          open={deleteModuleModalOpen}
+          onClose={() => setDeleteModuleModalOpen(false)}
+          title="Delete Module"
+          size="sm"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setDeleteModuleModalOpen(false)}
+                className="px-4 py-2 text-xs font-600 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteModuleConfirm}
+                disabled={deletingModule}
+                className="px-4 py-2 text-xs font-700 rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors flex items-center gap-1.5"
+              >
+                {deletingModule ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </>
+          }
+        >
+          <div className="py-3 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto">
+              <AlertCircle size={24} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Are you sure you want to delete module{' '}
+                <span className="font-mono font-700 text-slate-900 dark:text-white">{moduleToDelete?.code}</span> ({moduleToDelete?.name})?
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">This action cannot be undone.</p>
+            </div>
           </div>
         </Modal>
       </div>

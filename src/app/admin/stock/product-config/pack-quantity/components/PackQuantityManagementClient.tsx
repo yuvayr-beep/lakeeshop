@@ -134,71 +134,101 @@ const parseNdjson = (raw: string): any[] => {
   }
 };
 
-const fetchProductData = async (search: string, filters: PackQuantityFiltersState): Promise<ApiProduct[]> => {
+interface FetchProductResult {
+  products: ApiProduct[];
+  totalCount: number;
+}
+
+const fetchProductData = async (
+  search: string,
+  filters: PackQuantityFiltersState,
+  pageIndex: number = 0,
+  pageSize: number = 20
+): Promise<FetchProductResult> => {
   const q = search.trim();
+  let responseData = '';
+  let totalHeaderCount: number | undefined = undefined;
+
+  const hasAdvanceFilter = Object.values(filters || {}).some(
+    (val) => val !== undefined && val !== null && String(val).trim() !== ''
+  );
+
   if (!q) {
     const params = new URLSearchParams();
+    params.append('page', String(pageIndex));
+    params.append('size', String(pageSize));
+
     if (filters.categoryCode) params.append('sku', filters.categoryCode);
     if (filters.brand) params.append('brand', filters.brand);
     if (filters.productType) params.append('productType', filters.productType);
 
-    const queryString = params.toString();
-    const url = `/prod/products?${queryString ? `${queryString}&` : ''}_t=${Date.now()}`;
+    const url = `/prod/products?${params.toString()}&_t=${Date.now()}`;
 
     const response = await axiosInstance.get<string>(url, {
       headers: { Accept: 'application/x-ndjson', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
       responseType: 'text',
       transformResponse: [(data) => data],
     });
-    return parseNdjson(response.data) as ApiProduct[];
-  }
 
-  let skuParts: string[] = [];
-  let isBulkSkuSearch = false;
-
-  if (q.includes(',') || q.includes(';') || q.includes('\n') || q.includes('\r')) {
-    skuParts = q.split(/[,\n\r;]+/).map(p => p.trim()).filter(Boolean);
-    isBulkSkuSearch = skuParts.length > 0;
+    const headerCount = response.headers['x-total-count'];
+    if (headerCount) totalHeaderCount = parseInt(headerCount, 10);
+    responseData = response.data;
   } else {
-    const spaceParts = q.split(/\s+/).map(p => p.trim()).filter(Boolean);
-    const isAllSkus = spaceParts.length > 1 && spaceParts.every(p => /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(p));
-    if (isAllSkus) {
-      skuParts = spaceParts;
-      isBulkSkuSearch = true;
+    let skuParts: string[] = [];
+    let isBulkSkuSearch = false;
+
+    if (q.includes(',') || q.includes(';') || q.includes('\n') || q.includes('\r')) {
+      skuParts = q.split(/[,\n\r;]+/).map((p) => p.trim()).filter(Boolean);
+      isBulkSkuSearch = skuParts.length > 0;
+    } else {
+      const spaceParts = q.split(/\s+/).map((p) => p.trim()).filter(Boolean);
+      const isAllSkus = spaceParts.length > 1 && spaceParts.every((p) => /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(p));
+      if (isAllSkus) {
+        skuParts = spaceParts;
+        isBulkSkuSearch = true;
+      }
+    }
+
+    if (isBulkSkuSearch) {
+      const response = await axiosInstance.post<string>(
+        `/prod/products/by-skus?page=${pageIndex}&size=${pageSize}&_t=${Date.now()}`,
+        { skus: skuParts },
+        {
+          headers: { Accept: 'application/x-ndjson', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+          responseType: 'text',
+          transformResponse: [(data) => data],
+        }
+      );
+      const headerCount = response.headers['x-total-count'];
+      if (headerCount) totalHeaderCount = parseInt(headerCount, 10);
+      responseData = response.data;
+    } else {
+      const response = await axiosInstance.get<string>(
+        `/prod/products/search?q=${encodeURIComponent(q)}&page=${pageIndex}&size=${pageSize}&_t=${Date.now()}`,
+        {
+          headers: { Accept: 'application/x-ndjson', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+          responseType: 'text',
+          transformResponse: [(data) => data],
+        }
+      );
+      const headerCount = response.headers['x-total-count'];
+      if (headerCount) totalHeaderCount = parseInt(headerCount, 10);
+      responseData = response.data;
     }
   }
 
-  let responseData = '';
-  if (isBulkSkuSearch) {
-    const response = await axiosInstance.post<string>(
-      `/prod/products/by-skus?_t=${Date.now()}`,
-      { skus: skuParts },
-      {
-        headers: { Accept: 'application/x-ndjson', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
-        responseType: 'text',
-        transformResponse: [(data) => data],
-      }
-    );
-    responseData = response.data;
-  } else {
-    const response = await axiosInstance.get<string>(
-      `/prod/products/search?q=${encodeURIComponent(q)}&_t=${Date.now()}`,
-      {
-        headers: { Accept: 'application/x-ndjson', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
-        responseType: 'text',
-        transformResponse: [(data) => data],
-      }
-    );
-    responseData = response.data;
-  }
-
   const list = parseNdjson(responseData) as ApiProduct[];
-  return list.filter((p) => {
+  const filtered = list.filter((p) => {
     if (filters.categoryCode && p.categoryPath && !p.categoryPath.toLowerCase().includes(filters.categoryCode.toLowerCase())) return false;
     if (filters.brand && p.brandName !== filters.brand) return false;
     if (filters.productType && p.productTypeName !== filters.productType) return false;
     return true;
   });
+
+  return {
+    products: filtered,
+    totalCount: totalHeaderCount !== undefined ? totalHeaderCount : filtered.length,
+  };
 };
 
 const initialFilters: PackQuantityFiltersState = {
@@ -210,6 +240,7 @@ const initialFilters: PackQuantityFiltersState = {
 export default function PackQuantityManagementClient() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -286,9 +317,10 @@ export default function PackQuantityManagementClient() {
     setLoading(true);
     setError(null);
     try {
-      const apiProducts = await fetchProductData(search, filters);
-      const mapped = apiProducts.map(toProduct);
+      const result = await fetchProductData(search, filters, page - 1, perPage);
+      const mapped = result.products.map(toProduct);
       setProducts(mapped);
+      setTotalCount(result.totalCount);
     } catch (err: any) {
       console.error('Error fetching product list:', err);
       setError('Failed to load products. Please check server or retry.');
@@ -296,7 +328,7 @@ export default function PackQuantityManagementClient() {
     } finally {
       setLoading(false);
     }
-  }, [search, filters]);
+  }, [search, filters, page, perPage]);
 
   useEffect(() => {
     loadProducts();
@@ -339,13 +371,8 @@ export default function PackQuantityManagementClient() {
     });
   }, [products, sortCol, sortDir]);
 
-  const total = sortedProducts.length;
+  const total = totalCount || sortedProducts.length;
   const totalPages = Math.ceil(total / perPage) || 1;
-
-  const paginatedProducts = useMemo(() => {
-    const start = (page - 1) * perPage;
-    return sortedProducts.slice(start, start + perPage);
-  }, [sortedProducts, page, perPage]);
 
   // Edit popup trigger
   const handleOpenEditModal = (product: Product) => {
@@ -369,43 +396,98 @@ export default function PackQuantityManagementClient() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Product Pack Quantity</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-              Product Configuration
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage pack quantities and product packaging configurations across all products.
-          </p>
+    <div className="flex-1 flex flex-col min-h-0 space-y-3">
+      {/* Control Bar (Single Line: Search, Filters, View Switch, Export, Import, Refresh) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col xl:flex-row items-center justify-between gap-3 shrink-0">
+        {/* Search Input */}
+        <div className="relative w-full xl:w-80">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+          <input
+            type="text"
+            placeholder="Search by SKU, Product Name, or comma-separated SKUs..."
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full h-9 pl-9 pr-8 text-xs bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 dark:text-white font-medium transition-all"
+          />
+          {search && (
+            <button
+              onClick={() => handleSearchChange('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              Clear
+            </button>
+          )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Action Controls in Single Line */}
+        <div className="flex items-center gap-2 flex-wrap justify-end w-full xl:w-auto">
+          {/* Filters Toggle Button */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition-all ${
+              activeFilterCount > 0
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Filter size={14} />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
+          {/* View Mode Toggle (List or Grid) */}
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
+              title="Table View"
+            >
+              <List size={15} />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid size={15} />
+            </button>
+          </div>
+
+          {/* Export Button */}
           <button
             onClick={() => setExportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-xs transition-all"
           >
             <Download size={14} />
             Export
           </button>
 
+          {/* Import Button */}
           <button
             onClick={() => setImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-xs transition-all"
           >
             <Upload size={14} />
             Import
           </button>
 
+          {/* Refresh Button */}
           <button
             onClick={loadProducts}
             disabled={loading}
-            className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-sm transition-all disabled:opacity-50"
+            className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-xs transition-all disabled:opacity-50"
             title="Refresh Data"
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
@@ -413,165 +495,102 @@ export default function PackQuantityManagementClient() {
         </div>
       </div>
 
-      {/* Control Bar (Search, Filter Toggle, View Switch) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl p-4 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          {/* Search Input */}
-          <div className="relative flex-1 w-full">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by SKU, Product Name, or comma-separated SKUs..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
-            />
-            {search && (
-              <button
-                onClick={() => handleSearchChange('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            {/* Filter Toggle Button */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 px-3.5 h-10 text-xs font-semibold rounded-xl border transition-all ${
-                activeFilterCount > 0
-                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
-                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Filter size={14} />
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60">
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                }`}
-                title="Table View"
-              >
-                <List size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  viewMode === 'grid'
-                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                }`}
-                title="Grid View"
-              >
-                <LayoutGrid size={16} />
-              </button>
-            </div>
-          </div>
+      {/* Collapsible Filter Panel */}
+      {showFilters && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 shadow-sm shrink-0">
+          <PackQuantityFilters
+            filters={filters}
+            onChange={(f) => {
+              setFilters(f);
+              setPage(1);
+            }}
+            onClear={handleResetFilters}
+            flatCategories={flatCategories}
+            treeCategories={treeCategories}
+            brands={brands}
+            productTypes={productTypes}
+          />
         </div>
+      )}
 
-        {/* Collapsible Filter Panel */}
-        {showFilters && (
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
-            <PackQuantityFilters
-              filters={filters}
-              onChange={(f) => {
-                setFilters(f);
+      {/* Main Content Area (Fixed Container & Scrollable Body) */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {loading ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-16 text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm">
+            <RefreshCw size={32} className="animate-spin text-blue-600 mb-3" />
+            <p className="text-xs font-semibold">Loading products...</p>
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-16 text-slate-500 dark:text-slate-400 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm">
+            <AlertCircle size={32} className="text-red-500 mb-3" />
+            <p className="text-xs font-semibold">{error}</p>
+            <button
+              onClick={loadProducts}
+              className="mt-4 px-4 py-2 text-xs font-semibold bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
+            >
+              Retry Loading
+            </button>
+          </div>
+        ) : sortedProducts.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm">
+            <EmptyState
+              icon={<Package size={24} className="text-slate-400" />}
+              title="No products found"
+              description="No products matched your search or filters. Try resetting search parameters."
+              action={
+                <button
+                  onClick={handleResetFilters}
+                  className="px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              }
+            />
+          </div>
+        ) : viewMode === 'table' ? (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <PackQuantityTable
+              products={sortedProducts}
+              allProducts={products}
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+              sortCol={sortCol}
+              sortDir={sortDir}
+              onSort={handleSort}
+              onEdit={handleOpenEditModal}
+              onView={handleViewProduct}
+              page={page}
+              perPage={perPage}
+              total={total}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPerPageChange={(n) => {
+                setPerPage(n);
                 setPage(1);
               }}
-              onClear={handleResetFilters}
-              flatCategories={flatCategories}
-              treeCategories={treeCategories}
-              brands={brands}
-              productTypes={productTypes}
+            />
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <PackQuantityGrid
+              products={sortedProducts}
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+              onEdit={handleOpenEditModal}
+              onView={handleViewProduct}
+              page={page}
+              perPage={perPage}
+              total={total}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPerPageChange={(n) => {
+                setPerPage(n);
+                setPage(1);
+              }}
             />
           </div>
         )}
       </div>
-
-      {/* Main Content Area */}
-      {loading ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl p-12 text-center flex flex-col items-center justify-center gap-3">
-          <RefreshCw size={28} className="animate-spin text-blue-600" />
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Loading products...</p>
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl p-8 text-center text-red-600 dark:text-red-400 flex flex-col items-center gap-3">
-          <AlertCircle size={32} />
-          <p className="text-sm font-semibold">{error}</p>
-          <button
-            onClick={loadProducts}
-            className="px-4 py-2 text-xs font-semibold bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
-          >
-            Retry Loading
-          </button>
-        </div>
-      ) : paginatedProducts.length === 0 ? (
-        <EmptyState
-          icon={<Package size={24} className="text-slate-400" />}
-          title="No products found"
-          description="No products matched your search or filters. Try resetting search parameters."
-          action={
-            <button
-              onClick={handleResetFilters}
-              className="px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              Clear Filters
-            </button>
-          }
-        />
-      ) : viewMode === 'table' ? (
-        <PackQuantityTable
-          products={paginatedProducts}
-          allProducts={products}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          sortCol={sortCol}
-          sortDir={sortDir}
-          onSort={handleSort}
-          onEdit={handleOpenEditModal}
-          onView={handleViewProduct}
-          page={page}
-          perPage={perPage}
-          total={total}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          onPerPageChange={(n) => {
-            setPerPage(n);
-            setPage(1);
-          }}
-        />
-      ) : (
-        <PackQuantityGrid
-          products={paginatedProducts}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          onEdit={handleOpenEditModal}
-          onView={handleViewProduct}
-          page={page}
-          perPage={perPage}
-          total={total}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          onPerPageChange={(n) => {
-            setPerPage(n);
-            setPage(1);
-          }}
-        />
-      )}
 
       {/* Edit Popup Modal */}
       <PackQuantityEditModal

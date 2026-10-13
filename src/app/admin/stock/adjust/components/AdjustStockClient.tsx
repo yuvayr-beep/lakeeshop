@@ -266,18 +266,7 @@ export default function AdjustStockClient() {
   }
 
   return (
-    <div className="space-y-6 flex-1 p-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Sliders size={22} className="text-[var(--primary)]" />
-          Adjust Stock
-        </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Adjust the status of specific inventory units (using barcode scan) or available quantities of a product on a FIFO basis.
-        </p>
-      </div>
-
+    <div className="space-y-6 w-full">
       {/* Mode Switcher */}
       <div className="flex justify-start">
         <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl flex gap-1 border border-slate-200 dark:border-slate-750">

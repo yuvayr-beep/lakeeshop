@@ -152,6 +152,8 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   const [editLegalName, setEditLegalName] = useState('');
   const [editLogoUrl, setEditLogoUrl] = useState('');
   const [editRemarks, setEditRemarks] = useState('');
+  const [editFulfillmentMode, setEditFulfillmentMode] = useState('STANDARD_COURIER');
+  const [failedLogos, setFailedLogos] = useState<Record<number, boolean>>({});
 
   // Selected Client edit business unit states
   const [buId, setBuId] = useState<number | undefined>(undefined);
@@ -163,6 +165,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
   const [buHasOwnProductCode, setBuHasOwnProductCode] = useState(true);
   const [buHasMultiProductOrder, setBuHasMultiProductOrder] = useState(true);
   const [buHasProgram, setBuHasProgram] = useState(true);
+  const [buBillingType, setBuBillingType] = useState('B2B');
   const [isLegalNameSynced, setIsLegalNameSynced] = useState(true);
   const [savingBU, setSavingBU] = useState(false);
   const [buSubTab, setBuSubTab] = useState('profile');
@@ -416,7 +419,8 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       deliverWithinDays: buDeliverWithinDays === '' ? 7 : Number(buDeliverWithinDays),
       hasOwnProductCode: !!buHasOwnProductCode,
       hasMultiProductOrder: !!buHasMultiProductOrder,
-      hasProgram: !!buHasProgram
+      hasProgram: !!buHasProgram,
+      billingType: buBillingType || 'B2B'
     };
 
     console.log(buId ? `[PUT /client/business-unit/${buId}] Payload:` : '[POST /client/business-unit] Payload:', buPayload);
@@ -2524,6 +2528,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
               setBuHasOwnProductCode(buData.hasOwnProductCode ?? true);
               setBuHasMultiProductOrder(buData.hasMultiProductOrder ?? true);
               setBuHasProgram(buData.hasProgram ?? true);
+              setBuBillingType(buData.billingType || 'B2B');
               setIsLegalNameSynced(false);
             } else {
               setBuOriginalData(null);
@@ -2536,6 +2541,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
               setBuHasOwnProductCode(true);
               setBuHasMultiProductOrder(true);
               setBuHasProgram(true);
+              setBuBillingType('B2B');
               setIsLegalNameSynced(true);
             }
           }
@@ -2555,6 +2561,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
             setBuHasOwnProductCode(buData.hasOwnProductCode ?? true);
             setBuHasMultiProductOrder(buData.hasMultiProductOrder ?? true);
             setBuHasProgram(buData.hasProgram ?? true);
+            setBuBillingType(buData.billingType || 'B2B');
             setIsLegalNameSynced(false);
           } else {
             setBuOriginalData(null);
@@ -2567,6 +2574,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
             setBuHasOwnProductCode(true);
             setBuHasMultiProductOrder(true);
             setBuHasProgram(true);
+            setBuBillingType('B2B');
             setIsLegalNameSynced(true);
           }
         }
@@ -2694,6 +2702,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       setEditLegalName(selectedClient.legalName || '');
       setEditLogoUrl(selectedClient.logoUrl || '');
       setEditRemarks(selectedClient.remarks || '');
+      setEditFulfillmentMode(selectedClient.fulfillmentMode || 'STANDARD_COURIER');
     }
   }, [selectedClient, tab]);
 
@@ -2743,6 +2752,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
       legalName: editLegalName.trim(),
       logoUrl: editLogoUrl.trim() || null,
       remarks: editRemarks.trim() || null,
+      fulfillmentMode: editFulfillmentMode || 'STANDARD_COURIER',
       businessUnits: [
         {
           ...(buId ? { id: buId } : {}),
@@ -2753,7 +2763,8 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
           deliverWithinDays: buDeliverWithinDays === '' ? 7 : Number(buDeliverWithinDays),
           hasOwnProductCode: !!buHasOwnProductCode,
           hasMultiProductOrder: !!buHasMultiProductOrder,
-          hasProgram: !!buHasProgram
+          hasProgram: !!buHasProgram,
+          billingType: buBillingType || 'B2B'
         }
       ]
     };
@@ -2971,9 +2982,9 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(c => 
-        c.clientName.toLowerCase().includes(q) || 
-        c.clientCode.toLowerCase().includes(q) || 
-        c.legalName.toLowerCase().includes(q)
+        (c.clientName || '').toLowerCase().includes(q) || 
+        (c.clientCode || '').toLowerCase().includes(q) || 
+        (c.legalName || '').toLowerCase().includes(q)
       );
     }
     result.sort((a, b) => {
@@ -3134,7 +3145,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                     Client Code <span className="text-red-500">*</span>
@@ -3173,9 +3184,23 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Fulfillment Mode</label>
+                  <select
+                    value={editFulfillmentMode}
+                    onChange={(e) => setEditFulfillmentMode(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors cursor-pointer"
+                  >
+                    <option value="STANDARD_COURIER">STANDARD_COURIER</option>
+                    <option value="EXTERNAL_AWB_DIRECT">EXTERNAL_AWB_DIRECT</option>
+                    <option value="BULK_DELIVERY_CHALLAN">BULK_DELIVERY_CHALLAN</option>
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+
                 <div className="space-y-1 md:col-span-2">
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Logo URL</label>
                   <div className="flex items-center gap-3">
@@ -3477,7 +3502,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Dispatch Days</label>
                       <input 
@@ -3496,6 +3521,19 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         onChange={e => setBuDeliverWithinDays(e.target.value === '' ? '' : Number(e.target.value))}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                       />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Billing Type</label>
+                      <select
+                        value={buBillingType}
+                        onChange={(e) => setBuBillingType(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors cursor-pointer"
+                      >
+                        <option value="">Select</option>
+                        <option value="B2B">B2B</option>
+                        <option value="B2C">B2C</option>
+                      </select>
                     </div>
                   </div>
 
@@ -3603,8 +3641,8 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                             1. Program Identifiers & Details
                           </h5>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-1">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-12 gap-4">
+                            <div className="space-y-1 xl:col-span-2">
                               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                                 Program Code <span className="text-red-500">*</span>
                               </label>
@@ -3618,7 +3656,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                               />
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 xl:col-span-2">
                               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                                 Program Name <span className="text-red-500">*</span>
                               </label>
@@ -3632,29 +3670,25 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                               />
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 xl:col-span-2">
                               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                Program Label <span className="text-red-500">*</span>
+                                Program Label
                               </label>
                               <input 
                                 type="text" 
-                                required
                                 value={progLabel} 
                                 onChange={e => setProgLabel(e.target.value)}
                                 placeholder="e.g. Test Program Label"
                                 className="w-full h-10 px-3.5 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
                               />
                             </div>
-                          </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-1">
+                            <div className="space-y-1 xl:col-span-3">
                               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                Powered By Description <span className="text-red-500">*</span>
+                                Powered By Description
                               </label>
                               <input 
                                 type="text" 
-                                required
                                 value={progPoweredBy} 
                                 onChange={e => setProgPoweredBy(e.target.value)}
                                 placeholder="e.g. Test Power"
@@ -3662,28 +3696,26 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                               />
                             </div>
 
-                            <div className="space-y-1">
-                              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                TAT Hours <span className="text-red-500">*</span>
+                            <div className="space-y-1 xl:col-span-1">
+                              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                TAT Hours
                               </label>
                               <input 
                                 type="number" 
-                                required
                                 value={progTatHours} 
                                 onChange={e => setProgTatHours(e.target.value === '' ? '' : Number(e.target.value))}
                                 placeholder="e.g. 10"
                                 min={0}
-                                className="w-full h-10 px-3.5 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
+                                className="w-full h-10 px-2.5 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
                               />
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 xl:col-span-2">
                               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                Print Group <span className="text-red-500">*</span>
+                                Print Group
                               </label>
                               <input 
                                 type="text" 
-                                required
                                 value={progPrintGroup} 
                                 onChange={e => setProgPrintGroup(e.target.value)}
                                 placeholder="e.g. TEST001"
@@ -3693,91 +3725,95 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                           </div>
                         </div>
 
-                        {/* Section 2: Order Processing & Dispatch Controls (Toggles) */}
+                        {/* Section 2: Order Processing & Courier Controls (Toggles) */}
                         <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl p-5 border border-slate-200/70 dark:border-slate-800 space-y-4">
                           <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 pb-1 border-b border-slate-200/60 dark:border-slate-800">
                             2. Order Processing & Courier Controls
                           </h5>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                            
-                            {/* Toggle 1 */}
-                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                                  Allow RPI
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Return pickup instruction</p>
+                          <div className="space-y-3.5">
+                            {/* Row 1: Allow RPI, Priority Procurement, Special Packing, Separate Invoice Print */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                              {/* Toggle 1 */}
+                              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                    Allow RPI
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 mt-0.5">Return pickup instruction</p>
+                                </div>
+                                <YesNoToggle value={progAllowRpi} onChange={setProgAllowRpi} />
                               </div>
-                              <YesNoToggle value={progAllowRpi} onChange={setProgAllowRpi} />
+
+                              {/* Toggle 2 */}
+                              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                    Priority Procurement
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 mt-0.5">High priority stock allocation</p>
+                                </div>
+                                <YesNoToggle value={progPriorityProc} onChange={setProgPriorityProc} />
+                              </div>
+
+                              {/* Toggle 3 */}
+                              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                    Special Packing
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 mt-0.5">Custom unboxing / gift wrap</p>
+                                </div>
+                                <YesNoToggle value={progSpecialPack} onChange={setProgSpecialPack} />
+                              </div>
+
+                              {/* Toggle 4 */}
+                              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                    Separate Invoice Print
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 mt-0.5">Individual invoice generation</p>
+                                </div>
+                                <YesNoToggle value={progSepInvPrint} onChange={setProgSepInvPrint} />
+                              </div>
                             </div>
 
-                            {/* Toggle 2 */}
-                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                                  Priority Procurement
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">High priority stock allocation</p>
+                            {/* Row 2: Separate Picklist, Separate Batching, Separate Exclude Courier */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                              {/* Toggle 5 */}
+                              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                    Separate Picklist
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 mt-0.5">Dedicated warehouse pick sheet</p>
+                                </div>
+                                <YesNoToggle value={progSepPicklist} onChange={setProgSepPicklist} />
                               </div>
-                              <YesNoToggle value={progPriorityProc} onChange={setProgPriorityProc} />
-                            </div>
 
-                            {/* Toggle 3 */}
-                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                                  Special Packing
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Custom unboxing / gift wrap</p>
+                              {/* Toggle 6 */}
+                              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                    Separate Batching
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 mt-0.5">Separate order batch run</p>
+                                </div>
+                                <YesNoToggle value={progSepBatching} onChange={setProgSepBatching} />
                               </div>
-                              <YesNoToggle value={progSpecialPack} onChange={setProgSpecialPack} />
-                            </div>
 
-                            {/* Toggle 4 */}
-                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                                  Separate Invoice Print
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Individual invoice generation</p>
+                              {/* Toggle 7 */}
+                              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                    Separate Exclude Courier
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 mt-0.5">Custom courier blocklist</p>
+                                </div>
+                                <YesNoToggle value={progHasSepExcludeCourier} onChange={setProgHasSepExcludeCourier} />
                               </div>
-                              <YesNoToggle value={progSepInvPrint} onChange={setProgSepInvPrint} />
                             </div>
-
-                            {/* Toggle 5 */}
-                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                                  Separate Picklist
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Dedicated warehouse pick sheet</p>
-                              </div>
-                              <YesNoToggle value={progSepPicklist} onChange={setProgSepPicklist} />
-                            </div>
-
-                            {/* Toggle 6 */}
-                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                                  Separate Batching
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Separate order batch run</p>
-                              </div>
-                              <YesNoToggle value={progSepBatching} onChange={setProgSepBatching} />
-                            </div>
-
-                            {/* Toggle 7 */}
-                            <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                                  Separate Exclude Courier
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Custom courier blocklist</p>
-                              </div>
-                              <YesNoToggle value={progHasSepExcludeCourier} onChange={setProgHasSepExcludeCourier} />
-                            </div>
-
                           </div>
                         </div>
 
@@ -4011,7 +4047,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                       </div>
 
                       <form onSubmit={handleSaveGst} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                           <div className="space-y-1">
                             <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                               GSTIN <span className="text-red-500">*</span>
@@ -4762,6 +4798,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                   </div>
 
                   <form onSubmit={handleSaveAddress} className="space-y-4">
+                    {/* Row 1: Address Type *, Is Primary? * */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Address Type Dropdown */}
                       <div className="space-y-1">
@@ -4797,8 +4834,11 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                           <option value="false">No</option>
                         </select>
                       </div>
+                    </div>
 
-                      {/* Address Lines 1-4 */}
+                    {/* Row 2: Address Line 1 *, Address Line 2, Address Line 3 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Address Line 1 */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           Address Line 1 <span className="text-red-500">*</span>
@@ -4813,13 +4853,13 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
+                      {/* Address Line 2 */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                          Address Line 2 <span className="text-red-500">*</span>
+                          Address Line 2
                         </label>
                         <input 
                           type="text" 
-                          required
                           value={addrLine2} 
                           onChange={e => setAddrLine2(e.target.value)}
                           placeholder="e.g. Srinivasan Street"
@@ -4827,27 +4867,30 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
+                      {/* Address Line 3 */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                          Address Line 3 <span className="text-red-500">*</span>
+                          Address Line 3
                         </label>
                         <input 
                           type="text" 
-                          required
                           value={addrLine3} 
                           onChange={e => setAddrLine3(e.target.value)}
                           placeholder="e.g. Mandaveli"
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                         />
                       </div>
+                    </div>
 
+                    {/* Row 3: Address Line 4, City *, State *, Pincode *, Country * */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                      {/* Address Line 4 */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                          Address Line 4 <span className="text-red-500">*</span>
+                          Address Line 4
                         </label>
                         <input 
                           type="text" 
-                          required
                           value={addrLine4} 
                           onChange={e => setAddrLine4(e.target.value)}
                           placeholder="e.g. test"
@@ -4855,7 +4898,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
-                      {/* City & State */}
+                      {/* City */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           City <span className="text-red-500">*</span>
@@ -4870,6 +4913,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
+                      {/* State */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           State <span className="text-red-500">*</span>
@@ -4884,7 +4928,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
-                      {/* Pincode & Country */}
+                      {/* Pincode */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           Pincode <span className="text-red-500">*</span>
@@ -4899,6 +4943,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
+                      {/* Country */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           Country <span className="text-red-500">*</span>
@@ -5063,7 +5108,8 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                   </div>
 
                   <form onSubmit={handleSaveAddress} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Row 1: Address Type *, Label *, Is Primary? * */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                       {/* Address Type Dropdown with Add Plus Button */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -5108,6 +5154,19 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
+                      {/* Is Primary Toggle */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">
+                          Is Primary? <span className="text-red-500">*</span>
+                        </label>
+                        <div className="pt-1">
+                          <YesNoToggle value={addrIsPrimary} onChange={setAddrIsPrimary} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 2: Address Line 1 *, Address Line 2, Address Line 3 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Address Line 1 */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -5126,11 +5185,10 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                       {/* Address Line 2 */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                          Address Line 2 <span className="text-red-500">*</span>
+                          Address Line 2
                         </label>
                         <input 
                           type="text" 
-                          required
                           value={addrLine2} 
                           onChange={e => setAddrLine2(e.target.value)}
                           placeholder="e.g. Street / Locality"
@@ -5141,14 +5199,30 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                       {/* Address Line 3 */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                          Address Line 3 <span className="text-red-500">*</span>
+                          Address Line 3
                         </label>
                         <input 
                           type="text" 
-                          required
                           value={addrLine3} 
                           onChange={e => setAddrLine3(e.target.value)}
                           placeholder="e.g. Landmark / Area"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-805 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 3: Address Line 4, City *, State *, Pincode *, Country * */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                      {/* Address Line 4 */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          Address Line 4
+                        </label>
+                        <input 
+                          type="text" 
+                          value={addrLine4} 
+                          onChange={e => setAddrLine4(e.target.value)}
+                          placeholder="e.g. Extra detail"
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-805 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                         />
                       </div>
@@ -5212,8 +5286,10 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-805 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                         />
                       </div>
+                    </div>
 
-                      {/* GSTIN Field */}
+                    {/* Row 4: GSTIN, State Code, GST Type, Is Default Address */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end pt-2">
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           GSTIN
@@ -5228,7 +5304,6 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
-                      {/* State Code Field */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           State Code
@@ -5243,7 +5318,6 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         />
                       </div>
 
-                      {/* GST Type Field */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           GST Type
@@ -5251,19 +5325,18 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                         <select 
                           value={addrGstType} 
                           onChange={e => setAddrGstType(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors cursor-pointer"
                         >
                           <option value="IGST">IGST (Inter-State)</option>
                           <option value="CGST_SGST">LOCAL (CGST_SGST)</option>
                         </select>
                       </div>
 
-                      {/* isDefault Radio Button Field */}
-                      <div className="space-y-2 md:col-span-2">
+                      <div className="space-y-2">
                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">
                           Is Default Address? <span className="text-red-500">*</span>
                         </label>
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-6 pt-1">
                           <label className="flex items-center gap-2 cursor-pointer select-none">
                             <input 
                               type="radio" 
@@ -5293,7 +5366,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                           <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">
                             Address Status <span className="text-red-500">*</span>
                           </label>
-                          <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-6 pt-1">
                             <label className="flex items-center gap-2 cursor-pointer select-none">
                               <input 
                                 type="radio" 
@@ -5525,45 +5598,75 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
             </div>
 
             {showContactForm ? (
-              <form onSubmit={handleSaveContact} className="p-5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <form onSubmit={handleSaveContact} className="p-5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 gap-3">
                   <h4 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">
                     {editingContactId ? 'Edit Contact Person' : 'Register New Contact'}
                   </h4>
+
+                  {/* Is Primary Contact? * Yes/No straight to Register New Contact heading end */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                      Is Primary Contact? <span className="text-red-500">*</span>
+                    </span>
+                    <div className="flex items-center gap-3 px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <input 
+                          type="radio" 
+                          name="isPrimaryContact"
+                          checked={isPrimaryContact === true}
+                          onChange={() => setIsPrimaryContact(true)}
+                          className="text-blue-600 focus:ring-blue-500 border-slate-300"
+                        />
+                        Yes
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <input 
+                          type="radio" 
+                          name="isPrimaryContact"
+                          checked={isPrimaryContact === false}
+                          onChange={() => setIsPrimaryContact(false)}
+                          className="text-blue-600 focus:ring-blue-500 border-slate-300"
+                        />
+                        No
+                      </label>
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {type === 'client' && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                        Contact Type <span className="text-red-500">*</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <select 
-                          required
-                          value={contactTypeId} 
-                          onChange={e => setContactTypeId(e.target.value === '' ? '' : Number(e.target.value))}
-                          className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                        >
-                          <option value="">Select Contact Type</option>
-                          {contactTypes.map((type) => (
-                            <option key={type.id} value={type.id}>
-                              {type.typeName}
-                            </option>
-                          ))}
-                        </select>
-                        <button 
-                          type="button"
-                          onClick={() => setShowAddContactTypeModal(true)}
-                          className="p-2.5 border border-slate-200 dark:border-slate-800 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all"
-                          title="Create Custom Contact Type"
-                        >
-                          <Plus size={16} />
-                        </button>
-                      </div>
+                {/* Single line form controls for input fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
+                  {/* Contact Type with Add + Button */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                      Contact Type <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <select 
+                        required
+                        value={contactTypeId} 
+                        onChange={e => setContactTypeId(e.target.value === '' ? '' : Number(e.target.value))}
+                        className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      >
+                        <option value="">Select Contact Type</option>
+                        {contactTypes.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.typeName || t.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button 
+                        type="button"
+                        onClick={() => setShowAddContactTypeModal(true)}
+                        className="px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center text-xs font-semibold gap-1 shrink-0"
+                        title="Add Contact Type"
+                      >
+                        <Plus size={16} />
+                      </button>
                     </div>
-                  )}
+                  </div>
 
+                  {/* Contact Name */}
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       Contact Name <span className="text-red-500">*</span>
@@ -5578,6 +5681,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     />
                   </div>
 
+                  {/* Email ID */}
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       Email ID <span className="text-red-500">*</span>
@@ -5592,6 +5696,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     />
                   </div>
 
+                  {/* Phone No */}
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       Phone No <span className="text-red-500">*</span>
@@ -5606,55 +5711,14 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     />
                   </div>
 
-                  <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                      Designation
-                    </label>
-                    <textarea 
-                      rows={2}
-                      value={contactDesignation} 
-                      onChange={e => setContactDesignation(e.target.value)}
-                      placeholder="e.g. Marketing Head"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                      Is Primary Contact? <span className="text-red-500">*</span>
-                    </span>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
-                        <input 
-                          type="radio" 
-                          name="isPrimaryContact"
-                          checked={isPrimaryContact === true}
-                          onChange={() => setIsPrimaryContact(true)}
-                          className="text-blue-600 focus:ring-blue-500 border-slate-300"
-                        />
-                        Yes
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
-                        <input 
-                          type="radio" 
-                          name="isPrimaryContact"
-                          checked={isPrimaryContact === false}
-                          onChange={() => setIsPrimaryContact(false)}
-                          className="text-blue-600 focus:ring-blue-500 border-slate-300"
-                        />
-                        No
-                      </label>
-                    </div>
-                  </div>
-
                   {/* Status Radio Field (Only for supplier contact in edit mode) */}
                   {type === 'supplier' && editingContactId && (
-                    <div className="space-y-2 md:col-span-2">
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                        Contact Status <span className="text-red-500">*</span>
+                    <div className="space-y-1.5">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">
+                        Status <span className="text-red-500">*</span>
                       </span>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-3 h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
                           <input 
                             type="radio" 
                             name="contactStatus"
@@ -5664,7 +5728,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                           />
                           Active
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
                           <input 
                             type="radio" 
                             name="contactStatus"
@@ -5679,7 +5743,8 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                   )}
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                {/* Action Buttons on NEXT LINE */}
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-200/60 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => {
@@ -5693,14 +5758,14 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                       setIsPrimaryContact(false);
                       setContactStatus(1);
                     }}
-                    className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-355 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl text-xs font-semibold transition-colors"
+                    className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-355 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={savingContact}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-150 flex items-center gap-1.5 hover:scale-[1.02] disabled:opacity-50"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-150 flex items-center gap-1.5 hover:scale-[1.02] disabled:opacity-50 whitespace-nowrap"
                   >
                     {savingContact ? (
                       <>
@@ -5710,7 +5775,7 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                     ) : (
                       <>
                         <ShieldCheck size={14} />
-                        {editingContactId ? 'Update Contact' : 'Save Contact'}
+                        {editingContactId ? 'Update Contact' : 'Register New Contact'}
                       </>
                     )}
                   </button>
@@ -5846,128 +5911,142 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
 
             {showBankForm ? (
               <form onSubmit={handleSaveBank} className="p-5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                      Account Holder Name <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      required
-                      value={accountHolderName} 
-                      onChange={e => setAccountHolderName(e.target.value)}
-                      placeholder="Enter account holder name"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                      Account Number <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      required
-                      value={accountNumber} 
-                      onChange={e => setAccountNumber(e.target.value)}
-                      placeholder="Enter bank account number"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                      Bank Name <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      required
-                      value={bankName} 
-                      onChange={e => setBankName(e.target.value)}
-                      placeholder="e.g. ICICI Bank"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                      Branch Name <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      required
-                      value={branchName} 
-                      onChange={e => setBranchName(e.target.value)}
-                      placeholder="e.g. Parrys Branch"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                      IFSC Code <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      required
-                      value={ifscCode} 
-                      onChange={e => setIfscCode(e.target.value)}
-                      placeholder="e.g. ICIC0006020"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors font-mono"
-                    />
-                  </div>
-
-                  {type === 'supplier' && (
+                <div className="space-y-4">
+                  {/* Row 1: Account Holder Name *, Account Number *, Bank Name * */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Account Holder Name */}
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">
-                        Account Type <span className="text-red-500">*</span>
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Account Holder Name <span className="text-red-500">*</span>
                       </label>
-                      <select 
+                      <input 
+                        type="text" 
                         required
-                        value={accountType} 
-                        onChange={e => setAccountType(e.target.value)}
+                        value={accountHolderName} 
+                        onChange={e => setAccountHolderName(e.target.value)}
+                        placeholder="Enter account holder name"
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                      >
-                        <option value="SAVINGS">SAVINGS</option>
-                        <option value="CURRENT">CURRENT</option>
-                      </select>
+                      />
                     </div>
-                  )}
 
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-medium text-slate-550 dark:text-slate-400 block">
-                      Is Primary Bank Account? <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex items-center gap-6">
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input 
-                          type="radio" 
-                          name="isPrimaryBank"
-                          checked={isPrimaryBank === true}
-                          onChange={() => setIsPrimaryBank(true)}
-                          className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:bg-slate-900 dark:border-slate-800"
-                        />
-                        <span className="text-xs text-slate-700 dark:text-slate-300">Yes</span>
+                    {/* Account Number */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Account Number <span className="text-red-500">*</span>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input 
-                          type="radio" 
-                          name="isPrimaryBank"
-                          checked={isPrimaryBank === false}
-                          onChange={() => setIsPrimaryBank(false)}
-                          className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:bg-slate-900 dark:border-slate-800"
-                        />
-                        <span className="text-xs text-slate-700 dark:text-slate-300">No</span>
+                      <input 
+                        type="text" 
+                        required
+                        value={accountNumber} 
+                        onChange={e => setAccountNumber(e.target.value)}
+                        placeholder="Enter bank account number"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors font-mono"
+                      />
+                    </div>
+
+                    {/* Bank Name */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Bank Name <span className="text-red-500">*</span>
                       </label>
+                      <input 
+                        type="text" 
+                        required
+                        value={bankName} 
+                        onChange={e => setBankName(e.target.value)}
+                        placeholder="e.g. ICICI Bank"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      />
                     </div>
                   </div>
 
+                  {/* Row 2: Branch Name *, IFSC Code *, (Account Type for supplier), Is Primary Bank Account? * */}
+                  <div className={`grid grid-cols-1 md:grid-cols-3 ${type === 'supplier' ? 'lg:grid-cols-4' : ''} gap-4 items-end`}>
+                    {/* Branch Name */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Branch Name <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        required
+                        value={branchName} 
+                        onChange={e => setBranchName(e.target.value)}
+                        placeholder="e.g. Parrys Branch"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* IFSC Code */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        IFSC Code <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        required
+                        value={ifscCode} 
+                        onChange={e => setIfscCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. ICIC0006020"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors font-mono"
+                      />
+                    </div>
+
+                    {/* Account Type (supplier only) */}
+                    {type === 'supplier' && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">
+                          Account Type <span className="text-red-500">*</span>
+                        </label>
+                        <select 
+                          required
+                          value={accountType} 
+                          onChange={e => setAccountType(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                        >
+                          <option value="SAVINGS">SAVINGS</option>
+                          <option value="CURRENT">CURRENT</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Is Primary Bank Account? */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-550 dark:text-slate-400 block">
+                        Is Primary Bank Account? <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex items-center gap-6 h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input 
+                            type="radio" 
+                            name="isPrimaryBank"
+                            checked={isPrimaryBank === true}
+                            onChange={() => setIsPrimaryBank(true)}
+                            className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:bg-slate-900 dark:border-slate-800"
+                          />
+                          <span className="text-xs text-slate-700 dark:text-slate-300">Yes</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input 
+                            type="radio" 
+                            name="isPrimaryBank"
+                            checked={isPrimaryBank === false}
+                            onChange={() => setIsPrimaryBank(false)}
+                            className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:bg-slate-900 dark:border-slate-800"
+                          />
+                          <span className="text-xs text-slate-700 dark:text-slate-300">No</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status Radio Field (Only for supplier bank in edit mode) */}
                   {type === 'supplier' && editingBankId && (
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-1.5 pt-1">
                       <span className="text-xs font-medium text-slate-550 dark:text-slate-400 block">
                         Bank Account Status <span className="text-red-500">*</span>
                       </span>
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-6 h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-xs">
                         <label className="flex items-center gap-2 cursor-pointer select-none">
                           <input 
                             type="radio" 
@@ -7495,10 +7574,10 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                       />
                     </th>
                     <th className="px-3 py-3 w-16 text-xs font-600 text-black dark:text-slate-400 text-left">S.No</th>
-                    <th className="px-3 py-3 w-14 text-xs font-600 text-black dark:text-slate-400 text-left">Image</th>
+                    <th className="px-3 py-3 w-28 text-xs font-600 text-black dark:text-slate-400 text-left">Image</th>
                     <th
                       onClick={() => handleSort('clientCode')}
-                      className="px-3 py-3 text-xs font-600 text-black dark:text-slate-400 whitespace-nowrap text-left cursor-pointer hover:text-black/80 dark:hover:text-slate-200 select-none"
+                      className="px-3 py-3 w-32 text-xs font-600 text-black dark:text-slate-400 whitespace-nowrap text-left cursor-pointer hover:text-black/80 dark:hover:text-slate-200 select-none"
                     >
                       <span className="inline-flex items-center gap-0.5">
                         Client Code
@@ -7572,17 +7651,18 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
                             />
                           </td>
                           <td className="px-3 py-3 text-xs text-black dark:text-slate-400 whitespace-nowrap">{serialNumber}</td>
-                          <td className="px-3 py-3">
-                            {c.logoUrl ? (
+                          <td className="px-3 py-3 w-28 overflow-hidden">
+                            {c.logoUrl && !failedLogos[c.id] ? (
                               <img
                                 src={c.logoUrl}
                                 alt={c.clientName}
-                                className="h-8 w-auto max-w-[80px] object-contain"
+                                className="h-8 w-auto max-w-[70px] object-contain"
+                                onError={() => setFailedLogos((prev) => ({ ...prev, [c.id]: true }))}
                               />
                             ) : (
-                              <div className="flex items-center justify-center w-8 h-8 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg">
-                                <ImageIcon size={14} />
-                              </div>
+                              <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 italic bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded border border-slate-200/60 dark:border-slate-700/50 inline-block whitespace-nowrap">
+                                No Image
+                              </span>
                             )}
                           </td>
                           <td className="px-3 py-3 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap">{c.clientCode}</td>
@@ -7742,16 +7822,17 @@ export default function ClientSupplierModuleView({ type, tab }: ViewProps) {
               {type === 'client' && selectedClientId ? (
                 <div className="p-3 bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2.5 shrink-0">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    {selectedClient?.logoUrl ? (
+                    {selectedClient?.logoUrl && !failedLogos[selectedClient.id] ? (
                       <img
                         src={selectedClient.logoUrl}
                         alt={selectedClient.clientName}
                         className="h-8 w-auto max-w-[65px] object-contain flex-shrink-0"
+                        onError={() => setFailedLogos((prev) => ({ ...prev, [selectedClient.id]: true }))}
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400">
-                        <User size={16} />
-                      </div>
+                      <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 italic bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-slate-700/50 flex-shrink-0 whitespace-nowrap">
+                        No Image
+                      </span>
                     )}
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Active Client</span>

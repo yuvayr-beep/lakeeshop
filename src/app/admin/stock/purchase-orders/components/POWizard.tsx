@@ -151,15 +151,7 @@ export default function POWizard({ poId }: POWizardProps) {
     loadBasicData();
   }, []);
 
-  const filteredSuppliers = React.useMemo(() => {
-    if (!supplierSearch) return suppliers;
-    const query = supplierSearch.toLowerCase();
-    return suppliers.filter(
-      (sup) =>
-        sup.name?.toLowerCase().includes(query) ||
-        String(sup.id).includes(query)
-    );
-  }, [suppliers, supplierSearch]);
+
 
   // Auto-populate supplierSearch text when supplierId or suppliers list changes
   useEffect(() => {
@@ -723,31 +715,69 @@ export default function POWizard({ poId }: POWizardProps) {
     });
   }, [catalogProducts, allProductsMap, searchCode, searchName, droppedItems]);
 
+  // Filter suppliers for search & keyboard navigation
+  const [highlightedSupplierIndex, setHighlightedSupplierIndex] = useState<number>(0);
+
+  const filteredSuppliers = React.useMemo(() => {
+    if (!supplierSearch.trim()) return suppliers;
+    const q = supplierSearch.toLowerCase();
+    return suppliers.filter(
+      (s) =>
+        s.name?.toLowerCase().includes(q) ||
+        s.email?.toLowerCase().includes(q) ||
+        s.phone?.toLowerCase().includes(q) ||
+        String(s.id).includes(q)
+    );
+  }, [suppliers, supplierSearch]);
+
+  const selectSupplier = (sup: any) => {
+    if (!sup) return;
+    setSupplierId(sup.id);
+    setSupplierSearch(sup.name || '');
+    setIsSupplierFocused(false);
+    setHighlightedSupplierIndex(0);
+  };
+
+  const handleSupplierKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isSupplierFocused || filteredSuppliers.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedSupplierIndex((prev) => (prev < filteredSuppliers.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedSupplierIndex((prev) => (prev > 0 ? prev - 1 : filteredSuppliers.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetIndex =
+        highlightedSupplierIndex >= 0 && highlightedSupplierIndex < filteredSuppliers.length
+          ? highlightedSupplierIndex
+          : 0;
+      const selected = filteredSuppliers[targetIndex];
+      if (selected) {
+        selectSupplier(selected);
+      }
+    } else if (e.key === 'Escape') {
+      setIsSupplierFocused(false);
+    }
+  };
+
   return (
-    <div className="flex-1 p-6 space-y-6 w-full">
-      {/* Header */}
-      <div className="flex items-center gap-4">
+    <div className="flex-1 flex flex-col min-h-0 space-y-3 w-full overflow-hidden">
+      {/* Stepper progress & Back Navigation */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex items-center justify-between shrink-0">
         <button
           onClick={() => router.push('/admin/stock/purchase-orders/list')}
-          className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all shadow-sm"
+          className="p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all mr-3"
+          title="Back to Purchase Orders"
         >
           <ArrowLeft size={16} />
         </button>
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white">
-            {isEditMode ? `Edit Purchase Order #${poNumber || poId}` : 'Generate Purchase Order'}
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Create or edit purchase orders with product drag and drop interface.
-          </p>
-        </div>
-      </div>
 
-      {/* Stepper progress */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl p-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs transition-all ${
+            className={`w-7 h-7 rounded-full flex items-center justify-center font-semibold text-xs transition-all ${
               currentStep === 1
                 ? 'bg-blue-600 text-white shadow-md ring-4 ring-blue-500/20'
                 : currentStep > 1
@@ -766,7 +796,7 @@ export default function POWizard({ poId }: POWizardProps) {
 
         <div className="flex items-center gap-2">
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs transition-all ${
+            className={`w-7 h-7 rounded-full flex items-center justify-center font-semibold text-xs transition-all ${
               currentStep === 2
                 ? 'bg-blue-600 text-white shadow-md ring-4 ring-blue-500/20'
                 : currentStep > 2
@@ -799,27 +829,29 @@ export default function POWizard({ poId }: POWizardProps) {
         </div>
       </div>
 
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl">
-          <div className="w-10 h-10 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin"></div>
-          <span className="text-sm text-slate-500 dark:text-slate-400">Processing request...</span>
-        </div>
-      )}
-
-      {/* Step 1: PO Creation & Edit Form */}
-      {!loading && currentStep === 1 && (
-        <form onSubmit={handleStep1Submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl shadow-sm overflow-hidden">
-          <div className="bg-red-600 text-white py-3 px-4 flex items-center justify-between">
-            <span className="text-sm font-semibold tracking-wide">Supplier Information</span>
-            {isEditMode && (
-              <Badge variant="warning" size="sm" className="bg-white/20 border-0 text-white">
-                Edit Mode
-              </Badge>
-            )}
+      {/* Main Step Content Body */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto scrollbar-thin">
+        {loading && (
+          <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm">
+            <div className="w-10 h-10 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin"></div>
+            <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">Processing request...</span>
           </div>
+        )}
 
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Step 1: PO Creation & Edit Form */}
+        {!loading && currentStep === 1 && (
+          <form onSubmit={handleStep1Submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+            <div className="shrink-0 bg-red-600 text-white py-3 px-4 flex items-center justify-between">
+              <span className="text-sm font-semibold tracking-wide">Supplier Information</span>
+              {isEditMode && (
+                <Badge variant="warning" size="sm" className="bg-white/20 border-0 text-white">
+                  Edit Mode
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin min-h-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Supplier search & select */}
               <div className="relative">
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier *</label>
@@ -829,14 +861,19 @@ export default function POWizard({ poId }: POWizardProps) {
                     required
                     disabled={isEditMode}
                     value={supplierSearch}
-                    onFocus={() => setIsSupplierFocused(true)}
+                    onFocus={() => {
+                      setIsSupplierFocused(true);
+                      setHighlightedSupplierIndex(0);
+                    }}
                     onBlur={() => {
                       setTimeout(() => setIsSupplierFocused(false), 200);
                     }}
+                    onKeyDown={handleSupplierKeyDown}
                     onChange={(e) => {
                       const val = e.target.value;
                       setSupplierSearch(val);
                       setIsSupplierFocused(true);
+                      setHighlightedSupplierIndex(0);
                       const match = suppliers.find((s) => s.id === Number(supplierId));
                       if (!match || match.name !== val) {
                         setSupplierId('');
@@ -851,6 +888,7 @@ export default function POWizard({ poId }: POWizardProps) {
                       onClick={() => {
                         setSupplierId('');
                         setSupplierSearch('');
+                        setHighlightedSupplierIndex(0);
                       }}
                       className="absolute right-2.5 top-3 text-slate-400 hover:text-slate-655 transition-colors"
                     >
@@ -862,23 +900,32 @@ export default function POWizard({ poId }: POWizardProps) {
                 {/* Dropdown Options */}
                 {isSupplierFocused && !isEditMode && filteredSuppliers.length > 0 && (
                   <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto scrollbar-thin">
-                    {filteredSuppliers.map((sup, idx) => (
-                      <button
-                        key={`supplier-select-${sup.id || idx}`}
-                        type="button"
-                        onMouseDown={() => {
-                          setSupplierId(sup.id);
-                          setSupplierSearch(sup.name || '');
-                          setIsSupplierFocused(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 last:border-b-0 transition-colors"
-                      >
-                        <div className="font-semibold truncate">{sup.name}</div>
-                        {sup.email && (
-                          <div className="text-[10px] text-slate-450 mt-0.5">{sup.email}</div>
-                        )}
-                      </button>
-                    ))}
+                    {filteredSuppliers.map((sup, idx) => {
+                      const isHighlighted = idx === highlightedSupplierIndex;
+                      return (
+                        <button
+                          key={`supplier-select-${sup.id || idx}`}
+                          type="button"
+                          ref={(el) => {
+                            if (isHighlighted && el) {
+                              el.scrollIntoView({ block: 'nearest' });
+                            }
+                          }}
+                          onMouseDown={() => selectSupplier(sup)}
+                          onMouseEnter={() => setHighlightedSupplierIndex(idx)}
+                          className={`w-full text-left px-3 py-2 text-xs border-b border-slate-100 dark:border-slate-700/50 last:border-b-0 transition-colors ${
+                            isHighlighted
+                              ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 font-bold'
+                              : 'hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200'
+                          }`}
+                        >
+                          <div className="font-semibold truncate">{sup.name}</div>
+                          {sup.email && (
+                            <div className="text-[10px] text-slate-450 mt-0.5">{sup.email}</div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -907,193 +954,8 @@ export default function POWizard({ poId }: POWizardProps) {
                   className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200"
                 />
               </div>
-            </div>
 
-            {/* Address fields */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Contact Person *</label>
-                <select
-                  required
-                  disabled={!supplierId}
-                  value={contacts.find((c) => c.name === contactName)?.id || ''}
-                  onChange={(e) => {
-                    const selected = contacts.find((c) => c.id === Number(e.target.value));
-                    applyContact(selected);
-                  }}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                >
-                  <option value="">Select Contact for Kind Attn:</option>
-                  {contacts.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.designation})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-                  Supplier Address Type {isEditMode ? '' : '*'}
-                </label>
-                <select
-                  required={!isEditMode}
-                  disabled={!supplierId}
-                  value={addresses.find((a) => a.addressLine1 === addrLine1)?.id || ''}
-                  onChange={(e) => {
-                    const selected = addresses.find((a) => a.id === Number(e.target.value));
-                    applyAddress(selected);
-                  }}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                >
-                  <option value="">Select Address Type</option>
-                  {addresses.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.label} ({a.city})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">GST IN</label>
-                <input
-                  type="text"
-                  value={gstin}
-                  onChange={(e) => setGstin(e.target.value)}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {!isEditMode ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Address 1 *</label>
-                    <input
-                      type="text"
-                      required
-                      value={addrLine1}
-                      onChange={(e) => setAddrLine1(e.target.value)}
-                      className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Address 2</label>
-                    <input
-                      type="text"
-                      value={addrLine2}
-                      onChange={(e) => setAddrLine2(e.target.value)}
-                      className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Address 3</label>
-                    <input
-                      type="text"
-                      value={addrLine3}
-                      onChange={(e) => setAddrLine3(e.target.value)}
-                      className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">City *</label>
-                    <input
-                      type="text"
-                      required
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">State *</label>
-                    <input
-                      type="text"
-                      required
-                      value={stateName}
-                      onChange={(e) => setStateName(e.target.value)}
-                      className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Postal Code *</label>
-                    <input
-                      type="text"
-                      required
-                      value={pincode}
-                      onChange={(e) => setPincode(e.target.value)}
-                      className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier Address *</label>
-                  <textarea
-                    required
-                    rows={2}
-                    value={editSupplierAddress}
-                    onChange={(e) => setEditSupplierAddress(e.target.value)}
-                    className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none resize-none"
-                    placeholder="Enter combined supplier address..."
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Additional Supplier info */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">State Code</label>
-                <input
-                  type="text"
-                  value={stateCode}
-                  onChange={(e) => setStateCode(e.target.value)}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier PAN</label>
-                <input
-                  type="text"
-                  value={pan}
-                  onChange={(e) => setPan(e.target.value)}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier Email</label>
-                <input
-                  type="email"
-                  value={supEmail}
-                  onChange={(e) => setSupEmail(e.target.value)}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier Contact</label>
-                <input
-                  type="text"
-                  value={supPhone}
-                  onChange={(e) => setSupPhone(e.target.value)}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Warehouse setup */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+              {/* Warehouse */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Warehouse *</label>
                 <select
@@ -1110,6 +972,30 @@ export default function POWizard({ poId }: POWizardProps) {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Contact Information (Single Line: Contact Person *, Contact Name, Contact Phone, Contact Email) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Contact Person *</label>
+                <select
+                  required
+                  disabled={!supplierId}
+                  value={contacts.find((c) => c.name === contactName)?.id || ''}
+                  onChange={(e) => {
+                    const selected = contacts.find((c) => c.id === Number(e.target.value));
+                    applyContact(selected);
+                  }}
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                >
+                  <option value="">Select Contact for Kind Attn:</option>
+                  {contacts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.designation})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Contact Name</label>
@@ -1117,7 +1003,7 @@ export default function POWizard({ poId }: POWizardProps) {
                   type="text"
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
                 />
               </div>
 
@@ -1127,7 +1013,7 @@ export default function POWizard({ poId }: POWizardProps) {
                   type="text"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
                 />
               </div>
 
@@ -1137,7 +1023,186 @@ export default function POWizard({ poId }: POWizardProps) {
                   type="email"
                   value={contactEmail}
                   onChange={(e) => setContactEmail(e.target.value)}
-                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none"
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Discount & Supplier Address Type (3 cols for Discount, 9 cols for Address Type) */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+              <div className="md:col-span-3">
+                <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+                  Apply Negotiated Discount
+                </span>
+                <label className="inline-flex items-center cursor-pointer select-none h-10">
+                  <input
+                    type="checkbox"
+                    checked={applyNegotiatedDiscount}
+                    onChange={(e) => setApplyNegotiatedDiscount(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="relative w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
+                  <span className="ms-3 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {applyNegotiatedDiscount ? 'Yes' : 'No'}
+                  </span>
+                </label>
+              </div>
+
+              <div className="md:col-span-9">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
+                  Supplier Address Type {isEditMode ? '' : '*'}
+                </label>
+                <select
+                  required={!isEditMode}
+                  disabled={!supplierId}
+                  value={addresses.find((a) => a.addressLine1 === addrLine1)?.id || ''}
+                  onChange={(e) => {
+                    const selected = addresses.find((a) => a.id === Number(e.target.value));
+                    applyAddress(selected);
+                  }}
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                >
+                  <option value="">Select Address Type</option>
+                  {addresses.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label} ({a.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {!isEditMode ? (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Address 1 *</label>
+                  <input
+                    type="text"
+                    required
+                    value={addrLine1}
+                    onChange={(e) => setAddrLine1(e.target.value)}
+                    className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Address 2</label>
+                  <input
+                    type="text"
+                    value={addrLine2}
+                    onChange={(e) => setAddrLine2(e.target.value)}
+                    className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Address 3</label>
+                  <input
+                    type="text"
+                    value={addrLine3}
+                    onChange={(e) => setAddrLine3(e.target.value)}
+                    className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">City *</label>
+                  <input
+                    type="text"
+                    required
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">State *</label>
+                  <input
+                    type="text"
+                    required
+                    value={stateName}
+                    onChange={(e) => setStateName(e.target.value)}
+                    className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                  />
+                </div>
+
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 whitespace-nowrap">Postal Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
+                    className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier Address *</label>
+                  <textarea
+                    required
+                    rows={2}
+                    value={editSupplierAddress}
+                    onChange={(e) => setEditSupplierAddress(e.target.value)}
+                    className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none resize-none"
+                    placeholder="Enter combined supplier address..."
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Tax & Additional Supplier Info (Single Line: GST IN, State Code, Supplier PAN, Supplier Email, Supplier Contact) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">GST IN</label>
+                <input
+                  type="text"
+                  value={gstin}
+                  onChange={(e) => setGstin(e.target.value)}
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">State Code</label>
+                <input
+                  type="text"
+                  value={stateCode}
+                  onChange={(e) => setStateCode(e.target.value)}
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier PAN</label>
+                <input
+                  type="text"
+                  value={pan}
+                  onChange={(e) => setPan(e.target.value)}
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier Email</label>
+                <input
+                  type="email"
+                  value={supEmail}
+                  onChange={(e) => setSupEmail(e.target.value)}
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier Contact</label>
+                <input
+                  type="text"
+                  value={supPhone}
+                  onChange={(e) => setSupPhone(e.target.value)}
+                  className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none font-medium"
                 />
               </div>
             </div>
@@ -1333,76 +1398,56 @@ export default function POWizard({ poId }: POWizardProps) {
                 />
               </div>
 
-              <div className="flex flex-col justify-between">
+              {isEditMode && (
                 <div>
-                  <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
-                    Apply Negotiated Discount
-                  </span>
-                  <label className="inline-flex items-center cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={applyNegotiatedDiscount}
-                      onChange={(e) => setApplyNegotiatedDiscount(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="relative w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
-                    <span className="ms-3 text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {applyNegotiatedDiscount ? 'Yes' : 'No'}
-                    </span>
-                  </label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">PO Status</label>
+                  <select
+                    value={poStatus}
+                    onChange={(e) => setPoStatus(e.target.value)}
+                    className="w-full h-10 px-3 text-sm bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700 rounded-lg focus:outline-none font-semibold text-amber-700 dark:text-amber-400"
+                  >
+                    <option value="DRAFT">DRAFT</option>
+                    <option value="OPEN">OPEN</option>
+                    <option value="PARTIALLY_RECEIVED">PARTIALLY RECEIVED</option>
+                    <option value="CLOSED">CLOSED</option>
+                    <option value="PRECLOSED">PRECLOSED</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                  </select>
                 </div>
-
-                {isEditMode && (
-                  <div className="mt-4">
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">PO Status</label>
-                    <select
-                      value={poStatus}
-                      onChange={(e) => setPoStatus(e.target.value)}
-                      className="w-full h-10 px-3 text-sm bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700 rounded-lg focus:outline-none font-semibold text-amber-700 dark:text-amber-400"
-                    >
-                      <option value="DRAFT">DRAFT</option>
-                      <option value="OPEN">OPEN</option>
-                      <option value="PARTIALLY_RECEIVED">PARTIALLY RECEIVED</option>
-                      <option value="CLOSED">CLOSED</option>
-                      <option value="PRECLOSED">PRECLOSED</option>
-                      <option value="CANCELLED">CANCELLED</option>
-                    </select>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-          </div>
+            </div>
 
-          <div className="bg-slate-50 dark:bg-slate-800/40 p-4 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => router.push('/admin/stock/purchase-orders/list')}
-              className="h-10 px-5 text-sm font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-sm transition-all text-sm flex items-center gap-1.5"
-            >
-              Save & Next
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </form>
+            <div className="shrink-0 bg-slate-50 dark:bg-slate-800/40 p-4 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-end gap-3 sticky bottom-0 z-10">
+              <button
+                type="button"
+                onClick={() => router.push('/admin/stock/purchase-orders/list')}
+                className="h-10 px-5 text-sm font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-sm transition-all text-sm flex items-center gap-1.5"
+              >
+                Save & Next
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </form>
       )}
 
       {/* Step 2: Product Selection (Drag and Drop) */}
       {!loading && currentStep === 2 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch min-h-0">
           {/* Zone 1: Supplier Products List (6 Columns) */}
-          <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl shadow-sm overflow-hidden flex flex-col h-[600px]">
-            <div className="bg-red-600 text-white px-4 flex items-center justify-between h-11">
+          <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[480px]">
+            <div className="bg-red-600 text-white px-4 flex items-center justify-between h-11 shrink-0">
               <span className="text-sm font-semibold tracking-wide">Available Supplier Products</span>
               <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">{filteredCatalog.length}</span>
             </div>
 
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700/60 grid grid-cols-3 gap-3">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700/60 grid grid-cols-3 gap-3 shrink-0">
               <div className="relative col-span-1">
                 <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
                 <input
@@ -1426,7 +1471,7 @@ export default function POWizard({ poId }: POWizardProps) {
             </div>
 
             {/* Product catalog list */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin min-h-0">
               {filteredCatalog.length === 0 ? (
                 <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-xs">
                   No products approved for this supplier.
@@ -1482,7 +1527,7 @@ export default function POWizard({ poId }: POWizardProps) {
           </div>
 
           {/* Zone 2: Drag and Drop Target area (6 Columns) */}
-          <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl shadow-sm overflow-hidden flex flex-col h-[600px]">
+          <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[480px]">
             <div className="bg-red-600 text-white px-4 flex items-center justify-between h-11">
               <div>
                 <span className="text-sm font-semibold tracking-wide">Purchase Order Products</span>
@@ -1695,6 +1740,7 @@ export default function POWizard({ poId }: POWizardProps) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

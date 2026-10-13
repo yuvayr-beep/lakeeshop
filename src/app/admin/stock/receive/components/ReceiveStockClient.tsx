@@ -48,6 +48,7 @@ export default function ReceiveStockClient() {
   const [supplierId, setSupplierId] = useState<number | ''>('');
   const [supplierSearch, setSupplierSearch] = useState('');
   const [isSupplierFocused, setIsSupplierFocused] = useState(false);
+  const [highlightedSupplierIndex, setHighlightedSupplierIndex] = useState(0);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
@@ -202,6 +203,43 @@ export default function ReceiveStockClient() {
         String(sup.id).includes(query)
     );
   }, [suppliers, supplierSearch]);
+
+  // Reset highlighted index whenever query or list changes
+  useEffect(() => {
+    setHighlightedSupplierIndex(0);
+  }, [supplierSearch, filteredSuppliers]);
+
+  // Arrow key navigation for supplier search dropdown
+  const handleSupplierKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isSupplierFocused || filteredSuppliers.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedSupplierIndex((prev) => (prev < filteredSuppliers.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedSupplierIndex((prev) => (prev > 0 ? prev - 1 : filteredSuppliers.length - 1));
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      if (isSupplierFocused && filteredSuppliers.length > 0) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        const targetIndex =
+          highlightedSupplierIndex >= 0 && highlightedSupplierIndex < filteredSuppliers.length
+            ? highlightedSupplierIndex
+            : 0;
+        const selected = filteredSuppliers[targetIndex];
+        if (selected) {
+          setSupplierId(selected.id);
+          setSupplierSearch(selected.name || '');
+          setIsSupplierFocused(false);
+        }
+      }
+    } else if (e.key === 'Escape') {
+      setIsSupplierFocused(false);
+    }
+  };
 
   const selectedSupplierName = useMemo(() => {
     if (!supplierId || suppliers.length === 0) return '';
@@ -1020,21 +1058,10 @@ export default function ReceiveStockClient() {
   };
 
   return (
-    <div className={`space-y-6 ${showFullForm ? 'flex-1 p-6' : 'max-w-7xl mx-auto px-1 py-4'}`}>
-      {/* Header title */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Layers size={22} className="text-[var(--primary)]" />
-          Receive Stock
-        </h1>
-        <p className="text-xs text-slate-700 dark:text-slate-400 mt-1">
-          Receive product stock from suppliers, link optional PO allocations, verify taxes/pricing and generate Goods Receipt Notes.
-        </p>
-      </div>
-
+    <div className={`space-y-6 ${showFullForm ? 'w-full' : 'max-w-7xl mx-auto px-1'}`}>
       {/* Part 1: Supplier & Invoice Initial Check */}
       {!showFullForm ? (
-        <div className="flex items-center justify-center py-10">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-220px)] py-4">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
             <div className="bg-[var(--primary)] px-6 py-4 text-white">
               <span className="text-sm font-semibold tracking-wide flex items-center gap-2">
@@ -1055,6 +1082,7 @@ export default function ReceiveStockClient() {
                       value={supplierSearch}
                       onFocus={() => setIsSupplierFocused(true)}
                       onBlur={() => setTimeout(() => setIsSupplierFocused(false), 200)}
+                      onKeyDown={handleSupplierKeyDown}
                       onChange={(e) => {
                         setSupplierSearch(e.target.value);
                         setIsSupplierFocused(true);
@@ -1081,23 +1109,36 @@ export default function ReceiveStockClient() {
 
                     {isSupplierFocused && filteredSuppliers.length > 0 && (
                       <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto scrollbar-thin">
-                        {filteredSuppliers.map((sup, idx) => (
-                          <button
-                            key={`sup-sel-${sup.id || idx}`}
-                            type="button"
-                            onMouseDown={() => {
-                              setSupplierId(sup.id);
-                              setSupplierSearch(sup.name || '');
-                              setIsSupplierFocused(false);
-                            }}
-                            className="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 last:border-b-0 transition-colors"
-                          >
-                            <div className="font-semibold truncate">{sup.name}</div>
-                            {sup.supplierCode && (
-                              <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Code: {sup.supplierCode}</div>
-                            )}
-                          </button>
-                        ))}
+                        {filteredSuppliers.map((sup, idx) => {
+                          const isHighlighted = idx === highlightedSupplierIndex;
+                          return (
+                            <button
+                              key={`sup-sel-${sup.id || idx}`}
+                              type="button"
+                              ref={(el) => {
+                                if (isHighlighted && el) {
+                                  el.scrollIntoView({ block: 'nearest' });
+                                }
+                              }}
+                              onMouseEnter={() => setHighlightedSupplierIndex(idx)}
+                              onMouseDown={() => {
+                                setSupplierId(sup.id);
+                                setSupplierSearch(sup.name || '');
+                                setIsSupplierFocused(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-xs border-b border-slate-100 dark:border-slate-700/50 last:border-b-0 transition-colors ${
+                                isHighlighted
+                                  ? 'bg-blue-50 dark:bg-blue-950/50 text-[var(--primary)] dark:text-blue-400 font-bold'
+                                  : 'hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200'
+                              }`}
+                            >
+                              <div className="font-semibold truncate">{sup.name}</div>
+                              {sup.supplierCode && (
+                                <div className="text-[10px] opacity-75 mt-0.5 font-mono">Code: {sup.supplierCode}</div>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1159,7 +1200,7 @@ export default function ReceiveStockClient() {
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full">
           {/* Block 1: Invoice Header details */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden w-full">
               <div className="bg-slate-50 dark:bg-slate-950 px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -1776,7 +1817,7 @@ export default function ReceiveStockClient() {
 
       {/* Part 5: Supplier Item List (Always visible once main form is open) */}
       {showFullForm && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden w-full">
           <div className="bg-slate-50 dark:bg-slate-955 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
             <h6 className="text-xs font-bold uppercase tracking-wider text-slate-700">Supplier Item List</h6>
           </div>

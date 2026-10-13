@@ -81,6 +81,14 @@ export const invoicePrintService = {
     const idsString = Array.isArray(groupIds) ? groupIds.join(',') : String(groupIds);
     const url = `/courier/invoice/print/${format}/${idsString}?docType=${docType}`;
 
+    if (format === '1x4') {
+      console.log('=== [1x4 Sheet Print] Request ===');
+      console.log('URL:', url);
+      console.log('Method: POST');
+      console.log('Group IDs:', groupIds);
+      console.log('Doc Type:', docType);
+    }
+
     const response = await axiosInstance.post(
       url,
       {},
@@ -91,6 +99,14 @@ export const invoicePrintService = {
         responseType: 'blob',
       }
     );
+
+    if (format === '1x4') {
+      console.log('=== [1x4 Sheet Print] Response ===');
+      console.log('Status Code:', response.status);
+      console.log('Status Text:', response.statusText);
+      console.log('Headers:', response.headers);
+      console.log('Response Data Size (bytes):', response.data?.size);
+    }
 
     // Create Blob URL for PDF
     const contentTypeHeader = response.headers?.['content-type'];
@@ -144,6 +160,19 @@ export const invoicePrintService = {
     const url = `/courier/invoice/reprint/${format}`;
     const payload = { batchNos };
 
+    if (format === '1x4') {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const fullUrl = `${origin}/api/proxy${url}`;
+      
+      const curlCommand = `curl -X POST "${fullUrl}" \\\n  -H "Content-Type: application/json" \\\n  -H "Accept: application/pdf, application/json, */*" ${token ? `\\\n  -H "Authorization: Bearer ${token}"` : ''} \\\n  -d '${JSON.stringify(payload, null, 2)}'`;
+
+      console.log('%c===================================================', 'color: #2563eb; font-weight: bold;');
+      console.log('%c🚀 [1x4 Sheet Reprint] REQUEST cURL COMMAND:', 'color: #2563eb; font-weight: bold; font-size: 13px;');
+      console.log(curlCommand);
+      console.log('%c===================================================', 'color: #2563eb; font-weight: bold;');
+    }
+
     const response = await axiosInstance.post(
       url,
       payload,
@@ -155,6 +184,18 @@ export const invoicePrintService = {
         responseType: 'blob',
       }
     );
+
+    if (format === '1x4') {
+      console.log('%c===================================================', 'color: #059669; font-weight: bold;');
+      console.log('%c📥 [1x4 Sheet Reprint] COMPLETE RESPONSE DETAILS:', 'color: #059669; font-weight: bold; font-size: 13px;');
+      console.log('Status Code:', response.status, response.statusText);
+      console.log('Response Headers:', response.headers);
+      console.log('Content-Type:', response.headers?.['content-type']);
+      console.log('Response Data (Blob):', response.data);
+      console.log('Blob Size (Bytes):', response.data?.size);
+      console.log('Blob Type:', response.data?.type);
+      console.log('%c===================================================', 'color: #059669; font-weight: bold;');
+    }
 
     const contentTypeHeader = response.headers?.['content-type'];
     const contentType = contentTypeHeader ? String(contentTypeHeader) : 'application/pdf';
@@ -288,6 +329,13 @@ export const invoicePrintService = {
       ? `/courier/packing-slip/reprint/batch/${batchIdParam}`
       : `/courier/invoice/reprint/${format}?docType=${docType}`;
 
+    if (format === '1x4') {
+      console.log('=== [1x4 Sheet Batch Reprint] Request ===');
+      console.log('URL:', url);
+      console.log('Method: POST');
+      console.log('Payload:', payload);
+    }
+
     const response = await axiosInstance.post(url, payload, {
       headers: {
         'Content-Type': 'application/json',
@@ -295,6 +343,14 @@ export const invoicePrintService = {
       },
       responseType: 'blob',
     });
+
+    if (format === '1x4') {
+      console.log('=== [1x4 Sheet Batch Reprint] Response ===');
+      console.log('Status Code:', response.status);
+      console.log('Status Text:', response.statusText);
+      console.log('Headers:', response.headers);
+      console.log('Response Blob Size (bytes):', response.data?.size);
+    }
 
     const contentTypeHeader = response.headers?.['content-type'];
     const contentType = contentTypeHeader ? String(contentTypeHeader) : 'application/pdf';

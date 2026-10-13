@@ -294,22 +294,38 @@ export default function DamagedProductsClient() {
   }
 
   return (
-    <div className="space-y-6 flex-1 p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <AlertTriangle size={22} className="text-red-500 animate-pulse" />
-            Damaged & Defective Stock
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Record, track, and classify stock damaged in warehouses or retail outlets, and assign specific repair/write-off reason codes.
-          </p>
+    <div className="space-y-6 w-full">
+      {/* Mode Switcher Tabs & Actions in single row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <div className="bg-slate-105 dark:bg-slate-800/80 p-1 rounded-2xl flex gap-1 border border-slate-200 dark:border-slate-750 max-w-fit">
+          <button
+            onClick={() => { setMode('catalog'); handleReset(); }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 ${
+              mode === 'catalog'
+                ? 'bg-white dark:bg-slate-900 text-red-500 shadow-md scale-100'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/40 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Package size={15} />
+            Search Catalog Product
+          </button>
+          <button
+            onClick={() => { setMode('barcode'); handleReset(); }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 ${
+              mode === 'barcode'
+                ? 'bg-white dark:bg-slate-900 text-red-500 shadow-md scale-100'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/40 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Barcode size={15} />
+            Scan Barcode
+          </button>
         </div>
+
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setShowUploadArea(!showUploadArea)}
-            className={`flex items-center justify-center gap-2 h-10 px-4 text-xs font-bold rounded-xl shadow-sm transition-all border ${
+            className={`flex items-center justify-center gap-2 h-10 px-4 text-xs font-bold rounded-xl shadow-sm transition-all border whitespace-nowrap ${
               showUploadArea
                 ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] border-[var(--primary)]'
                 : 'bg-[var(--primary-light-bg)] text-[var(--primary)] border border-[var(--primary)]/30'
@@ -399,34 +415,6 @@ export default function DamagedProductsClient() {
           </div>
         </div>
       )}
-
-      {/* Mode Switcher */}
-      <div className="flex justify-start">
-        <div className="bg-slate-105 dark:bg-slate-800/80 p-1 rounded-2xl flex gap-1 border border-slate-200 dark:border-slate-750">
-          <button
-            onClick={() => { setMode('catalog'); handleReset(); }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 ${
-              mode === 'catalog'
-                ? 'bg-white dark:bg-slate-900 text-red-500 shadow-md scale-100'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/40 dark:hover:bg-slate-800'
-            }`}
-          >
-            <Package size={15} />
-            Search Catalog Product
-          </button>
-          <button
-            onClick={() => { setMode('barcode'); handleReset(); }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 ${
-              mode === 'barcode'
-                ? 'bg-white dark:bg-slate-900 text-red-500 shadow-md scale-100'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/40 dark:hover:bg-slate-800'
-            }`}
-          >
-            <Barcode size={15} />
-            Scan Barcode
-          </button>
-        </div>
-      </div>
 
       {/* 50/50 Panel Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">

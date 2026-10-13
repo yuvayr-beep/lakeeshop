@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
-  ArrowLeft, Truck, Settings, Layers, MapPin, Clock, Globe, Building2, ChevronRight, Shield
+  ArrowLeft, Truck, Layers, MapPin, Globe, DollarSign
 } from 'lucide-react';
 import axiosInstance from '@/lib/axios';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
@@ -10,6 +10,8 @@ import { selectCourier } from '@/redux/slices/courierSlice';
 import { CourierPartner } from '@/types/courier';
 import CourierServicesTab from './CourierServicesTab';
 import CourierPincodesTab from './CourierPincodesTab';
+import CourierZonesTab from './CourierZonesTab';
+import CourierRatesTab from './CourierRatesTab';
 
 export default function CourierConfigClient() {
   const router = useRouter();
@@ -19,7 +21,7 @@ export default function CourierConfigClient() {
   const reduxCourier = useAppSelector((state) => state.courier.selectedCourier);
   const [courier, setCourier] = useState<CourierPartner | null>(reduxCourier);
   const [loadingCourier, setLoadingCourier] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'SERVICES' | 'PINCODES' | 'SLA'>('SERVICES');
+  const [activeTab, setActiveTab] = useState<'SERVICES' | 'PINCODES' | 'ZONES' | 'RATES'>('SERVICES');
 
   // Load courier details on mount or URL param change
   useEffect(() => {
@@ -193,17 +195,30 @@ export default function CourierConfigClient() {
           Pincode Serviceability
         </button>
 
-        {/* Tab 3: SLA */}
+        {/* Tab 3: Courier Zones */}
         <button
-          onClick={() => setActiveTab('SLA')}
+          onClick={() => setActiveTab('ZONES')}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'SLA'
+            activeTab === 'ZONES'
               ? 'border-[var(--primary)] text-[var(--primary)]'
               : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
         >
-          <Clock size={16} />
-          SLA & Transit Controls
+          <Layers size={16} />
+          Zones
+        </button>
+
+        {/* Tab 4: Rates */}
+        <button
+          onClick={() => setActiveTab('RATES')}
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === 'RATES'
+              ? 'border-[var(--primary)] text-[var(--primary)]'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          <DollarSign size={16} />
+          Rates
         </button>
       </div>
 
@@ -212,15 +227,9 @@ export default function CourierConfigClient() {
 
       {activeTab === 'PINCODES' && <CourierPincodesTab courier={courier} />}
 
-      {activeTab === 'SLA' && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-12 text-center">
-          <Clock size={36} className="mx-auto text-slate-300 dark:text-slate-700 mb-3" />
-          <h3 className="text-sm font-bold text-slate-800 dark:text-white">SLA & Transit Controls</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
-            Configure expected delivery turnaround time, cutoff windows, and escalation rules for {courier?.courierName || 'selected courier'}.
-          </p>
-        </div>
-      )}
+      {activeTab === 'ZONES' && <CourierZonesTab courier={courier} />}
+
+      {activeTab === 'RATES' && <CourierRatesTab courier={courier} />}
     </div>
   );
 }

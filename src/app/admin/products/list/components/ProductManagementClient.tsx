@@ -13,9 +13,9 @@ import QuickProductModal from './QuickProductModal';
 import ProductImportModal from './ProductImportModal';
 import ProductExportModal from './ProductExportModal';
 import AdminLayout from '@/app/admin/components/AdminLayout';
+import { getMediaViewUrl } from '@/services/mediaApi';
 
-
-type ApiProductImage = ProductImage & { priority?: number };
+type ApiProductImage = ProductImage & { priority?: number; fileKey?: string; key?: string };
 
 interface ApiProduct {
   id: number | string;
@@ -79,11 +79,18 @@ const getCategoryLeaf = (categoryPath?: string) => {
 
 const normalizeImages = (images: ApiProduct['images']): ProductImage[] => {
   if (!images) return [];
-  if (typeof images === 'string') return [{ url: images, alt: 'Product image' }];
+  if (typeof images === 'string') {
+    const viewUrl = getMediaViewUrl(images);
+    return viewUrl ? [{ url: viewUrl, alt: 'Product image' }] : [];
+  }
   return [...images]
     .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
-    .filter((image) => Boolean(image.url))
-    .map((image) => ({ url: image.url, alt: image.alt || 'Product image' }));
+    .filter((image) => Boolean(image && (image.url || image.fileKey || image.key)))
+    .map((image) => ({
+      url: getMediaViewUrl(image.url || image.fileKey || image.key || image),
+      alt: image.alt || 'Product image',
+    }))
+    .filter((img) => Boolean(img.url));
 };
 
 const toProduct = (product: ApiProduct): Product => {

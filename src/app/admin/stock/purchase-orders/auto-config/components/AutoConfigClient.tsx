@@ -447,38 +447,9 @@ export default function AutoConfigClient() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Settings size={22} className="text-blue-600 dark:text-blue-400" />
-            Auto-PO Configuration
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage automatic Purchase Order configurations, algorithm formulas, overrides, and schedule parameters.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          {/* Trigger Auto-PO Pipeline */}
-          <button
-            onClick={handleTriggerAutoPO}
-            disabled={triggering}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow"
-          >
-            {triggering ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Zap size={14} className="fill-white" />
-            )}
-            Trigger Auto-PO
-          </button>
-        </div>
-      </div>
-
-      {/* Navigation Tabs and actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-2">
+    <div className="flex-1 flex flex-col h-full min-h-0 space-y-4">
+      {/* Navigation Tabs and Action Buttons in single row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-2">
         {/* Tabs */}
         <div className="flex gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl max-w-fit">
           <button
@@ -505,14 +476,14 @@ export default function AutoConfigClient() {
           </button>
         </div>
 
-        {/* Tab specific top actions */}
-        <div className="flex items-center gap-2.5 self-end">
+        {/* Action Buttons straight on tab headings row */}
+        <div className="flex items-center gap-2.5 flex-wrap">
           {activeTab === 'brand' ? (
             <>
               {selectedBrandConfigIds.length > 0 && (
                 <button
                   onClick={handleBulkDeleteTrigger}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm transition-all"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm transition-all whitespace-nowrap"
                 >
                   <Trash2 size={14} />
                   Delete Selected ({selectedBrandConfigIds.length})
@@ -521,13 +492,13 @@ export default function AutoConfigClient() {
               <button
                 onClick={handleExportExcel}
                 disabled={brandExporting || brandConfigs.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow disabled:opacity-50 whitespace-nowrap"
               >
                 <Download size={14} /> Export Excel
               </button>
               <button
                 onClick={() => setBrandShowUpload(!brandShowUpload)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl shadow-sm transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl shadow-sm transition-all whitespace-nowrap ${
                   brandShowUpload
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                     : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/50'
@@ -537,7 +508,7 @@ export default function AutoConfigClient() {
               </button>
               <button
                 onClick={handleCreateBrandConfig}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow whitespace-nowrap"
               >
                 <Plus size={14} /> Add Config
               </button>
@@ -547,7 +518,7 @@ export default function AutoConfigClient() {
               {selectedProductIds.length > 0 && (
                 <button
                   onClick={handleBulkDeleteTrigger}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm transition-all"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm transition-all whitespace-nowrap"
                 >
                   <Trash2 size={14} />
                   Delete Selected ({selectedProductIds.length})
@@ -556,13 +527,13 @@ export default function AutoConfigClient() {
               <button
                 onClick={handleExportExcel}
                 disabled={productExporting || productOverrides.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow disabled:opacity-50 whitespace-nowrap"
               >
                 <Download size={14} /> Export Excel
               </button>
               <button
                 onClick={() => setProductShowUpload(!productShowUpload)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl shadow-sm transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl shadow-sm transition-all whitespace-nowrap ${
                   productShowUpload
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                     : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/50'
@@ -572,18 +543,32 @@ export default function AutoConfigClient() {
               </button>
               <button
                 onClick={handleCreateProductConfig}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow whitespace-nowrap"
               >
                 <Plus size={14} /> Add Override
               </button>
             </>
           )}
+
+          {/* Trigger Auto-PO Pipeline */}
+          <button
+            onClick={handleTriggerAutoPO}
+            disabled={triggering}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:shadow whitespace-nowrap"
+          >
+            {triggering ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Zap size={14} className="fill-white" />
+            )}
+            Trigger Auto-PO
+          </button>
         </div>
       </div>
 
       {/* Brand Tab Content */}
       {activeTab === 'brand' && (
-        <div className="space-y-6">
+        <div className="flex-1 flex flex-col min-h-0 space-y-4">
           {/* Brand Upload Section */}
           {brandShowUpload && (
             <div className="bg-slate-50 dark:bg-slate-950/10 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6 transition-all animate-in slide-in-from-top-4 duration-300">
@@ -687,7 +672,7 @@ export default function AutoConfigClient() {
           </div>
 
           {/* Brand Configurations Table */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden flex flex-col">
             {loadingBrands ? (
               <div className="flex flex-col items-center justify-center py-24 text-slate-500">
                 <Loader2 size={36} className="animate-spin text-blue-600 mb-3" />
@@ -711,10 +696,10 @@ export default function AutoConfigClient() {
                 <p className="text-xs text-slate-550 mt-1">Configure overrides to run custom Auto-PO replenishment cycles.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto scrollbar-thin">
+              <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin">
                 <table className="w-full text-left border-collapse table-fixed min-w-[1100px]">
-                  <thead>
-                    <tr className="border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/25">
+                  <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-2xs">
+                    <tr className="bg-slate-50 dark:bg-slate-950">
                       <th className="w-12 py-3 px-4 text-center">
                         <input
                           type="checkbox"
@@ -863,7 +848,7 @@ export default function AutoConfigClient() {
 
       {/* Product Override Tab Content */}
       {activeTab === 'product' && (
-        <div className="space-y-6">
+        <div className="flex-1 flex flex-col min-h-0 space-y-4">
           {/* Product Upload Section */}
           {productShowUpload && (
             <div className="bg-slate-50 dark:bg-slate-950/10 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6 transition-all animate-in slide-in-from-top-4 duration-300">
@@ -996,7 +981,7 @@ export default function AutoConfigClient() {
           </div>
 
           {/* Product Table */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden flex flex-col">
             {loadingProducts ? (
               <div className="flex flex-col items-center justify-center py-24 text-slate-500">
                 <Loader2 size={36} className="animate-spin text-blue-600 mb-3" />
@@ -1020,10 +1005,10 @@ export default function AutoConfigClient() {
                 <p className="text-xs text-slate-550 mt-1">Configure product overrides to adjust historical ordering velocity days.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto scrollbar-thin">
+              <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin">
                 <table className="w-full text-left border-collapse table-fixed min-w-[900px]">
-                  <thead>
-                    <tr className="border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/25">
+                  <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-2xs">
+                    <tr className="bg-slate-50 dark:bg-slate-950">
                       <th className="w-12 py-3 px-4 text-center">
                         <input
                           type="checkbox"

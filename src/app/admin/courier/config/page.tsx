@@ -6,7 +6,7 @@ import { Settings } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Courier Configuration | Admin',
-  description: 'Configure service ship modes, air/surface serviceability pincodes, and SLA performance settings for carrier partner.',
+  description: 'Configure service ship modes and air/surface serviceability pincodes for carrier partner.',
 };
 
 export default function CourierConfigPage() {
@@ -14,7 +14,7 @@ export default function CourierConfigPage() {
     <AdminLayout
       fullWidth={true}
       pageTitle="Courier Configuration"
-      pageSubtitle="Configure service ship modes, air/surface serviceability pincodes, and SLA performance settings for carrier partner."
+      pageSubtitle="Configure service ship modes and air/surface serviceability pincodes for carrier partner."
       pageIcon={<Settings className="h-5 w-5 text-amber-500" />}
     >
       <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400 font-semibold">Loading Courier Configuration...</div>}>

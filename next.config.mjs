@@ -24,6 +24,10 @@ const nextConfig = {
         source: '/api/proxy/:path*',
         destination: 'https://v2.lakeetech.com/:path*',
       },
+      {
+        source: '/media/:path*',
+        destination: 'http://94.249.213.81:5017/media/:path*',
+      },
     ];
   },
 };

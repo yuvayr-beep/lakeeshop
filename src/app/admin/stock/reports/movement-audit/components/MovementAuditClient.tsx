@@ -6,7 +6,6 @@ import {
   ChevronLeft, ChevronRight, Filter, AlertCircle, 
   Boxes, Package, ArrowUpRight, ArrowDownLeft, Tag, CheckCircle2, ArrowUpDown, Calendar, Percent, DollarSign
 } from 'lucide-react';
-import AdminLayout from '@/app/admin/components/AdminLayout';
 import axiosInstance from '@/lib/axios';
 import { toast } from 'sonner';
 
@@ -519,120 +518,82 @@ export default function MovementAuditClient() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 pb-12">
-        
-        {/* =================================================================== */}
-        {/* HEADER SECTION */}
-        {/* =================================================================== */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <TrendingUp size={24} className="text-blue-600 dark:text-blue-400" />
-              Stock Movement Report (Audit)
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Complete inventory movement audit: Opening & Closing stock, purchases, sales, GST tax breakdowns, and costs.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={fetchMovementData}
-              disabled={loading}
-              className="flex items-center justify-center p-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all shadow-2xs"
-              title="Refresh Stock Movement Report Data"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin text-blue-600' : ''} />
-            </button>
-
-            <button
-              onClick={handleExportExcel}
-              disabled={exporting}
-              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-2xs transition-all hover:shadow-sm"
-            >
-              {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              Export Excel (Job)
-            </button>
-          </div>
-        </div>
+    <div className="flex-1 flex flex-col h-full min-h-0 space-y-4">
 
         {/* =================================================================== */}
-        {/* SUMMARY STATISTICS CARDS */}
+        {/* FILTER CONTROL BAR (WITH INLINE SUMMARY STATISTICS) */}
         {/* =================================================================== */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
-              <Boxes size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Products Audited</p>
-              <h4 className="text-base font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">
-                {stats.totalItems.toLocaleString('en-IN')}
-              </h4>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-2xs space-y-3 shrink-0">
+          <div className="border-b border-slate-100 dark:border-slate-800/80 pb-3">
+            {/* Filter Heading + Inline Summary Statistics + Clear Filters */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+              <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-slate-200 dark:border-slate-800">
+                <Filter size={16} className="text-blue-600 dark:text-blue-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                  Movement Audit Filters
+                </h3>
+              </div>
+
+              {/* Stats 1: Products Audited */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Boxes size={14} className="text-blue-600 dark:text-blue-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Products Audited:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100">
+                  {stats.totalItems.toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-800 hidden xl:block shrink-0" />
+
+              {/* Stats 2: Purchases / Sales Qty */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <ArrowDownLeft size={14} className="text-emerald-600 dark:text-emerald-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Purchases / Sales:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  +{stats.totalPurchases.toLocaleString('en-IN')} / -{stats.totalSales.toLocaleString('en-IN')} units
+                </span>
+              </div>
+
+              <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-800 hidden xl:block shrink-0" />
+
+              {/* Stats 3: Closing Stock Qty */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Package size={14} className="text-purple-600 dark:text-purple-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Closing Qty:</span>
+                <span className="font-bold text-purple-600 dark:text-purple-400">
+                  {stats.totalClosingQty.toLocaleString('en-IN')} units
+                </span>
+              </div>
+
+              <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-800 hidden xl:block shrink-0" />
+
+              {/* Stats 4: Closing Value */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <DollarSign size={14} className="text-amber-600 dark:text-amber-400" />
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Closing Value:</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">
+                  {formatCurrency(stats.totalClosingValue)}
+                </span>
+              </div>
+
+              {/* Clear Filters Button (Inlined as last item) */}
+              {(selectedProductId || selectedBrand || viewAll) && (
+                <>
+                  <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
+                  <button
+                    onClick={handleClearFilters}
+                    className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1 shrink-0 ml-1"
+                  >
+                    <X size={14} /> Clear Filters
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-              <ArrowDownLeft size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Purchases / Sales Qty</p>
-              <h4 className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                +{stats.totalPurchases.toLocaleString('en-IN')} / -{stats.totalSales.toLocaleString('en-IN')} units
-              </h4>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
-              <Package size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Closing Stock Quantity</p>
-              <h4 className="text-base font-extrabold text-purple-600 dark:text-purple-400 mt-0.5">
-                {stats.totalClosingQty.toLocaleString('en-IN')} units
-              </h4>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
-              <DollarSign size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Closing Value</p>
-              <h4 className="text-base font-extrabold text-amber-600 dark:text-amber-400 mt-0.5">
-                {formatCurrency(stats.totalClosingValue)}
-              </h4>
-            </div>
-          </div>
-        </div>
-
-        {/* =================================================================== */}
-        {/* FILTER CONTROL BAR */}
-        {/* =================================================================== */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
-            <div className="flex items-center gap-2">
-              <Filter size={16} className="text-blue-600 dark:text-blue-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">
-                Movement Audit Filters
-              </h3>
-            </div>
-
-            <button
-              onClick={handleClearFilters}
-              className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
-            >
-              <X size={14} /> Clear Filters
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5 items-end">
             
-            {/* START DATE (REQUIRED) */}
+            {/* 1. START DATE (REQUIRED) */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1">
                 <Calendar size={13} className="text-blue-600" />
@@ -649,7 +610,7 @@ export default function MovementAuditClient() {
               />
             </div>
 
-            {/* END DATE (REQUIRED) */}
+            {/* 2. END DATE (REQUIRED) */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1">
                 <Calendar size={13} className="text-blue-600" />
@@ -666,7 +627,7 @@ export default function MovementAuditClient() {
               />
             </div>
 
-            {/* PRODUCT SEARCH & SELECT */}
+            {/* 3. PRODUCT SEARCH & SELECT DROPDOWN */}
             <div className="space-y-1.5 relative" ref={productDropdownRef}>
               <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
                 <span>Product Filter</span>
@@ -705,7 +666,7 @@ export default function MovementAuditClient() {
                       setShowProductDropdown(true);
                     }}
                     onFocus={() => setShowProductDropdown(true)}
-                    placeholder="Search product name/SKU..."
+                    placeholder="Search product..."
                     className="w-full h-10 pl-9 pr-9 text-xs bg-slate-50/60 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 transition-all"
                   />
                   {loadingProducts && (
@@ -745,7 +706,7 @@ export default function MovementAuditClient() {
               )}
             </div>
 
-            {/* BRAND SEARCH & SELECT */}
+            {/* 4. BRAND SEARCH & SELECT DROPDOWN */}
             <div className="space-y-1.5 relative" ref={brandDropdownRef}>
               <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Brand Filter
@@ -814,55 +775,51 @@ export default function MovementAuditClient() {
               )}
             </div>
 
-          </div>
-
-          {/* Rows / View Mode Selection */}
-          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80 pt-3">
-            <div className="flex items-center gap-3">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                View Mode / Rows Per Page:
+            {/* 5. ACTIONS: REFRESH & EXPORT EXCEL */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-transparent select-none hidden xl:block">
+                Actions
               </label>
-              <select
-                value={viewAll ? 'ALL' : size}
-                onChange={(e) => {
-                  if (e.target.value === 'ALL') {
-                    setViewAll(true);
-                  } else {
-                    setViewAll(false);
-                    setSize(Number(e.target.value));
-                  }
-                  setPage(0);
-                }}
-                className="h-8 px-3 text-xs bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 dark:text-slate-100 font-semibold cursor-pointer"
-              >
-                <option value={10}>10 rows (Paginated)</option>
-                <option value={20}>20 rows (Default Paginated)</option>
-                <option value={50}>50 rows (Paginated)</option>
-                <option value={100}>100 rows (Paginated)</option>
-                <option value="ALL">✨ All Products</option>
-              </select>
+              <div className="flex items-center gap-1.5 h-10">
+                <button
+                  type="button"
+                  onClick={fetchMovementData}
+                  disabled={loading}
+                  className="flex items-center justify-center h-10 w-10 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all shadow-2xs shrink-0"
+                  title="Refresh Report Data"
+                >
+                  <RefreshCw size={16} className={loading ? 'animate-spin text-blue-600' : ''} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportExcel}
+                  disabled={exporting}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-10 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-2xs transition-all hover:shadow-sm whitespace-nowrap"
+                >
+                  {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  <span>Export Excel (Job)</span>
+                </button>
+              </div>
             </div>
 
-            <div className="text-[11px] text-slate-400 font-medium italic">
-              Date Filter Range: <span className="font-bold text-slate-700 dark:text-slate-300">{startDate}</span> to <span className="font-bold text-slate-700 dark:text-slate-300">{endDate}</span>
-            </div>
           </div>
         </div>
 
         {/* =================================================================== */}
         {/* REPORT DATA TABLE */}
         {/* =================================================================== */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xs overflow-hidden">
+        <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xs overflow-hidden flex flex-col">
           
           {loading ? (
-            <div className="py-24 text-center text-slate-400 space-y-3">
+            <div className="py-24 text-center text-slate-400 space-y-3 flex-1 flex flex-col justify-center">
               <RefreshCw className="animate-spin text-blue-600 mx-auto" size={32} />
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                 {viewAll ? 'Fetching all stock movement records...' : 'Fetching stock movement report data...'}
               </p>
             </div>
           ) : error ? (
-            <div className="py-20 text-center text-red-500 space-y-3 px-4">
+            <div className="py-20 text-center text-red-500 space-y-3 px-4 flex-1 flex flex-col justify-center">
               <AlertCircle size={36} className="mx-auto text-red-500" />
               <p className="text-xs font-bold text-red-700 dark:text-red-400">{error}</p>
               <button
@@ -873,7 +830,7 @@ export default function MovementAuditClient() {
               </button>
             </div>
           ) : processedData.length === 0 ? (
-            <div className="py-24 text-center text-slate-400 space-y-2">
+            <div className="py-24 text-center text-slate-400 space-y-2 flex-1 flex flex-col justify-center">
               <TrendingUp size={40} className="mx-auto text-slate-300 dark:text-slate-700" />
               <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
                 No stock movement audit records found for date range ({startDate} to {endDate})
@@ -883,77 +840,77 @@ export default function MovementAuditClient() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-left border-collapse text-xs min-w-[1300px]">
-                <thead>
-                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productCode')}>
+            <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse text-xs min-w-full whitespace-nowrap">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-955 border-b border-slate-100 dark:border-slate-800 shadow-2xs">
+                  <tr className="bg-slate-50 dark:bg-slate-955 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                    <th className="py-2.5 px-3 whitespace-nowrap cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productCode')}>
                       <div className="flex items-center gap-1">
                         <span>Product Code</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productName')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('productName')}>
                       <div className="flex items-center gap-1">
                         <span>Product Name</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('brand')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('brand')}>
                       <div className="flex items-center gap-1">
                         <span>Brand</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-center cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('taxPercentage')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-center cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('taxPercentage')}>
                       <div className="flex items-center justify-center gap-1">
                         <span>Tax %</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('openingQty')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('openingQty')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Opening Stock</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('totalPurchaseQty')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('totalPurchaseQty')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Purchases</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('totalSaleQty')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('totalSaleQty')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Sales</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingQty')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingQty')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Closing Stock</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingCostLatest')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingCostLatest')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Closing Cost</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingValueLatestTaxable')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingValueLatestTaxable')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Taxable Value</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingValueLatestTax')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingValueLatestTax')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Tax Amount</span>
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingValueLatestTotal')}>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-right cursor-pointer hover:text-slate-800 dark:hover:text-white" onClick={() => handleSort('closingValueLatestTotal')}>
                       <div className="flex items-center justify-end gap-1">
                         <span>Total Closing Value</span>
                         <ArrowUpDown size={12} />
@@ -961,15 +918,15 @@ export default function MovementAuditClient() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium whitespace-nowrap">
                   {processedData.map((row) => (
                     <tr
                       key={row.productId}
-                      className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors text-slate-800 dark:text-slate-200"
+                      className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors text-slate-800 dark:text-slate-200 whitespace-nowrap"
                     >
-                      <td className="py-3.5 px-4 font-mono text-[11px] font-bold">
+                      <td className="py-2 px-3 font-mono text-[11px] font-bold whitespace-nowrap">
                         {row.productCode ? (
-                          <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+                          <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 whitespace-nowrap">
                             {row.productCode}
                           </span>
                         ) : (
@@ -977,13 +934,13 @@ export default function MovementAuditClient() {
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 font-bold max-w-xs truncate text-slate-900 dark:text-slate-100" title={row.productName}>
+                      <td className="py-2 px-3 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap" title={row.productName}>
                         {row.productName}
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="py-2 px-3 whitespace-nowrap">
                         {row.brand ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/50">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/50 whitespace-nowrap">
                             {row.brand}
                           </span>
                         ) : (
@@ -991,12 +948,12 @@ export default function MovementAuditClient() {
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 text-center font-mono font-semibold text-slate-600 dark:text-slate-300">
+                      <td className="py-2 px-3 text-center font-mono font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
                         {row.taxPercentage || 0}%
                       </td>
 
                       {/* OPENING STOCK (Qty & Total Value tooltip) */}
-                      <td className="py-3.5 px-4 text-right font-mono" title={`Opening Value: ${formatCurrency(row.openingValueOrgTotal)}`}>
+                      <td className="py-2 px-3 text-right font-mono whitespace-nowrap" title={`Opening Value: ${formatCurrency(row.openingValueOrgTotal)}`}>
                         <div className="font-bold text-slate-700 dark:text-slate-300">
                           {row.openingQty || 0}
                         </div>
@@ -1006,7 +963,7 @@ export default function MovementAuditClient() {
                       </td>
 
                       {/* PURCHASES QTY */}
-                      <td className="py-3.5 px-4 text-right font-mono">
+                      <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${
                           row.totalPurchaseQty > 0 
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60'
@@ -1017,7 +974,7 @@ export default function MovementAuditClient() {
                       </td>
 
                       {/* SALES QTY */}
-                      <td className="py-3.5 px-4 text-right font-mono">
+                      <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${
                           row.totalSaleQty > 0 
                             ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60'
@@ -1028,7 +985,7 @@ export default function MovementAuditClient() {
                       </td>
 
                       {/* CLOSING STOCK QTY */}
-                      <td className="py-3.5 px-4 text-right font-mono">
+                      <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${
                           row.closingQty > 0 
                             ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/60'
@@ -1039,22 +996,22 @@ export default function MovementAuditClient() {
                       </td>
 
                       {/* CLOSING COST LATEST */}
-                      <td className="py-3.5 px-4 text-right font-mono text-slate-600 dark:text-slate-300">
+                      <td className="py-2 px-3 text-right font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
                         {formatCurrency(row.closingCostLatest)}
                       </td>
 
                       {/* TAXABLE VALUE */}
-                      <td className="py-3.5 px-4 text-right font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-2 px-3 text-right font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
                         {formatCurrency(row.closingValueLatestTaxable)}
                       </td>
 
                       {/* TAX AMOUNT */}
-                      <td className="py-3.5 px-4 text-right font-mono text-slate-600 dark:text-slate-400">
+                      <td className="py-2 px-3 text-right font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
                         {formatCurrency(row.closingValueLatestTax)}
                       </td>
 
                       {/* TOTAL CLOSING VALUE */}
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                      <td className="py-2 px-3 text-right font-mono font-bold text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
                         {formatCurrency(row.closingValueLatestTotal)}
                       </td>
                     </tr>
@@ -1067,7 +1024,7 @@ export default function MovementAuditClient() {
           {/* =================================================================== */}
           {/* FOOTER BAR */}
           {/* =================================================================== */}
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-slate-50/50 dark:bg-slate-950/20">
+          <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-slate-50/50 dark:bg-slate-955/20 shrink-0">
             <div className="text-slate-500 dark:text-slate-400 font-medium">
               {viewAll ? (
                 <span>Showing <span className="font-bold text-blue-600 dark:text-blue-400">All {movementData.length} Stock Movement Audit Records</span></span>
@@ -1076,34 +1033,59 @@ export default function MovementAuditClient() {
               )}
             </div>
 
-            {!viewAll ? (
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Rows Per Page Selector */}
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((prev) => Math.max(0, prev - 1))}
-                  disabled={page === 0 || loading}
-                  className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Rows per page:</span>
+                <select
+                  value={viewAll ? 'ALL' : size}
+                  onChange={(e) => {
+                    if (e.target.value === 'ALL') {
+                      setViewAll(true);
+                    } else {
+                      setViewAll(false);
+                      setSize(Number(e.target.value));
+                    }
+                    setPage(0);
+                  }}
+                  className="h-8 px-2.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold cursor-pointer text-slate-800 dark:text-slate-200 shadow-2xs"
                 >
-                  <ChevronLeft size={16} /> Previous
-                </button>
-
-                <span className="px-3 py-1 bg-slate-200/60 dark:bg-slate-800 rounded-lg font-bold font-mono text-slate-700 dark:text-slate-300">
-                  Page {page + 1}
-                </span>
-
-                <button
-                  onClick={() => setPage((prev) => prev + 1)}
-                  disabled={!hasNextPage || loading}
-                  className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  Next <ChevronRight size={16} />
-                </button>
+                  <option value={10}>10 rows</option>
+                  <option value={20}>20 rows</option>
+                  <option value={50}>50 rows</option>
+                  <option value={100}>100 rows</option>
+                  <option value="ALL">✨ All Products</option>
+                </select>
               </div>
-            ) : null}
+
+              {!viewAll ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+                    disabled={page === 0 || loading}
+                    className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft size={16} /> Previous
+                  </button>
+
+                  <span className="px-3 py-1 bg-slate-200/60 dark:bg-slate-800 rounded-lg font-bold font-mono text-slate-700 dark:text-slate-300">
+                    Page {page + 1}
+                  </span>
+
+                  <button
+                    onClick={() => setPage((prev) => prev + 1)}
+                    disabled={!hasNextPage || loading}
+                    className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next <ChevronRight size={16} />
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
 
         </div>
 
       </div>
-    </AdminLayout>
   );
 }

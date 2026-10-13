@@ -15,6 +15,7 @@ interface POFiltersProps {
   };
   onChange: (newFilters: any) => void;
   onReset: () => void;
+  actionButtons?: React.ReactNode;
 }
 
 const statusOptions = [
@@ -56,7 +57,7 @@ const parseNdjson = (raw: any): any[] => {
   }
 };
 
-export default function POFilters({ filters, onChange, onReset }: POFiltersProps) {
+export default function POFilters({ filters, onChange, onReset, actionButtons }: POFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
@@ -66,6 +67,15 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
   // Searchable Product states
   const [productSearch, setProductSearch] = useState('');
   const [isProductFocused, setIsProductFocused] = useState(false);
+
+  const activeFilterCount = React.useMemo(() => {
+    let count = 0;
+    if (filters.status) count++;
+    if (filters.isAuto) count++;
+    if (filters.productid) count++;
+    if (filters.brand) count++;
+    return count;
+  }, [filters]);
 
   // Filter products locally based on typing
   const filteredProducts = React.useMemo(() => {
@@ -119,8 +129,6 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
     }
   }, [filters.brand]);
 
-
-
   useEffect(() => {
     async function loadFilterData() {
       try {
@@ -160,41 +168,40 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl p-4 shadow-sm mb-6 transition-all duration-300">
-      {/* Primary Filters (Date Range & Supplier) */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
-            <Calendar size={13} className="text-[var(--primary)]" />
-            Start Date
-          </label>
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => handleFieldChange('startDate', e.target.value)}
-            className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200 font-medium"
-          />
-        </div>
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm shrink-0">
+      {/* Primary Control Bar (Start Date, End Date, Supplier, Advanced Filters, Reset + Action Buttons in Single Line) */}
+      <div className="flex flex-col xl:flex-row items-center justify-between gap-3">
+        {/* Left Side: Filter inputs (Start Date, End Date, Supplier, Advanced Filters, Reset) */}
+        <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+          {/* Start Date */}
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl px-2.5 h-9">
+            <Calendar size={13} className="text-blue-600 dark:text-blue-400 shrink-0" />
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0">From:</span>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFieldChange('startDate', e.target.value)}
+              className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
+            />
+          </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
-            <Calendar size={13} className="text-[var(--primary)]" />
-            End Date
-          </label>
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => handleFieldChange('endDate', e.target.value)}
-            className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200 font-medium"
-          />
-        </div>
+          {/* End Date */}
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl px-2.5 h-9">
+            <Calendar size={13} className="text-blue-600 dark:text-blue-400 shrink-0" />
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0">To:</span>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFieldChange('endDate', e.target.value)}
+              className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
+            />
+          </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Supplier</label>
+          {/* Supplier */}
           <select
             value={filters.supplierId}
             onChange={(e) => handleFieldChange('supplierId', e.target.value)}
-            className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all text-slate-800 dark:text-slate-200 font-medium"
+            className="h-9 px-3 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 font-semibold cursor-pointer max-w-[160px] truncate"
           >
             <option value="">All Suppliers</option>
             {suppliers.map((sup, idx) => (
@@ -203,28 +210,41 @@ export default function POFilters({ filters, onChange, onReset }: POFiltersProps
               </option>
             ))}
           </select>
-        </div>
 
-        <div className="flex gap-2">
+          {/* Advanced Filters Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className={`flex-1 h-10 px-4 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
-              isOpen
-                ? 'bg-[var(--primary-light-bg)] border-[var(--primary)]/40 text-[var(--primary)]'
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
+            className={`flex items-center gap-1.5 px-3 h-9 text-xs font-semibold rounded-xl border transition-all ${
+              isOpen || activeFilterCount > 0
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            <Filter size={15} />
-            {isOpen ? 'Hide Filters' : 'Advanced Filters'}
+            <Filter size={14} />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
+
+          {/* Reset Filters */}
           <button
             onClick={onReset}
-            className="h-10 w-10 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-lg flex items-center justify-center transition-colors"
+            className="p-2 h-9 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
             title="Reset Filters"
           >
-            <RefreshCw size={15} />
+            <RefreshCw size={14} />
           </button>
         </div>
+
+        {/* Right Side: Action Buttons (Delete Selected, Refresh, Upload, Create PO) */}
+        {actionButtons && (
+          <div className="flex items-center gap-2 flex-wrap justify-end w-full xl:w-auto shrink-0">
+            {actionButtons}
+          </div>
+        )}
       </div>
 
       {/* Advanced Filters Expandable Section */}

@@ -80,7 +80,8 @@ export default function CourierPartnersClient() {
         headers: { Accept: 'application/x-ndjson' },
       });
       const parsed = parseCourierResponse(response.data);
-      setCouriers(parsed);
+      const sorted = parsed.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+      setCouriers(sorted);
       setSelectedIds([]); // Clear selection on refresh
     } catch (err: any) {
       console.error('Failed to load courier list:', err);
@@ -95,20 +96,23 @@ export default function CourierPartnersClient() {
     fetchCouriers();
   }, [fetchCouriers]);
 
-  // Search Filter logic
+  // Search Filter & ID Sorting logic
   const filteredCouriers = useMemo(() => {
-    if (!searchQuery.trim()) return couriers;
-    const q = searchQuery.toLowerCase().trim();
-    return couriers.filter((c) => {
-      return (
-        (c.courierCode && c.courierCode.toLowerCase().includes(q)) ||
-        (c.courierName && c.courierName.toLowerCase().includes(q)) ||
-        (c.vendorNo && c.vendorNo.toLowerCase().includes(q)) ||
-        (c.businessName && c.businessName.toLowerCase().includes(q)) ||
-        (c.originCityCode && c.originCityCode.toLowerCase().includes(q)) ||
-        (c.originBranchCode && c.originBranchCode.toLowerCase().includes(q))
-      );
-    });
+    let list = couriers;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = couriers.filter((c) => {
+        return (
+          (c.courierCode && c.courierCode.toLowerCase().includes(q)) ||
+          (c.courierName && c.courierName.toLowerCase().includes(q)) ||
+          (c.vendorNo && c.vendorNo.toLowerCase().includes(q)) ||
+          (c.businessName && c.businessName.toLowerCase().includes(q)) ||
+          (c.originCityCode && c.originCityCode.toLowerCase().includes(q)) ||
+          (c.originBranchCode && c.originBranchCode.toLowerCase().includes(q))
+        );
+      });
+    }
+    return [...list].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
   }, [couriers, searchQuery]);
 
   // Paginated List

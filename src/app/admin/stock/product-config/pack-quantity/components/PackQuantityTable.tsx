@@ -173,19 +173,13 @@ export default function PackQuantityTable({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[960px]">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60">
-              <th className="px-3 py-3 w-10">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                  onChange={toggleAll}
-                  className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
-                />
+    <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-auto scrollbar-thin">
+        <table className="w-full text-sm min-w-[960px] text-left border-collapse">
+          <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-2xs">
+            <tr>
+              <th className="px-3 py-3 w-12 text-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                S.No
               </th>
               {cols.map((col) => (
                 <th
@@ -219,13 +213,8 @@ export default function PackQuantityTable({
                         ? 'hover:bg-slate-50 dark:hover:bg-slate-800/40' : 'bg-slate-50/40 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-800/40'
                   }`}
                 >
-                  <td className="px-3 py-3">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleOne(p.id)}
-                      className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
-                    />
+                  <td className="px-3 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 font-mono">
+                    {(page - 1) * perPage + i + 1}
                   </td>
 
                   {/* Image Column */}
@@ -298,7 +287,7 @@ export default function PackQuantityTable({
 
                   {/* Actions Column */}
                   <td className="px-3 py-3">
-                    <div className="hidden group-hover:flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1">
                       {onView && (
                         <button
                           onClick={() => onView(p)}
@@ -334,7 +323,7 @@ export default function PackQuantityTable({
       )}
 
       {/* Pagination */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-600 dark:text-slate-400 tabular-nums">
             Showing {start}–{end} of {total} products

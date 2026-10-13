@@ -208,4 +208,12 @@ export const preAwbMasterService = {
 
     return list;
   },
+
+  // 7. Clear Pre-AWB Pool for a Courier
+  // DELETE /courier/pre-awb/pool?courierId={courierId}
+  clearPreAwbPool: async (courierId: number): Promise<any> => {
+    const response = await axiosInstance.delete(`/courier/pre-awb/pool?courierId=${courierId}`);
+    return response.data;
+  },
 };
+
